@@ -1,0 +1,6 @@
+{
+  "name": "Leads Centralizados - Eventos y Visitas",
+  "description": "Plataforma de gestión y captura de leads para eventos y visitas de clientes, con panel de control, reportes analíticos y vista móvil.",
+  "requestFramePermissions": ["camera", "microphone"],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

@@ -1,0 +1,17 @@
+node_modules/
+build/
+dist/
+coverage/
+.DS_Store
+*.log
+.env*
+!.env.example
+.firebase/
+.wrangler/
+
+# Documentacion interna de la boveda Obsidian
+Bobeda/
+
+# Codigo muerto del generado de AI Studio
+data/
+*.bak

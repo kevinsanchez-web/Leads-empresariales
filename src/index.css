@@ -1,0 +1,94 @@
+@import "tailwindcss";
+
+/* Theme Color System Variables */
+:root {
+  --primary-accent: #0071E3;
+  --primary-accent-hover: #0077ED;
+  --primary-accent-light: rgba(0, 113, 227, 0.1);
+  --primary-accent-border: rgba(0, 113, 227, 0.2);
+  --primary-gradient-from: #0071E3;
+  --primary-gradient-to: #5856D6;
+}
+
+[data-theme="verde"] {
+  --primary-accent: #10B981;
+  --primary-accent-hover: #059669;
+  --primary-accent-light: rgba(16, 185, 129, 0.12);
+  --primary-accent-border: rgba(16, 185, 129, 0.25);
+  --primary-gradient-from: #10B981;
+  --primary-gradient-to: #059669;
+}
+
+[data-theme="naranja"] {
+  --primary-accent: #F97316;
+  --primary-accent-hover: #EA580C;
+  --primary-accent-light: rgba(249, 115, 22, 0.12);
+  --primary-accent-border: rgba(249, 115, 22, 0.25);
+  --primary-gradient-from: #F97316;
+  --primary-gradient-to: #E11D48;
+}
+
+[data-theme="purpura"] {
+  --primary-accent: #8B5CF6;
+  --primary-accent-hover: #7C3AED;
+  --primary-accent-light: rgba(139, 92, 246, 0.12);
+  --primary-accent-border: rgba(139, 92, 246, 0.25);
+  --primary-gradient-from: #8B5CF6;
+  --primary-gradient-to: #6366F1;
+}
+
+/* Dynamic theme helper classes */
+.bg-accent {
+  background-color: var(--primary-accent) !important;
+}
+
+.text-accent {
+  color: var(--primary-accent) !important;
+}
+
+.border-accent {
+  border-color: var(--primary-accent) !important;
+}
+
+.bg-accent-light {
+  background-color: var(--primary-accent-light) !important;
+}
+
+.border-accent-light {
+  border-color: var(--primary-accent-border) !important;
+}
+
+/* Apple macOS style subtle scrollbars */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(0, 0, 0, 0.15);
+  border-radius: 9999px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(0, 0, 0, 0.25);
+}
+
+/* Apple squircle and smooth transitions */
+.apple-card {
+  background: #ffffff;
+  border: 1px solid rgba(0, 0, 0, 0.06);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.02), 0 4px 12px rgba(0, 0, 0, 0.03);
+  border-radius: 1.25rem;
+}
+
+.apple-glass {
+  background: rgba(255, 255, 255, 0.82);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.6);
+}
+

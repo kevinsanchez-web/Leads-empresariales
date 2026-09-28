@@ -1,0 +1,18 @@
+rules_version = '2';
+
+// Solo cuentas de Gmail o del dominio institucional de la CUN pueden leer o escribir (a pedido
+// explícito del cliente). Debe coincidir con ALLOWED_DOMAINS en src/allowedUsers.ts — esa copia
+// del lado del cliente solo controla la pantalla de login, la protección real es esta regla.
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function isAllowed() {
+      return request.auth != null
+        && request.auth.token.email_verified == true
+        && request.auth.token.email.matches('.*@(gmail[.]com|cun[.]edu[.]co)$');
+    }
+
+    match /{document=**} {
+      allow read, write: if isAllowed();
+    }
+  }
+}
