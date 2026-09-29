@@ -1,17 +1,33 @@
 import React, { useEffect, useState } from "react";
-import { GoogleAuthProvider, onAuthStateChanged, signInWithPopup, signOut, User } from "firebase/auth";
+import { GoogleAuthProvider, getRedirectResult, onAuthStateChanged, signInWithPopup, signInWithRedirect, signOut, User } from "firebase/auth";
 import { auth } from "../firebase";
 import { isAllowedEmail } from "../allowedUsers";
 import { DivergencyLogo } from "./DivergencyLogo";
+
+function isIOSBrowser(): boolean {
+  if (typeof navigator === "undefined") return false;
+  return (
+    /iPad|iPhone|iPod/.test(navigator.userAgent) ||
+    (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1)
+  );
+}
 
 export const AuthGate: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<User | null | undefined>(undefined);
   const [deniedEmail, setDeniedEmail] = useState<string | null>(null);
   const [signingIn, setSigningIn] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [redirectSettled, setRedirectSettled] = useState(false);
 
   useEffect(() => {
-    return onAuthStateChanged(auth, (firebaseUser) => {
+    let active = true;
+    getRedirectResult(auth)
+      .catch(() => undefined)
+      .finally(() => {
+        if (active) setRedirectSettled(true);
+      });
+
+    const unsubscribe = onAuthStateChanged(auth, (firebaseUser) => {
       if (firebaseUser && !isAllowedEmail(firebaseUser.email)) {
         setDeniedEmail(firebaseUser.email);
         signOut(auth);
@@ -21,21 +37,46 @@ export const AuthGate: React.FC<{ children: React.ReactNode }> = ({ children }) 
       setDeniedEmail(null);
       setUser(firebaseUser);
     });
+
+    return () => {
+      active = false;
+      unsubscribe();
+    };
   }, []);
 
   const handleSignIn = async () => {
     setError(null);
     setSigningIn(true);
+    const provider = new GoogleAuthProvider();
+
+    if (isIOSBrowser()) {
+      try {
+        await signInWithRedirect(auth, provider);
+      } catch {
+        setError("No se pudo iniciar sesión. Intenta de nuevo.");
+        setSigningIn(false);
+      }
+      return;
+    }
+
     try {
-      await signInWithPopup(auth, new GoogleAuthProvider());
-    } catch (err: any) {
-      setError(err?.code === "auth/popup-closed-by-user" ? null : "No se pudo iniciar sesión. Intenta de nuevo.");
-    } finally {
+      await signInWithPopup(auth, provider);
       setSigningIn(false);
+    } catch (err: any) {
+      if (err?.code === "auth/popup-closed-by-user") {
+        setSigningIn(false);
+        return;
+      }
+      try {
+        await signInWithRedirect(auth, provider);
+      } catch {
+        setError("No se pudo iniciar sesión. Intenta de nuevo.");
+        setSigningIn(false);
+      }
     }
   };
 
-  if (user === undefined) {
+  if (user === undefined || !redirectSettled) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-[#F8FAFC]">
         <div className="animate-pulse text-slate-400 text-sm font-semibold">Cargando...</div>
