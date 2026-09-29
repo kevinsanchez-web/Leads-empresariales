@@ -154,7 +154,7 @@ export const MobileQuickCapture: React.FC<MobileQuickCaptureProps> = ({
     if (Array.isArray(data.interests) && data.interests.length > 0) {
       setSelectedInterests(data.interests);
     }
-    setSelectedSources(['QR', 'Escanear Tarjeta', 'Visita Stand']);
+    setSelectedSources(prev => Array.from(new Set([...prev, 'Escanear Tarjeta'])));
     setPriority(true);
   };
 

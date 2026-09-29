@@ -1,6 +1,7 @@
 import React, { useState, useRef } from 'react';
-import { Camera, Upload, X, Sparkles, Loader2, QrCode, CheckCircle2, AlertCircle } from 'lucide-react';
-import { scanCard } from '../services/aiService';
+import { Camera, Upload, X, Sparkles, Loader2, QrCode } from 'lucide-react';
+import { scanCard, isAiFailure, ScannedCard } from '../services/aiService';
+import { AiNotice } from './AiNotice';
 
 interface CardScannerModalProps {
   isOpen: boolean;
@@ -25,6 +26,8 @@ export const CardScannerModal: React.FC<CardScannerModalProps> = ({
   const [activeTab, setActiveTab] = useState<'camera' | 'upload'>('camera');
   const [isScanning, setIsScanning] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  const [errorSimulated, setErrorSimulated] = useState(false);
+  const [sampleData, setSampleData] = useState<ScannedCard | null>(null);
 
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
@@ -76,20 +79,35 @@ export const CardScannerModal: React.FC<CardScannerModalProps> = ({
   const processImageBase64 = async (base64Image: string) => {
     setIsScanning(true);
     setErrorMsg(null);
+    setErrorSimulated(false);
+    setSampleData(null);
 
     try {
-      const resData: any = await scanCard(base64Image);
+      const resData = await scanCard(base64Image);
 
-      if (resData.success && resData.data) {
-        stopCamera();
-        onScanSuccess(resData.data);
-        onClose();
-      } else {
-        setErrorMsg(resData.error || "No se pudo leer la tarjeta con claridad. Intenta con una foto más nítida.");
+      if (isAiFailure(resData)) {
+        setErrorMsg(resData.error);
+        setErrorSimulated(resData.simulated);
+        return;
       }
-    } catch (err: any) {
-      console.error("Error procesando escaneo:", err);
-      setErrorMsg("Error de conexión al procesar la imagen con la IA.");
+
+      if (!resData.data) {
+        setErrorMsg('La IA no devolvió datos de la tarjeta.');
+        return;
+      }
+
+      // Sin VITE_AI_WORKER_URL la respuesta es una muestra. No se aplica sola: el comercial
+      // tiene que ver el aviso y aceptarla, o estos datos entran al CRM como si fueran reales.
+      if (resData.simulated) {
+        setSampleData(resData.data);
+        return;
+      }
+
+      stopCamera();
+      onScanSuccess(resData.data);
+      onClose();
+    } catch {
+      setErrorMsg('No se pudo contactar el asistente de IA.');
     } finally {
       setIsScanning(false);
     }
@@ -175,12 +193,11 @@ export const CardScannerModal: React.FC<CardScannerModalProps> = ({
         <div className="p-6 relative">
           
           {errorMsg && (
-            <div className="mb-4 p-3 bg-rose-50 border border-rose-200 rounded-2xl text-xs text-rose-700 flex flex-col sm:flex-row sm:items-center justify-between gap-2 font-medium">
-              <div className="flex items-center gap-2">
-                <AlertCircle className="w-4 h-4 text-rose-600 shrink-0" />
-                <span>{errorMsg}</span>
+            <div className="mb-4 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+              <div className="flex-1">
+                <AiNotice message={errorMsg} tone={errorSimulated ? 'simulated' : 'error'} />
               </div>
-              {activeTab === 'camera' && (
+              {activeTab === 'camera' && !errorSimulated && (
                 <button
                   type="button"
                   onClick={() => setActiveTab('upload')}
@@ -189,6 +206,35 @@ export const CardScannerModal: React.FC<CardScannerModalProps> = ({
                   Subir Foto / Archivo
                 </button>
               )}
+            </div>
+          )}
+
+          {sampleData && (
+            <div className="mb-4 space-y-2.5">
+              <AiNotice
+                message="No hay IA configurada, así que esto es una tarjeta de ejemplo, no la foto que subiste. Si aplicas estos datos, entra un contacto falso a la base."
+                tone="simulated"
+              />
+              <div className="flex flex-col sm:flex-row gap-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    stopCamera();
+                    onScanSuccess(sampleData);
+                    onClose();
+                  }}
+                  className="flex-1 px-3 py-1.5 bg-amber-500 hover:bg-amber-600 text-white rounded-xl text-[11px] font-bold cursor-pointer"
+                >
+                  Aplicar los datos de ejemplo
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setSampleData(null)}
+                  className="flex-1 px-3 py-1.5 bg-[#F5F5F7] hover:bg-[#EBEBEF] text-slate-700 rounded-xl text-[11px] font-bold cursor-pointer"
+                >
+                  Descartar
+                </button>
+              </div>
             </div>
           )}
 

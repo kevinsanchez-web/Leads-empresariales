@@ -31,7 +31,8 @@ import { isOnline, saveLeadOffline } from '../utils/offlineStore';
 import { todayISODate } from '../utils/date';
 import { cleanCompanyName } from '../utils/company';
 import { sendPriorityLeadPushNotification } from '../utils/pushNotifications';
-import { researchCompany } from '../services/aiService';
+import { AiNotice } from './AiNotice';
+import { researchCompany, isAiFailure, AI_SIMULATED_WARNING } from '../services/aiService';
 
 interface NewLeadModalProps {
   isOpen: boolean;
@@ -77,6 +78,7 @@ export const NewLeadModal: React.FC<NewLeadModalProps> = ({
   const [companyInfo, setCompanyInfo] = useState<CompanyResearchInfo | null>(null);
   const [isResearchingCompany, setIsResearchingCompany] = useState(false);
   const [researchError, setResearchError] = useState<string | null>(null);
+  const [researchSimulated, setResearchSimulated] = useState(false);
 
   if (!isOpen) return null;
 
@@ -86,15 +88,24 @@ export const NewLeadModal: React.FC<NewLeadModalProps> = ({
 
     setIsResearchingCompany(true);
     setResearchError(null);
+    setResearchSimulated(false);
     try {
-      const data: any = await researchCompany({ companyName: targetComp, leadName: name, role });
-      if (data.success && data.companyInfo) {
-        setCompanyInfo(data.companyInfo);
-      } else {
-        setResearchError(data.error || 'No se pudo obtener información de la empresa.');
+      const data = await researchCompany({ companyName: targetComp, leadName: name, role });
+      if (isAiFailure(data)) {
+        setResearchError(data.error);
+        return;
       }
-    } catch (err: any) {
-      setResearchError('Error de red al consultar Google Search.');
+      if (!data.companyInfo) {
+        setResearchError('La IA no devolvió información de la empresa.');
+        return;
+      }
+      setCompanyInfo(data.companyInfo);
+      if (data.simulated) {
+        setResearchError(AI_SIMULATED_WARNING);
+        setResearchSimulated(true);
+      }
+    } catch {
+      setResearchError('No se pudo contactar el asistente de IA.');
     } finally {
       setIsResearchingCompany(false);
     }
@@ -111,7 +122,7 @@ export const NewLeadModal: React.FC<NewLeadModalProps> = ({
     if (Array.isArray(data.interests) && data.interests.length > 0) {
       setSelectedInterests(data.interests);
     }
-    setSelectedSources(['QR', 'Escanear Tarjeta', 'Visita Stand']);
+    setSelectedSources(prev => Array.from(new Set([...prev, 'Escanear Tarjeta'])));
     setPriority(true);
   };
 
@@ -456,9 +467,10 @@ export const NewLeadModal: React.FC<NewLeadModalProps> = ({
               )}
 
               {researchError && (
-                <div className="text-red-600 text-xs py-1">
-                  {researchError}
-                </div>
+                <AiNotice
+                  message={researchError}
+                  tone={researchSimulated ? 'simulated' : 'error'}
+                />
               )}
 
               {companyInfo && !isResearchingCompany && (

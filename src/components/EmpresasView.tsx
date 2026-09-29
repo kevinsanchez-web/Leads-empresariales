@@ -1,8 +1,9 @@
 import React, { useState } from 'react';
 import { Building2, Users, Star, DollarSign, Search, ChevronRight, Sparkles, Globe, ExternalLink, Loader2 } from 'lucide-react';
 import { Lead, CompanyResearchInfo } from '../types';
-import { researchCompany } from '../services/aiService';
+import { researchCompany, isAiFailure, AI_SIMULATED_WARNING } from '../services/aiService';
 import { cleanCompanyName, companyKey } from '../utils/company';
+import { AiNotice } from './AiNotice';
 
 interface EmpresasViewProps {
   leads: Lead[];
@@ -14,6 +15,7 @@ export const EmpresasView: React.FC<EmpresasViewProps> = ({ leads, onSelectLead,
   const [searchTerm, setSearchTerm] = useState('');
   const [researchingCompanies, setResearchingCompanies] = useState<{ [key: string]: boolean }>({});
   const [localCompanyInfo, setLocalCompanyInfo] = useState<{ [key: string]: CompanyResearchInfo }>({});
+  const [researchErrors, setResearchErrors] = useState<{ [key: string]: { message: string; simulated: boolean } }>({});
 
   // Group leads by company
   const companyMap: { [key: string]: Lead[] } = {};
@@ -49,23 +51,39 @@ export const EmpresasView: React.FC<EmpresasViewProps> = ({ leads, onSelectLead,
 
   const handleResearchCompany = async (companyName: string, companyLeads: Lead[]) => {
     setResearchingCompanies(prev => ({ ...prev, [companyName]: true }));
+    setResearchErrors(prev => { const next = { ...prev }; delete next[companyName]; return next; });
     try {
       const firstLead = companyLeads[0];
-      const data: any = await researchCompany({
+      const data = await researchCompany({
         companyName,
         leadName: firstLead?.name,
         role: firstLead?.role
       });
-      if (data.success && data.companyInfo) {
-        setLocalCompanyInfo(prev => ({ ...prev, [companyName]: data.companyInfo }));
-        if (onUpdateLead) {
-          companyLeads.forEach(l => {
-            onUpdateLead({ ...l, companyInfo: data.companyInfo });
-          });
-        }
+      if (isAiFailure(data)) {
+        setResearchErrors(prev => ({ ...prev, [companyName]: { message: data.error, simulated: data.simulated } }));
+        return;
       }
-    } catch (err) {
-      console.error("Error al investigar empresa en EmpresasView:", err);
+      if (!data.companyInfo) {
+        setResearchErrors(prev => ({ ...prev, [companyName]: { message: 'La IA no devolvió información de la empresa.', simulated: data.simulated } }));
+        return;
+      }
+      if (data.simulated) {
+        // Solo se previsualiza: una muestra de desarrollo no debe llegar a Firestore ni a los leads.
+        setLocalCompanyInfo(prev => ({ ...prev, [companyName]: data.companyInfo! }));
+        setResearchErrors(prev => ({ ...prev, [companyName]: { message: AI_SIMULATED_WARNING, simulated: true } }));
+        return;
+      }
+      setLocalCompanyInfo(prev => ({ ...prev, [companyName]: data.companyInfo! }));
+      if (onUpdateLead) {
+        companyLeads.forEach(l => {
+          onUpdateLead({ ...l, companyInfo: data.companyInfo });
+        });
+      }
+      if (data.usedSearch === false) {
+        setResearchErrors(prev => ({ ...prev, [companyName]: { message: 'La IA respondió sin buscar en la web: este perfil no está verificado.', simulated: true } }));
+      }
+    } catch {
+      setResearchErrors(prev => ({ ...prev, [companyName]: { message: 'No se pudo contactar el asistente de IA.', simulated: false } }));
     } finally {
       setResearchingCompanies(prev => ({ ...prev, [companyName]: false }));
     }
@@ -160,6 +178,13 @@ export const EmpresasView: React.FC<EmpresasViewProps> = ({ leads, onSelectLead,
                         <Loader2 className="w-3.5 h-3.5 text-blue-600 animate-spin shrink-0" />
                         <span>Buscando qué hace {comp.name} en Google...</span>
                       </div>
+                    )}
+
+                    {researchErrors[comp.name] && !isLoading && (
+                      <AiNotice
+                        message={researchErrors[comp.name].message}
+                        tone={researchErrors[comp.name].simulated ? 'simulated' : 'error'}
+                      />
                     )}
 
                     {comp.companyInfo && !isLoading && (

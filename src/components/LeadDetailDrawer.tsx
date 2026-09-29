@@ -24,8 +24,9 @@ import {
   Loader2
 } from 'lucide-react';
 import { QRCodeCanvas } from 'qrcode.react';
-import { Lead, LeadStatus, InteractionItem } from '../types';
-import { researchCompany, analyzeLead, draftEmail } from '../services/aiService';
+import { Lead, LeadStatus, InteractionItem, CompanyResearchInfo } from '../types';
+import { researchCompany, analyzeLead, draftEmail, isAiFailure, LeadAnalysis, DraftEmail, AI_SIMULATED_WARNING } from '../services/aiService';
+import { AiNotice } from './AiNotice';
 
 interface LeadDetailDrawerProps {
   lead: Lead | null;
@@ -47,10 +48,14 @@ export const LeadDetailDrawer: React.FC<LeadDetailDrawerProps> = ({
   const [activeTab, setActiveTab] = useState<DrawerTab>('resumen');
   const [newNote, setNewNote] = useState('');
   const [isAnalyzing, setIsAnalyzing] = useState(false);
-  const [aiAnalysis, setAiAnalysis] = useState<any>(null);
+  const [aiAnalysis, setAiAnalysis] = useState<LeadAnalysis | null>(null);
+  const [analysisError, setAnalysisError] = useState<string | null>(null);
+  const [analysisSimulated, setAnalysisSimulated] = useState(false);
 
   const [isDraftingEmail, setIsDraftingEmail] = useState(false);
-  const [aiEmail, setAiEmail] = useState<{ asunto: string; cuerpo: string } | null>(null);
+  const [aiEmail, setAiEmail] = useState<DraftEmail | null>(null);
+  const [emailError, setEmailError] = useState<string | null>(null);
+  const [emailSimulated, setEmailSimulated] = useState(false);
   const [copiedEmail, setCopiedEmail] = useState(false);
 
   const [showScheduleModal, setShowScheduleModal] = useState(false);
@@ -62,25 +67,46 @@ export const LeadDetailDrawer: React.FC<LeadDetailDrawerProps> = ({
   // AI Company Research (Google Search Grounding)
   const [isResearchingCompany, setIsResearchingCompany] = useState(false);
   const [researchError, setResearchError] = useState<string | null>(null);
+  const [researchSimulated, setResearchSimulated] = useState(false);
+  const [researchNotice, setResearchNotice] = useState<string | null>(null);
+  // Una muestra de desarrollo se muestra aquí, pero nunca se escribe en Firestore.
+  const [researchPreview, setResearchPreview] = useState<CompanyResearchInfo | null>(null);
 
   if (!lead) return null;
+
+  const shownCompanyInfo = researchPreview ?? lead.companyInfo;
 
   const handleResearchCompany = async () => {
     if (!lead || !lead.company) return;
     setIsResearchingCompany(true);
     setResearchError(null);
+    setResearchSimulated(false);
+    setResearchNotice(null);
+    setResearchPreview(null);
     try {
-      const data: any = await researchCompany({ companyName: lead.company, leadName: lead.name, role: lead.role });
-      if (data.success && data.companyInfo) {
-        onUpdateLead({
-          ...lead,
-          companyInfo: data.companyInfo
-        });
-      } else {
-        setResearchError(data.error || 'No se pudo obtener información de la empresa.');
+      const data = await researchCompany({ companyName: lead.company, leadName: lead.name, role: lead.role });
+      if (isAiFailure(data)) {
+        setResearchError(data.error);
+        setResearchSimulated(data.simulated);
+        return;
       }
-    } catch (err: any) {
-      setResearchError('Error de conexión al consultar Google Search.');
+      if (!data.companyInfo) {
+        setResearchError('La IA no devolvió información de la empresa.');
+        return;
+      }
+      if (data.simulated) {
+        // Se previsualiza con aviso, pero no se persiste: la muestra no es un dato real del lead.
+        setResearchPreview(data.companyInfo);
+        setResearchNotice(AI_SIMULATED_WARNING);
+        return;
+      }
+      setResearchPreview(null);
+      onUpdateLead({ ...lead, companyInfo: data.companyInfo });
+      if (data.usedSearch === false) {
+        setResearchNotice('La IA respondió sin buscar en la web: este perfil no está verificado.');
+      }
+    } catch {
+      setResearchError('No se pudo contactar el asistente de IA.');
     } finally {
       setIsResearchingCompany(false);
     }
@@ -176,8 +202,10 @@ END:VCARD`;
   const handleAnalyzeWithGemini = async () => {
     setIsAnalyzing(true);
     setAiAnalysis(null);
+    setAnalysisError(null);
+    setAnalysisSimulated(false);
     try {
-      const data: any = await analyzeLead({
+      const data = await analyzeLead({
         name: lead.name,
         company: lead.company,
         role: lead.role,
@@ -185,23 +213,22 @@ END:VCARD`;
         interactions: lead.history.map(h => h.text),
         notes: lead.notes
       });
-      if (data.success && data.analysis) {
-        setAiAnalysis(data.analysis);
-      } else {
-        setAiAnalysis({
-          resumenEstrategico: `${lead.name} de ${lead.company} es un prospecto de alta relevancia con interés claro en ${lead.interests.join(', ')}.`,
-          oportunidadClave: "Implementación de automatización e inteligencia artificial en procesos corporativos.",
-          siguienteAccion: "Agendar reunión técnica de 30 minutos con demostración de casos de éxito.",
-          nivelPrioridad: "Alta"
-        });
+      if (isAiFailure(data)) {
+        setAnalysisError(data.error);
+        setAnalysisSimulated(data.simulated);
+        return;
       }
-    } catch (err) {
-      setAiAnalysis({
-        resumenEstrategico: `${lead.name} de ${lead.company} destaca por interés directo en ${lead.interests.join(', ')}.`,
-        oportunidadClave: "Optimización operativa e integración tecnológica.",
-        siguienteAccion: "Realizar seguimiento telefónico o agendar demostración privada.",
-        nivelPrioridad: "Alta"
-      });
+      if (!data.analysis) {
+        setAnalysisError('La IA no devolvió un análisis.');
+        return;
+      }
+      setAiAnalysis(data.analysis);
+      if (data.simulated) {
+        setAnalysisError(AI_SIMULATED_WARNING);
+        setAnalysisSimulated(true);
+      }
+    } catch {
+      setAnalysisError('No se pudo contactar el asistente de IA.');
     } finally {
       setIsAnalyzing(false);
     }
@@ -210,8 +237,10 @@ END:VCARD`;
   const handleDraftEmail = async () => {
     setIsDraftingEmail(true);
     setAiEmail(null);
+    setEmailError(null);
+    setEmailSimulated(false);
     try {
-      const data: any = await draftEmail({
+      const data = await draftEmail({
         leadName: lead.name,
         leadCompany: lead.company,
         leadRole: lead.role,
@@ -219,19 +248,22 @@ END:VCARD`;
         repName: currentUser,
         eventName: lead.event
       });
-      if (data.success && data.email) {
-        setAiEmail(data.email);
-      } else {
-        setAiEmail({
-          asunto: `Seguimiento a nuestra reunión en ${lead.event} - ${lead.company}`,
-          cuerpo: `Hola ${lead.name},\n\nFue un gusto saludarte durante ${lead.event}. Conversamos sobre cómo potenciar las iniciativas de ${lead.company} en ${lead.interests.join(', ')}.\n\nMe gustaría proponerte una breve reunión virtual de 15 minutos para mostrarte casos de aplicación reales.\n\n¿Tienes disponibilidad esta semana?\n\nUn cordial saludo,\n${currentUser}\nDivergency AI`
-        });
+      if (isAiFailure(data)) {
+        setEmailError(data.error);
+        setEmailSimulated(data.simulated);
+        return;
       }
-    } catch (err) {
-      setAiEmail({
-        asunto: `Seguimiento comercial ${lead.event} - ${lead.company}`,
-        cuerpo: `Hola ${lead.name},\n\nGracias por visitarnos en ${lead.event}. Me encantaría continuar nuestra conversación sobre ${lead.interests.join(', ')}.\n\nQuedo atento a tu respuesta para agendar una breve llamada.\n\nSaludos,\n${currentUser}`
-      });
+      if (!data.email) {
+        setEmailError('La IA no devolvió un correo.');
+        return;
+      }
+      setAiEmail(data.email);
+      if (data.simulated) {
+        setEmailError(AI_SIMULATED_WARNING);
+        setEmailSimulated(true);
+      }
+    } catch {
+      setEmailError('No se pudo contactar el asistente de IA.');
     } finally {
       setIsDraftingEmail(false);
     }
@@ -487,32 +519,43 @@ END:VCARD`;
               )}
 
               {researchError && (
-                <div className="text-red-600 text-[11px]">
-                  {researchError}
-                </div>
+                <AiNotice
+                  message={researchError}
+                  tone={researchSimulated ? 'simulated' : 'error'}
+                />
               )}
 
-              {lead.companyInfo && !isResearchingCompany ? (
+              {researchNotice && (
+                <AiNotice message={researchNotice} tone="simulated" />
+              )}
+
+              {shownCompanyInfo && !isResearchingCompany ? (
                 <div className="space-y-2 text-slate-800">
+                  {!shownCompanyInfo.sources?.length && (
+                    <AiNotice
+                      message="Este perfil no trae fuentes consultadas: no lo tomes como un dato verificado."
+                      tone="simulated"
+                    />
+                  )}
                   <p className="text-slate-700 leading-relaxed text-xs">
                     <span className="font-bold text-slate-900">¿A qué se dedica?: </span>
-                    {lead.companyInfo.summary}
+                    {shownCompanyInfo.summary}
                   </p>
 
-                  {lead.companyInfo.industry && (
+                  {shownCompanyInfo.industry && (
                     <div className="flex items-center gap-1.5 text-[11px]">
                       <span className="font-bold text-slate-900">Sector:</span>
                       <span className="px-2 py-0.5 rounded-md bg-white border border-slate-200 text-slate-700 font-semibold">
-                        {lead.companyInfo.industry}
+                        {shownCompanyInfo.industry}
                       </span>
                     </div>
                   )}
 
-                  {lead.companyInfo.productsAndServices && lead.companyInfo.productsAndServices.length > 0 && (
+                  {shownCompanyInfo.productsAndServices && shownCompanyInfo.productsAndServices.length > 0 && (
                     <div>
                       <span className="font-bold text-slate-900 block mb-1 text-[11px]">Productos & Soluciones:</span>
                       <div className="flex flex-wrap gap-1">
-                        {lead.companyInfo.productsAndServices.map((prod, idx) => (
+                        {shownCompanyInfo.productsAndServices.map((prod, idx) => (
                           <span key={idx} className="px-2 py-0.5 rounded-md bg-white border border-blue-100 text-blue-900 text-[10px] font-medium">
                             {prod}
                           </span>
@@ -521,11 +564,11 @@ END:VCARD`;
                     </div>
                   )}
 
-                  {lead.companyInfo.sources && lead.companyInfo.sources.length > 0 && (
+                  {shownCompanyInfo.sources && shownCompanyInfo.sources.length > 0 && (
                     <div className="pt-2 border-t border-blue-100/80">
-                      <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block mb-1">Fuentes Google Search:</span>
+                      <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block mb-1">Fuentes consultadas:</span>
                       <div className="flex flex-wrap gap-1">
-                        {lead.companyInfo.sources.map((src, i) => (
+                        {shownCompanyInfo.sources.map((src, i) => (
                           <a
                             key={i}
                             href={src.url}
@@ -678,6 +721,14 @@ END:VCARD`;
                 <span>{isDraftingEmail ? "Generando..." : "Redactar Email"}</span>
               </button>
             </div>
+
+            {analysisError && (
+              <AiNotice message={analysisError} tone={analysisSimulated ? 'simulated' : 'error'} />
+            )}
+
+            {emailError && (
+              <AiNotice message={emailError} tone={emailSimulated ? 'simulated' : 'error'} />
+            )}
 
             {/* AI Analysis Result */}
             {aiAnalysis && (
