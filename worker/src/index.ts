@@ -53,6 +53,27 @@ function json(data: unknown, status = 200): Response {
   });
 }
 
+// El Worker nunca debe inventar un lead, un análisis, un correo o un perfil de empresa para
+// que la app parezca que la IA funcionó. Si Gemini no pudo responder, la respuesta es un error
+// visible y el usuario completa los datos a mano.
+function aiUnavailable(message: string): Response {
+  return json({ error: message }, 500);
+}
+
+function geminiFailure(path: string, error: any): Response {
+  const quota = isQuotaOrRateLimitError(error);
+  console.warn(`Fallo de Gemini en ${path}:`, error?.message || error);
+  return json(
+    {
+      error: quota
+        ? "Se agotó la cuota de la IA. Intenta de nuevo más tarde."
+        : "La IA no pudo completar la petición. Revisa los datos manualmente.",
+      quotaExceeded: quota,
+    },
+    502,
+  );
+}
+
 const MODELS_TO_TRY = ["gemini-2.5-flash", "gemini-3.7-flash"];
 
 async function generateContent(apiKey: string, model: string, body: Record<string, unknown>) {
@@ -111,99 +132,10 @@ function extractJson(text: string): any | null {
   }
 }
 
-function generateHeuristicCompanyProfile(companyName: string) {
-  const nameLower = (companyName || "").toLowerCase().trim();
-
-  let industry = "Tecnología y Servicios Empresariales";
-  let summary = `${companyName} es una destacada organización empresarial con operaciones enfocadas en soluciones estratégicas, innovación y desarrollo de mercado.`;
-  let productsAndServices = [
-    "Consultoría y asesoría técnica especializada",
-    "Soluciones de transformación digital y gestión",
-    "Servicios corporativos B2B integrales",
-  ];
-  let targetMarket = "Empresas medianas y grandes corporaciones en Latinoamérica";
-  let keyHighlights = [
-    "Participación activa en foros de innovación y eventos de la industria",
-    "Adopción de tecnologías emergentes para la optimización de procesos",
-  ];
-
-  if (nameLower.includes("banc") || nameLower.includes("bank") || nameLower.includes("finan") || nameLower.includes("cred") || nameLower.includes("davivienda") || nameLower.includes("bbva") || nameLower.includes("davibank")) {
-    industry = "Banca, Finanzas & Fintech";
-    summary = `${companyName} es una entidad del sector financiero líder en la provisión de servicios bancarios, créditos, medios de pago y soluciones digitales para personas y empresas.`;
-    productsAndServices = ["Banca digital y plataformas de pago", "Créditos comerciales e hipotecarios", "Gestión de activos y tesorería corporativa"];
-    targetMarket = "Clientes corporativos, PYMES y banca de consumo masivo";
-    keyHighlights = ["Liderazgo en transformación de pagos digitales", "Alta inversión en ciberseguridad y biometría"];
-  } else if (nameLower.includes("telecom") || nameLower.includes("claro") || nameLower.includes("tigo") || nameLower.includes("movistar") || nameLower.includes("wom") || nameLower.includes("telco") || nameLower.includes("red")) {
-    industry = "Telecomunicaciones y Conectividad";
-    summary = `${companyName} es un proveedor clave de infraestructura de telecomunicaciones, redes de alta velocidad, conectividad móvil y fibra óptica.`;
-    productsAndServices = ["Redes 5G y fibra óptica corporativa", "Soluciones de Cloud Connectivity y SD-WAN", "Servicios de telefonía e internet empresarial"];
-    targetMarket = "Empresas multinacionales, operadores y usuarios residenciales";
-    keyHighlights = ["Despliegue de infraestructura de conectividad avanzada", "Centros de datos de alta disponibilidad"];
-  } else if (nameLower.includes("soft") || nameLower.includes("tech") || nameLower.includes("ai") || nameLower.includes("cloud") || nameLower.includes("data") || nameLower.includes("globant") || nameLower.includes("oracle") || nameLower.includes("ibm") || nameLower.includes("micro") || nameLower.includes("aws")) {
-    industry = "Tecnología, Software & Nube";
-    summary = `${companyName} es una compañía tecnológica especializada en desarrollo de software de vanguardia, analítica de datos, infraestructura cloud e Inteligencia Artificial.`;
-    productsAndServices = ["Desarrollo de software a medida y APIs", "Servicios de migración a la nube y DevOps", "Soluciones de IA Generativa y analítica predictiva"];
-    targetMarket = "Empresas en proceso de digitalización y startups tecnológicas";
-    keyHighlights = ["Ecosistema ágil de innovación continua", "Alianzas estratégicas con principales proveedores globales"];
-  } else if (nameLower.includes("retail") || nameLower.includes("exito") || nameLower.includes("falabella") || nameLower.includes("alkosto") || nameLower.includes("comerc") || nameLower.includes("shop") || nameLower.includes("super")) {
-    industry = "Retail, Comercio & Consumo Masivo";
-    summary = `${companyName} es una cadena de comercialización y distribución líder con amplia presencia multicanal y plataformas de comercio electrónico.`;
-    productsAndServices = ["Canales de venta omnicanal y e-commerce", "Programas de fidelización y promociones", "Distribución logística de última milla"];
-    targetMarket = "Consumidores finales y canales mayoristas";
-    keyHighlights = ["Optimización de la experiencia del cliente digital", "Amplia red de centros de distribución"];
-  } else if (nameLower.includes("salud") || nameLower.includes("eps") || nameLower.includes("ips") || nameLower.includes("medic") || nameLower.includes("farma") || nameLower.includes("clinic") || nameLower.includes("san")) {
-    industry = "Salud, Farmacéutica & MedTech";
-    summary = `${companyName} es una institución dedicada a la prestación de servicios integrales de salud, biotecnología y gestión hospitalaria de alta calidad.`;
-    productsAndServices = ["Servicios asistenciales y telemedicina", "Distribución de insumos y medicamentos", "Sistemas de historia clínica digital"];
-    targetMarket = "Pacientes, entidades de salud pública y aseguradoras";
-    keyHighlights = ["Certificaciones de calidad médica y seguridad", "Implementación de tecnologías para atención remota"];
-  } else if (nameLower.includes("energi") || nameLower.includes("petrol") || nameLower.includes("gas") || nameLower.includes("eco") || nameLower.includes("solar") || nameLower.includes("min")) {
-    industry = "Energía, Petróleo & Sostenibilidad";
-    summary = `${companyName} es una empresa del sector energético enfocada en la producción, distribución y transición hacia fuentes de energía sostenibles y eficientes.`;
-    productsAndServices = ["Generación y distribución energética", "Soluciones de eficiencia y energía solar", "Consultoría en sostenibilidad y ESG"];
-    targetMarket = "Sector industrial, comercial y redes públicas de energía";
-    keyHighlights = ["Proyectos de descarbonización y transición energética", "Cumplimiento de estándares internacionales de sostenibilidad"];
-  } else if (nameLower.includes("logist") || nameLower.includes("trans") || nameLower.includes("envio") || nameLower.includes("carga") || nameLower.includes("express") || nameLower.includes("servi")) {
-    industry = "Logística, Transporte & Cadena de Suministro";
-    summary = `${companyName} es una compañía especializada en transporte de carga, almacenamiento inteligente y optimización de la cadena de suministro nacional e internacional.`;
-    productsAndServices = ["Transporte terrestre y multimodal", "Centros logísticos y gestión de bodegas", "Trazabilidad en tiempo real y última milla"];
-    targetMarket = "Empresas importadoras, exportadoras y comercio electrónico";
-    keyHighlights = ["Flotas monitoreadas con telemetría satelital", "Eficiencia en tiempos de entrega"];
-  }
-
-  return {
-    summary,
-    industry,
-    productsAndServices,
-    targetMarket,
-    keyHighlights,
-    sources: [{ title: `Registro Corporativo - ${companyName}`, url: `https://www.google.com/search?q=${encodeURIComponent(companyName)}` }],
-    researchedAt: new Date().toISOString().slice(0, 10),
-    isFallback: true,
-  };
-}
-
-async function handleScanCard(req: Request, apiKey: string): Promise<Response> {
+export async function handleScanCard(req: Request, apiKey: string): Promise<Response> {
   const { image } = (await req.json()) as any;
   if (!image) return json({ error: "Se requiere la imagen en base64" }, 400);
-
-  const fallbackResponse = () =>
-    json({
-      success: true,
-      data: {
-        name: "Contacto Escaneado",
-        company: "Empresa Detectada",
-        role: "Ejecutivo",
-        email: "",
-        phone: "",
-        city: "",
-        interests: ["Transformación Digital", "IA"],
-        notes: "Tarjeta procesada en modo local.",
-        isFallback: true,
-      },
-    });
-
-  if (!apiKey) return fallbackResponse();
+  if (!apiKey) return aiUnavailable("El asistente de IA no está configurado en este Worker.");
 
   const matches = image.match(/^data:(.+);base64,(.+)$/);
   const mimeType = matches ? matches[1] : "image/jpeg";
@@ -229,58 +161,22 @@ Si algún dato no aparece en la imagen, asigna una cadena vacía "". Responde Ú
       contents: [{ parts: [{ inlineData: { mimeType, data: base64Data } }, { text: prompt }] }],
     });
     const parsed = text && extractJson(text);
-    if (parsed) return json({ success: true, data: parsed });
-    return json({
-      success: true,
-      data: {
-        name: "Contacto Extraído",
-        company: "Empresa Asistente",
-        role: "Representante",
-        email: "",
-        phone: "",
-        city: "Colombia",
-        interests: ["IA Corporativa", "Automatización"],
-        notes: "Información recuperada mediante procesamiento resiliente.",
-        isFallback: true,
-      },
-    });
+    if (!parsed) {
+      console.warn("scan-card: Gemini no devolvió JSON legible");
+      return json({ error: "La IA no pudo leer la tarjeta. Prueba con una foto más nítida o completa los datos a mano." }, 502);
+    }
+    return json({ success: true, data: parsed });
   } catch (error: any) {
-    console.error("Error en scan-card:", error?.message || error);
-    return json({
-      success: true,
-      data: {
-        name: "Contacto Tarjeta",
-        company: "Empresa Participante",
-        role: "Ejecutivo Comercial",
-        email: "",
-        phone: "",
-        city: "",
-        interests: ["Innovación"],
-        notes: "Procesado con extractor de respaldo.",
-        isFallback: true,
-      },
-    });
+    return geminiFailure("scan-card", error);
   }
 }
 
-async function handleAnalyzeLead(req: Request, apiKey: string): Promise<Response> {
+export async function handleAnalyzeLead(req: Request, apiKey: string): Promise<Response> {
   const body = (await req.json()) as any;
   const { name, company, role, interests, interactions, notes } = body || {};
   const cleanInterests = Array.isArray(interests) && interests.length > 0 ? interests : ["Transformación Digital"];
 
-  const fallbackAnalysis = {
-    resumenEstrategico: `${name || "El prospecto"} (${role || "Ejecutivo"} en ${company || "su empresa"}) presenta un perfil de alto interés comercial enfocado en ${cleanInterests.join(", ")}.`,
-    oportunidadClave: `Modernización e implementación de soluciones en ${cleanInterests[0] || "automatización de procesos"}.`,
-    siguienteAccion: "Agendar reunión de presentación ejecutiva de 30 minutos para presentar casos de éxito relevantes.",
-    nivelPrioridad: "Alta",
-    puntosDeContactoRecomendados: [
-      "Compartir credenciales y propuesta de valor inicial vía correo",
-      "Coordinar demostración técnica enfocada en sus requerimientos de negocio",
-    ],
-    isFallback: true,
-  };
-
-  if (!apiKey) return json({ success: true, analysis: fallbackAnalysis });
+  if (!apiKey) return aiUnavailable("El asistente de IA no está configurado en este Worker.");
 
   const prompt = `Eres un asistente de Inteligencia Artificial para representantes comerciales en eventos corporativos (como ANDICOM, Tech Summits).
 Analiza los datos del siguiente lead y genera un informe conciso en formato JSON con la siguiente estructura:
@@ -304,25 +200,22 @@ Responde ÚNICAMENTE con el objeto JSON válido.`;
   try {
     const { text } = await generateWithFallbackModels(apiKey, { contents: [{ parts: [{ text: prompt }] }] });
     const parsed = text && extractJson(text);
-    return json({ success: true, analysis: parsed || fallbackAnalysis });
+    if (!parsed) {
+      console.warn("analyze-lead: Gemini no devolvió JSON legible");
+      return json({ error: "La IA no pudo generar el análisis. Intenta de nuevo." }, 502);
+    }
+    return json({ success: true, analysis: parsed });
   } catch (error: any) {
-    console.warn("Aviso en analyze-lead, usando fallback:", error?.message || error);
-    return json({ success: true, analysis: fallbackAnalysis });
+    return geminiFailure("analyze-lead", error);
   }
 }
 
-async function handleDraftEmail(req: Request, apiKey: string): Promise<Response> {
+export async function handleDraftEmail(req: Request, apiKey: string): Promise<Response> {
   const body = (await req.json()) as any;
   const { leadName, leadCompany, leadRole, interests, repName, eventName } = body || {};
   const cleanInterests = Array.isArray(interests) && interests.length > 0 ? interests : ["innovación digital"];
 
-  const fallbackEmail = {
-    asunto: `Seguimiento a nuestra reunión en ${eventName || "el evento"} - Divergency AI & ${leadCompany || "su empresa"}`,
-    cuerpo: `Estimado/a ${leadName || "Contacto"},\n\nFue un placer conversar contigo durante ${eventName || "nuestro reciente evento"}. Me dio mucho gusto conocer más sobre los proyectos de ${leadCompany || "su organización"} y su enfoque hacia ${cleanInterests.join(", ")}.\n\nMe gustaría proponerte una breve reunión virtual de 15 minutos en los próximos días para compartirte ejemplos prácticos de cómo hemos ayudado a empresas similares a acelerar sus objetivos.\n\n¿Tendrías disponibilidad esta semana o la próxima para coordinar la llamada?\n\nQuedo atento a tus comentarios.\n\nCordialmente,\n${repName || "Equipo Comercial"}\nDivergency AI`,
-    isFallback: true,
-  };
-
-  if (!apiKey) return json({ success: true, email: fallbackEmail });
+  if (!apiKey) return aiUnavailable("El asistente de IA no está configurado en este Worker.");
 
   const prompt = `Redacta un correo electrónico comercial profesional, empático y directo para seguimiento de evento.
 Evento: ${eventName || "ANDICOM 2026"}
@@ -339,25 +232,25 @@ Instrucciones:
   try {
     const { text } = await generateWithFallbackModels(apiKey, { contents: [{ parts: [{ text: prompt }] }] });
     const parsed = text && extractJson(text);
-    return json({ success: true, email: parsed || fallbackEmail });
+    if (!parsed) {
+      console.warn("draft-email: Gemini no devolvió JSON legible");
+      return json({ error: "La IA no pudo redactar el correo. Intenta de nuevo." }, 502);
+    }
+    return json({ success: true, email: parsed });
   } catch (error: any) {
-    console.warn("Aviso en draft-email, usando plantilla:", error?.message || error);
-    return json({ success: true, email: fallbackEmail });
+    return geminiFailure("draft-email", error);
   }
 }
 
-async function handleResearchCompany(req: Request, apiKey: string): Promise<Response> {
+export async function handleResearchCompany(req: Request, apiKey: string): Promise<Response> {
   const body = (await req.json()) as any;
   const { companyName } = body || {};
   if (!companyName || typeof companyName !== "string" || !companyName.trim()) {
     return json({ error: "Se requiere el nombre de la empresa" }, 400);
   }
   const trimmedCompany = companyName.trim();
-  const fallbackProfile = generateHeuristicCompanyProfile(trimmedCompany);
 
-  if (!apiKey) {
-    return json({ success: true, companyInfo: fallbackProfile, message: "Perfil estructurado generado mediante análisis predictivo local." });
-  }
+  if (!apiKey) return aiUnavailable("El asistente de IA no está configurado en este Worker.");
 
   const prompt = `Realiza una búsqueda exhaustiva en Google para la empresa u organización llamada "${trimmedCompany}".
 Determina con precisión:
@@ -380,33 +273,26 @@ Responde ÚNICAMENTE con el objeto JSON válido.`;
 
   let response: { text: string; candidates?: any[] } | null = null;
   let usedSearch = true;
-  const errors: any[] = [];
 
   try {
     response = await generateContent(apiKey, "gemini-2.5-flash", {
       contents: [{ parts: [{ text: prompt }] }],
       tools: [{ googleSearch: {} }],
     });
-  } catch (err1) {
-    errors.push(err1);
+  } catch {
     try {
       response = await generateContent(apiKey, "gemini-3.7-flash", {
         contents: [{ parts: [{ text: prompt }] }],
         tools: [{ googleSearch: {} }],
       });
-    } catch (err2) {
-      errors.push(err2);
+    } catch {
+      // Último reintento sin grounding: el modelo puede inventarse la empresa con el formato
+      // JSON esperado, así que la respuesta viaja marcada con usedSearch:false y la app avisa.
+      usedSearch = false;
       try {
-        usedSearch = false;
         response = await generateContent(apiKey, "gemini-2.5-flash", { contents: [{ parts: [{ text: prompt }] }] });
       } catch (err3) {
-        errors.push(err3);
-        return json({
-          success: true,
-          companyInfo: fallbackProfile,
-          quotaExceeded: errors.some(isQuotaOrRateLimitError),
-          message: "Se generó un perfil analítico estructurado para la empresa.",
-        });
+        return geminiFailure("research-company", err3);
       }
     }
   }
@@ -420,17 +306,19 @@ Responde ÚNICAMENTE con el objeto JSON válido.`;
     }
   });
   const uniqueSources = sources.filter((s, idx, self) => idx === self.findIndex((t) => t.url === s.url)).slice(0, 5);
-  if (uniqueSources.length === 0) {
-    uniqueSources.push({ title: `Búsqueda Web - ${trimmedCompany}`, url: `https://www.google.com/search?q=${encodeURIComponent(trimmedCompany)}` });
-  }
 
   const parsed = extractJson(text);
+  if (!parsed?.summary) {
+    console.warn("research-company: Gemini no devolvió un resumen utilizable para", trimmedCompany);
+    return json({ error: "La IA no pudo investigar esta empresa. Intenta de nuevo o completa los datos a mano." }, 502);
+  }
+
   const companyInfo = {
-    summary: parsed?.summary || fallbackProfile.summary,
-    industry: parsed?.industry || fallbackProfile.industry,
-    productsAndServices: Array.isArray(parsed?.productsAndServices) && parsed.productsAndServices.length > 0 ? parsed.productsAndServices : fallbackProfile.productsAndServices,
-    targetMarket: parsed?.targetMarket || fallbackProfile.targetMarket,
-    keyHighlights: Array.isArray(parsed?.keyHighlights) && parsed.keyHighlights.length > 0 ? parsed.keyHighlights : fallbackProfile.keyHighlights,
+    summary: parsed.summary,
+    industry: parsed.industry || "",
+    productsAndServices: Array.isArray(parsed.productsAndServices) ? parsed.productsAndServices : [],
+    targetMarket: parsed.targetMarket || "",
+    keyHighlights: Array.isArray(parsed.keyHighlights) ? parsed.keyHighlights : [],
     sources: uniqueSources,
     researchedAt: new Date().toISOString().slice(0, 10),
     usedSearch,
