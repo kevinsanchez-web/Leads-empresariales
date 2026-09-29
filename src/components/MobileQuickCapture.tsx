@@ -34,6 +34,7 @@ import { CardScannerModal } from './CardScannerModal';
 import { VoiceLeadAssistant } from './VoiceLeadAssistant';
 import { ParsedVoiceLead } from '../utils/voiceLeadParser';
 import { isOnline, saveLeadOffline } from '../utils/offlineStore';
+import { cleanCompanyName } from '../utils/company';
 import { sendPriorityLeadPushNotification } from '../utils/pushNotifications';
 
 interface MobileQuickCaptureProps {
@@ -228,13 +229,14 @@ export const MobileQuickCapture: React.FC<MobileQuickCaptureProps> = ({
 
     const now = new Date();
     const timeStr = `${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}`;
+    const cleanCompany = cleanCompanyName(company);
 
     const newLead: Lead = {
       id: `lead-live-${Date.now()}`,
       name: name.trim(),
       role: role.trim() || 'Visitante Stand',
-      company: company.trim(),
-      email: email.trim() || `${name.toLowerCase().replace(/\s+/g, '.')}@${company.toLowerCase().replace(/\s+/g, '')}.com`,
+      company: cleanCompany,
+      email: email.trim() || `${name.toLowerCase().replace(/\s+/g, '.')}@${cleanCompany.toLowerCase().replace(/\s+/g, '')}.com`,
       phone: phone.trim() || '+57 300 000 0000',
       event: currentEvent.name,
       interests: selectedInterests,

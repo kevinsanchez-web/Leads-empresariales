@@ -28,6 +28,8 @@ import { CardScannerModal } from './CardScannerModal';
 import { VoiceLeadAssistant } from './VoiceLeadAssistant';
 import { ParsedVoiceLead } from '../utils/voiceLeadParser';
 import { isOnline, saveLeadOffline } from '../utils/offlineStore';
+import { todayISODate } from '../utils/date';
+import { cleanCompanyName } from '../utils/company';
 import { sendPriorityLeadPushNotification } from '../utils/pushNotifications';
 import { researchCompany } from '../services/aiService';
 
@@ -58,7 +60,7 @@ export const NewLeadModal: React.FC<NewLeadModalProps> = ({
   const [selectedEvent, setSelectedEvent] = useState(currentEvent.name);
   const [priority, setPriority] = useState(false);
   const [notes, setNotes] = useState('');
-  const [nextContactDate, setNextContactDate] = useState('2026-08-10');
+  const [nextContactDate, setNextContactDate] = useState(todayISODate());
 
   useEffect(() => {
     setSelectedEvent(currentEvent.name);
@@ -211,13 +213,14 @@ export const NewLeadModal: React.FC<NewLeadModalProps> = ({
 
     const now = new Date();
     const timeStr = `${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}`;
+    const cleanCompany = cleanCompanyName(company);
 
     const newLead: Lead = {
       id: `lead-${Date.now()}`,
       name,
       role: role || 'Visitante Comercial',
-      company,
-      email: email || `${name.toLowerCase().replace(/\s+/g, '.')}@${company.toLowerCase().replace(/\s+/g, '')}.com`,
+      company: cleanCompany,
+      email: email || `${name.toLowerCase().replace(/\s+/g, '.')}@${cleanCompany.toLowerCase().replace(/\s+/g, '')}.com`,
       phone: phone || '+57 300 000 0000',
       event: selectedEvent,
       interests: selectedInterests.length > 0 ? selectedInterests : ['IA'],
@@ -230,7 +233,7 @@ export const NewLeadModal: React.FC<NewLeadModalProps> = ({
       status: "Nuevo",
       estimatedValue: 40000,
       notes,
-      nextContactDate: nextContactDate || '2026-08-10',
+      nextContactDate: nextContactDate || todayISODate(),
       history: [
         {
           id: `hist-${Date.now()}`,
