@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { Sidebar } from './components/Sidebar';
 import { Header } from './components/Header';
 import { MetricsHeader } from './components/MetricsHeader';
@@ -140,16 +140,30 @@ export default function App() {
   }, []);
 
   // Flush offline queue into Firestore (the leads subscription will reflect them once synced)
-  const handleFlushOfflineQueue = useCallback(() => {
-    const syncedCount = syncOfflineLeads((offlineLead) => {
-      createOrUpdateLead(offlineLead).catch((err) => console.error('Error sincronizando lead offline:', err));
-    });
+  const isFlushingRef = useRef(false);
 
-    if (syncedCount > 0) {
-      setSyncToastMessage(`🟢 Conexión restablecida: ¡${syncedCount} ${syncedCount === 1 ? 'lead' : 'leads'} sincronizados exitosamente!`);
-      setTimeout(() => setSyncToastMessage(null), 6000);
+  const handleFlushOfflineQueue = useCallback(async () => {
+    if (isFlushingRef.current) return;
+    isFlushingRef.current = true;
+    try {
+      const { synced, failed } = await syncOfflineLeads((offlineLead) =>
+        createOrUpdateLead(offlineLead)
+      );
+
+      if (synced > 0 && failed === 0) {
+        setSyncToastMessage(`🟢 Conexión restablecida: ¡${synced} ${synced === 1 ? 'lead' : 'leads'} sincronizados exitosamente!`);
+        setTimeout(() => setSyncToastMessage(null), 6000);
+      } else if (failed > 0) {
+        setSyncToastMessage(
+          `⚠️ ${synced} ${synced === 1 ? 'lead' : 'leads'} sincronizados, ${failed} ${failed === 1 ? 'falló' : 'fallaron'}. ${failed === 1 ? 'Sigue' : 'Siguen'} en la cola.`
+        );
+        setTimeout(() => setSyncToastMessage(null), 8000);
+      }
+
+      setOfflineQueueCount(getOfflineLeads().length);
+    } finally {
+      isFlushingRef.current = false;
     }
-    setOfflineQueueCount(0);
   }, []);
 
   // Online / Offline listeners

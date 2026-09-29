@@ -63,11 +63,12 @@ export function saveLeadOffline(lead: Lead): OfflineLeadItem {
 }
 
 /**
- * Removes a lead from the offline queue after successful sync
+ * Removes the given leads from the offline queue after a confirmed sync
  */
-export function removeOfflineLead(leadId: string): void {
-  const items = getOfflineLeads();
-  const updated = items.filter(item => item.lead.id !== leadId);
+export function removeOfflineLeads(leadIds: string[]): void {
+  if (leadIds.length === 0) return;
+  const ids = new Set(leadIds);
+  const updated = getOfflineLeads().filter(item => !ids.has(item.lead.id));
   try {
     localStorage.setItem(OFFLINE_LEADS_KEY, JSON.stringify(updated));
   } catch (e) {
@@ -77,6 +78,13 @@ export function removeOfflineLead(leadId: string): void {
   if (typeof window !== 'undefined') {
     window.dispatchEvent(new CustomEvent('offline_queue_changed', { detail: { count: updated.length } }));
   }
+}
+
+/**
+ * Removes a lead from the offline queue after successful sync
+ */
+export function removeOfflineLead(leadId: string): void {
+  removeOfflineLeads([leadId]);
 }
 
 /**
@@ -94,19 +102,42 @@ export function clearOfflineQueue(): void {
   }
 }
 
-/**
- * Flushes/synchronizes all queued offline leads into the main application state
- */
-export function syncOfflineLeads(onSyncLead: (lead: Lead) => void): number {
-  const items = getOfflineLeads();
-  if (items.length === 0) return 0;
+export interface SyncResult {
+  synced: number;
+  failed: number;
+  failedLeadIds: string[];
+}
 
-  let syncedCount = 0;
-  items.forEach(item => {
-    onSyncLead(item.lead);
-    syncedCount++;
+/**
+ * Sends every queued lead to Firestore and removes ONLY the ones that actually landed.
+ * A lead whose write rejected stays in the queue, so a sync failure can never lose data.
+ */
+export async function syncOfflineLeads(
+  onSyncLead: (lead: Lead) => Promise<void>
+): Promise<SyncResult> {
+  const items = getOfflineLeads();
+  if (items.length === 0) return { synced: 0, failed: 0, failedLeadIds: [] };
+
+  const results = await Promise.allSettled(items.map(item => onSyncLead(item.lead)));
+
+  const syncedIds: string[] = [];
+  const failedLeadIds: string[] = [];
+  results.forEach((result, index) => {
+    if (result.status === 'fulfilled') {
+      syncedIds.push(items[index].lead.id);
+    } else {
+      failedLeadIds.push(items[index].lead.id);
+    }
   });
 
-  clearOfflineQueue();
-  return syncedCount;
+  removeOfflineLeads(syncedIds);
+
+  if (failedLeadIds.length > 0) {
+    console.error(
+      `${failedLeadIds.length} lead(s) offline no se pudieron sincronizar y siguen en la cola:`,
+      failedLeadIds.join(', ')
+    );
+  }
+
+  return { synced: syncedIds.length, failed: failedLeadIds.length, failedLeadIds };
 }
