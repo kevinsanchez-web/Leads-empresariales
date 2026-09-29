@@ -1,6 +1,7 @@
 import React from 'react';
 import { Users, Building2, DollarSign, Star } from 'lucide-react';
 import { Lead } from '../types';
+import { companyKey } from '../utils/company';
 
 interface MetricsHeaderProps {
   leads: Lead[];
@@ -8,7 +9,7 @@ interface MetricsHeaderProps {
 
 export const MetricsHeader: React.FC<MetricsHeaderProps> = ({ leads }) => {
   const totalLeads = leads.length;
-  const uniqueCompanies = new Set(leads.map(l => l.company.trim().toLowerCase())).size;
+  const uniqueCompanies = new Set(leads.map(l => companyKey(l.company))).size;
   const priorityCount = leads.filter(l => l.priority).length;
   const totalValue = leads.reduce((acc, curr) => acc + (curr.estimatedValue || 35000), 0);
   const formattedValue = `$${(totalValue / 1000000).toFixed(2)}M`;

@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Building2, Users, Star, DollarSign, Search, ChevronRight, Sparkles, Globe, ExternalLink, Loader2 } from 'lucide-react';
 import { Lead, CompanyResearchInfo } from '../types';
 import { researchCompany } from '../services/aiService';
+import { cleanCompanyName, companyKey } from '../utils/company';
 
 interface EmpresasViewProps {
   leads: Lead[];
@@ -17,13 +18,14 @@ export const EmpresasView: React.FC<EmpresasViewProps> = ({ leads, onSelectLead,
   // Group leads by company
   const companyMap: { [key: string]: Lead[] } = {};
   leads.forEach(l => {
-    const key = l.company.trim();
+    const key = companyKey(l.company);
     if (!companyMap[key]) companyMap[key] = [];
     companyMap[key].push(l);
   });
 
   const companiesList = Object.entries(companyMap)
-    .map(([name, companyLeads]) => {
+    .map(([key, companyLeads]) => {
+      const name = cleanCompanyName(companyLeads[0].company);
       const totalPipeline = companyLeads.reduce((acc, curr) => acc + (curr.estimatedValue || 35000), 0);
       const hasPriority = companyLeads.some(l => l.priority);
       const allInterests = Array.from(new Set(companyLeads.flatMap(l => l.interests)));
