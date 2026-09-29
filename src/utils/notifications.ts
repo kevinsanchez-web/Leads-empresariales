@@ -1,7 +1,8 @@
 import { Lead, NotificationAlert } from '../types';
+import { todayISODate } from './date';
 
 // Utility to calculate date difference in days (targetDate - today)
-export function getDaysDiff(targetDateStr: string, todayStr: string = '2026-08-10'): number {
+export function getDaysDiff(targetDateStr: string, todayStr: string = todayISODate()): number {
   try {
     const target = new Date(targetDateStr);
     const today = new Date(todayStr);
@@ -15,7 +16,7 @@ export function getDaysDiff(targetDateStr: string, todayStr: string = '2026-08-1
   }
 }
 
-export function getNotificationAlerts(leads: Lead[], todayStr: string = '2026-08-10'): NotificationAlert[] {
+export function getNotificationAlerts(leads: Lead[], todayStr: string = todayISODate()): NotificationAlert[] {
   const alerts: NotificationAlert[] = [];
 
   leads.forEach((lead) => {
