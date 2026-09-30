@@ -37,6 +37,14 @@ import {
   deleteUser as deleteUserFromFirestore,
 } from './services/firestoreService';
 
+// Mapeo de valores hexadecimales para variables CSS dinámicas del tema
+const THEME_COLORS: Record<AccentTheme, { primary: string; hover: string; light: string }> = {
+  azul: { primary: '#0071E3', hover: '#0077ED', light: '#0071E310' },
+  verde: { primary: '#10B981', hover: '#059669', light: '#10B98110' },
+  naranja: { primary: '#F97316', hover: '#EA580C', light: '#F9731610' },
+  purpura: { primary: '#8B5CF6', hover: '#7C3AED', light: '#8B5CF610' },
+};
+
 export default function App() {
   const [activeView, setActiveView] = useState<ActiveView>('captura_movil');
   const [accentTheme, setAccentTheme] = useState<AccentTheme>(() => {
@@ -51,17 +59,22 @@ export default function App() {
     return 'azul';
   });
 
-  // Apply theme to HTML root element
+  // Aplicar atributos y variables CSS al HTML Root
   useEffect(() => {
     try {
+      const selected = THEME_COLORS[accentTheme] || THEME_COLORS.azul;
       document.documentElement.setAttribute('data-theme', accentTheme);
+      document.documentElement.style.setProperty('--color-primary', selected.primary);
+      document.documentElement.style.setProperty('--color-primary-hover', selected.hover);
+      document.documentElement.style.setProperty('--color-primary-light', selected.light);
+
       localStorage.setItem('app_accent_theme_v1', accentTheme);
     } catch (e) {
       console.error("Error guardando accentTheme:", e);
     }
   }, [accentTheme]);
-  // Events, users and leads are centralized in Firestore (see subscriptions below).
-  // These initial values are only an instant placeholder shown before the first snapshot arrives.
+
+  // Eventos, usuarios y leads desde Firestore
   const [events, setEvents] = useState<EventOption[]>(MOCK_EVENTS);
 
   const [currentEvent, setCurrentEvent] = useState<EventOption>(() => {
@@ -91,7 +104,7 @@ export default function App() {
     } catch (e) {
       console.error("Error cargando currentUser:", e);
     }
-    return MOCK_USERS[0]; // Admin by default
+    return MOCK_USERS[0];
   });
 
   useEffect(() => {
@@ -104,7 +117,7 @@ export default function App() {
 
   const [leads, setLeads] = useState<Lead[]>(INITIAL_LEADS);
 
-  // Real-time sync with Firestore: any device that creates/edits/deletes shows up here live.
+  // Sincronización en tiempo real con Firestore
   useEffect(() => {
     const unsubLeads = subscribeToLeads(setLeads);
     const unsubUsers = subscribeToUsers(setUsers);
@@ -116,7 +129,7 @@ export default function App() {
     };
   }, []);
 
-  // Selected Lead (Default selected on desktop viewports)
+  // Lead seleccionado
   const [selectedLeadId, setSelectedLeadId] = useState<string | null>(() => {
     if (typeof window !== 'undefined' && window.innerWidth >= 1024) {
       return INITIAL_LEADS[0].id;
@@ -124,12 +137,12 @@ export default function App() {
     return null;
   });
 
-  // Network & Offline Queue Sync State
+  // Estado de Red y Sincronización Offline
   const [isDeviceOffline, setIsDeviceOffline] = useState<boolean>(() => !isOnline());
   const [offlineQueueCount, setOfflineQueueCount] = useState<number>(() => getOfflineLeads().length);
   const [syncToastMessage, setSyncToastMessage] = useState<string | null>(null);
 
-  // Register Service Worker
+  // Registro de Service Worker
   useEffect(() => {
     if (typeof window !== 'undefined' && 'serviceWorker' in navigator) {
       navigator.serviceWorker.register('/sw.js').then(reg => {
@@ -140,7 +153,6 @@ export default function App() {
     }
   }, []);
 
-  // Flush offline queue into Firestore (the leads subscription will reflect them once synced)
   const isFlushingRef = useRef(false);
 
   const handleFlushOfflineQueue = useCallback(async () => {
@@ -167,7 +179,7 @@ export default function App() {
     }
   }, []);
 
-  // Online / Offline listeners
+  // Listeners Online / Offline
   useEffect(() => {
     const handleOnline = () => {
       setIsDeviceOffline(false);
@@ -190,7 +202,6 @@ export default function App() {
     window.addEventListener('offline', handleOffline);
     window.addEventListener('offline_queue_changed', handleQueueChange);
 
-    // Initial check if back online
     if (isOnline() && getOfflineLeads().length > 0) {
       handleFlushOfflineQueue();
     }
@@ -202,7 +213,7 @@ export default function App() {
     };
   }, [handleFlushOfflineQueue]);
 
-  // Search & Filter State
+  // Filtros y Búsqueda
   const [searchQuery, setSearchQuery] = useState('');
   const [showOnlyMyLeads, setShowOnlyMyLeads] = useState(false);
   const [priorityOnly, setPriorityOnly] = useState(false);
@@ -211,7 +222,7 @@ export default function App() {
   const [interestFilter, setInterestFilter] = useState('all');
   const [sourceFilter, setSourceFilter] = useState('all');
 
-  // Modals & Mobile Drawer State
+  // Modales y Menús
   const [isNewLeadModalOpen, setIsNewLeadModalOpen] = useState(false);
   const [isCreateEventModalOpen, setIsCreateEventModalOpen] = useState(false);
   const [isFiltersModalOpen, setIsFiltersModalOpen] = useState(false);
@@ -219,12 +230,11 @@ export default function App() {
   const [isUserAccountsModalOpen, setIsUserAccountsModalOpen] = useState(false);
   const [userModalInitialRole, setUserModalInitialRole] = useState<UserRoleType>('executive');
 
-  // Pagination State
+  // Paginación
   const [currentPage, setCurrentPage] = useState(1);
 
   const isAdmin = currentUser?.accountType === 'admin' || (currentUser?.role && currentUser.role.toLowerCase().includes('admin'));
 
-  // Calculate active filter count
   const activeFilterCount = (priorityOnly ? 1 : 0) + 
     (statusFilter !== 'all' ? 1 : 0) + 
     (repFilter !== 'all' ? 1 : 0) + 
@@ -240,30 +250,20 @@ export default function App() {
     setSearchQuery('');
   };
 
-  // Filter Leads
+  const handleLogout = () => {
+    console.log('Sesión cerrada correctamente');
+  };
+
+  // Filtrado de Leads
   const filteredLeads = leads.filter((lead) => {
-    // Event match
     if (lead.event !== currentEvent.name) return false;
-
-    // Rep match if "Mis Leads" active or if executive in filtered view
     if (showOnlyMyLeads && lead.capturedBy !== currentUser.name) return false;
-
-    // Rep filter dropdown
     if (repFilter !== 'all' && lead.capturedBy !== repFilter) return false;
-
-    // Priority filter
     if (priorityOnly && !lead.priority) return false;
-
-    // Status filter
     if (statusFilter !== 'all' && lead.status !== statusFilter) return false;
-
-    // Interest filter
     if (interestFilter !== 'all' && !lead.interests.includes(interestFilter)) return false;
-
-    // Source filter
     if (sourceFilter !== 'all' && !lead.sources.includes(sourceFilter)) return false;
 
-    // Search query match (Name, Company, Role, Interest)
     if (searchQuery.trim()) {
       const q = searchQuery.toLowerCase();
       const matchName = lead.name.toLowerCase().includes(q);
@@ -286,11 +286,6 @@ export default function App() {
     }
   };
 
-  /**
-   * Escribe el resultado del enriquecimiento sin pisar nada que el comercial haya escrito.
-   * Solo se copian los campos que llegan citados; un campo ausente o vacío conserva el valor
-   * previo, que puede venir de la tarjeta escaneada o de un Ditto escrito a mano.
-   */
   const handleApplyEnrichment = async (
     leadId: string,
     patch: { linkedinUrl?: string | null; email?: string | null; phone?: string | null; enrichment?: Lead['enrichment'] }
@@ -366,7 +361,7 @@ export default function App() {
   return (
     <div className="min-h-screen bg-[#F8FAFC] text-slate-800 font-sans flex flex-col antialiased selection:bg-blue-500 selection:text-white">
       
-      {/* Off-canvas Navigation Drawer (Hidden by default on Desktop & Mobile) */}
+      {/* Drawer Navegación Lateral (Oculto en pantallas pequeñas) */}
       <Sidebar
         activeView={activeView}
         setActiveView={setActiveView}
@@ -384,10 +379,10 @@ export default function App() {
         pendingAlertsCount={pendingAlertsCount}
       />
 
-      {/* Main App Canvas (Full width for maximum visual space) */}
+      {/* Área Principal de la Aplicación */}
       <div className="flex-1 flex flex-col min-w-0 min-h-screen">
         
-        {/* Top Header Bar */}
+        {/* Header Superior Conectado con Props */}
         <Header
           currentEvent={currentEvent}
           events={events}
@@ -415,12 +410,19 @@ export default function App() {
           }}
           onNavigateToNotifications={() => setActiveView('notificaciones')}
           onUpdateLead={handleUpdateLead}
+          // PROPS DE TEMA, CONFIGURACIÓN Y ACCIONES NAVEGACIÓN
+          activeTheme={accentTheme}
+          onChangeTheme={setAccentTheme}
+          companyName="Divergency Software"
+          companyCategory="Tecnología & Lead Management"
+          onNavigateToView={(view) => setActiveView(view as ActiveView)}
+          onLogout={handleLogout}
         />
 
-        {/* Dynamic View Content Area */}
+        {/* Contenido Dinámico según la Vista Activa */}
         <main className="flex-1 p-3 sm:p-4 md:p-6 pb-24 sm:pb-28 max-w-[1600px] w-full mx-auto space-y-3">
 
-          {/* Device Offline Persistent Alert Banner */}
+          {/* Banner Modo Offline */}
           {isDeviceOffline && (
             <div className="bg-amber-500 text-white px-4 py-2.5 rounded-2xl shadow-md flex items-center justify-between gap-3 animate-fade-in text-xs font-bold border border-amber-600/30">
               <div className="flex items-center gap-2 min-w-0">
@@ -437,7 +439,7 @@ export default function App() {
             </div>
           )}
 
-          {/* Sync Success Toast Banner */}
+          {/* Banner Toast Sincronización Exitosa */}
           {syncToastMessage && (
             <div className="bg-emerald-600 text-white px-4 py-2.5 rounded-2xl shadow-lg flex items-center justify-between gap-3 animate-fade-in text-xs font-bold border border-emerald-500">
               <div className="flex items-center gap-2 min-w-0">
@@ -453,7 +455,7 @@ export default function App() {
             </div>
           )}
 
-          {/* Unsynced Leads Manual Trigger Bar (When online with pending items) */}
+          {/* Barra para Forzar Sincronización de Leads Pendientes */}
           {!isDeviceOffline && offlineQueueCount > 0 && (
             <div className="bg-indigo-600 text-white px-4 py-2 rounded-2xl shadow-md flex items-center justify-between gap-3 text-xs font-bold animate-fade-in">
               <div className="flex items-center gap-2">
@@ -469,23 +471,17 @@ export default function App() {
             </div>
           )}
           
-          {/* VIEW 1: PERSONAS / LEADS LIST (Default Screenshot View) */}
+          {/* VISTA 1: PERSONAS / LEADS */}
           {activeView === 'personas' && (
             <div className="space-y-3.5">
-              
-              {/* Top Metrics Cards */}
               <MetricsHeader leads={leads.filter(l => l.event === currentEvent.name)} />
 
-              {/* Real-time Lead Capture Trend Line Chart (Recharts) */}
               <LeadsTrendChart
                 leads={leads}
                 currentEvent={currentEvent}
               />
 
-              {/* Main Content Split: Table on Left + Drawer on Right */}
               <div className="grid grid-cols-1 lg:grid-cols-12 gap-3.5 items-start">
-                
-                {/* Leads Table */}
                 <div className={`${selectedLead ? 'lg:col-span-7 xl:col-span-8' : 'lg:col-span-12'} min-w-0 transition-all duration-300`}>
                   <LeadsTable
                     leads={filteredLeads}
@@ -496,7 +492,6 @@ export default function App() {
                   />
                 </div>
 
-                {/* Right Lead Detail Drawer (Desktop lg+) */}
                 {selectedLead && (
                   <div className="hidden lg:block lg:col-span-5 xl:col-span-4 min-w-0 sticky top-20">
                     <LeadDetailDrawer
@@ -508,10 +503,8 @@ export default function App() {
                     />
                   </div>
                 )}
-
               </div>
 
-              {/* Mobile Slide-Up Lead Detail Modal (< lg) */}
               {selectedLead && (
                 <div 
                   className="fixed inset-0 z-50 lg:hidden flex flex-col justify-end bg-black/50 backdrop-blur-xs p-2 sm:p-4"
@@ -531,11 +524,10 @@ export default function App() {
                   </div>
                 </div>
               )}
-
             </div>
           )}
 
-          {/* VIEW 2: REPORTES Y ANALÍTICA (Panel de Control - Admin) */}
+          {/* VISTA 2: REPORTES Y ANALÍTICA */}
           {activeView === 'reportes' && (
             <ReportsDashboard
               leads={leads}
@@ -545,7 +537,7 @@ export default function App() {
             />
           )}
 
-          {/* VIEW: GESTIÓN DE EVENTOS Y SEDES */}
+          {/* VISTA: EVENTOS */}
           {activeView === 'eventos' && (
             <EventsView
               events={events}
@@ -564,7 +556,7 @@ export default function App() {
             />
           )}
 
-          {/* VIEW 3: EMPRESAS */}
+          {/* VISTA 3: EMPRESAS */}
           {activeView === 'empresas' && (
             <EmpresasView
               leads={leads.filter(l => l.event === currentEvent.name)}
@@ -585,7 +577,7 @@ export default function App() {
             />
           )}
 
-          {/* VIEW 4: INTERESES */}
+          {/* VISTA 4: INTERESES */}
           {activeView === 'intereses' && (
             <InteresesView
               leads={leads.filter(l => l.event === currentEvent.name)}
@@ -596,7 +588,7 @@ export default function App() {
             />
           )}
 
-          {/* VIEW 5: SEGUIMIENTOS PRIORITARIOS */}
+          {/* VISTA 5: SEGUIMIENTOS */}
           {activeView === 'seguimientos' && (
             <SeguimientosView
               leads={leads.filter(l => l.event === currentEvent.name)}
@@ -607,7 +599,7 @@ export default function App() {
             />
           )}
 
-          {/* VIEW 6: CAPTURA MÓVIL EXPRESS (Enfoque principal del ejecutivo) */}
+          {/* VISTA 6: CAPTURA MÓVIL */}
           {activeView === 'captura_movil' && (
             <MobileQuickCapture
               onSaveLead={handleSaveNewLead}
@@ -619,7 +611,7 @@ export default function App() {
             />
           )}
 
-          {/* VIEW 7: NOTIFICACIONES Y ALERTAS DE SEGUIMIENTO */}
+          {/* VISTA 7: NOTIFICACIONES */}
           {activeView === 'notificaciones' && (
             <NotificationsView
               leads={leads}
@@ -632,7 +624,7 @@ export default function App() {
             />
           )}
 
-          {/* VIEW 8: GESTIÓN DE USUARIOS Y ROLES (Admin) */}
+          {/* VISTA 8: USUARIOS */}
           {activeView === 'usuarios' && (
             <UsuariosView
               users={users}
@@ -645,7 +637,7 @@ export default function App() {
             />
           )}
 
-          {/* VIEW 9: CONFIGURACIÓN & PERFIL */}
+          {/* VISTA 9: CONFIGURACIÓN */}
           {activeView === 'configuracion' && (
             <ConfiguracionView
               currentUser={currentUser}
@@ -664,7 +656,7 @@ export default function App() {
 
       </div>
 
-      {/* Static Bottom Navigation Bar (Barra inferior estática) */}
+      {/* Navegación Inferior Móvil */}
       <BottomNavBar
         activeView={activeView}
         setActiveView={setActiveView}
@@ -672,7 +664,7 @@ export default function App() {
         leadsCount={leads.length}
       />
 
-      {/* New Lead Modal */}
+      {/* Modales */}
       <NewLeadModal
         isOpen={isNewLeadModalOpen}
         onClose={() => setIsNewLeadModalOpen(false)}
@@ -683,14 +675,12 @@ export default function App() {
         onOpenCreateEventModal={() => setIsCreateEventModalOpen(true)}
       />
 
-      {/* Create Event Modal */}
       <CreateEventModal
         isOpen={isCreateEventModalOpen}
         onClose={() => setIsCreateEventModalOpen(false)}
         onSaveEvent={handleSaveNewEvent}
       />
 
-      {/* User Accounts & Role Creation Modal */}
       <UserAccountsModal
         isOpen={isUserAccountsModalOpen}
         onClose={() => setIsUserAccountsModalOpen(false)}
@@ -703,7 +693,6 @@ export default function App() {
         defaultRoleType={userModalInitialRole}
       />
 
-      {/* Filters Modal */}
       <FiltersModal
         isOpen={isFiltersModalOpen}
         onClose={() => setIsFiltersModalOpen(false)}
@@ -724,4 +713,3 @@ export default function App() {
     </div>
   );
 }
-

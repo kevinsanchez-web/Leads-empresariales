@@ -49,7 +49,7 @@ export const MobileQuickCapture: React.FC<MobileQuickCaptureProps> = ({
   const [role, setRole] = useState('');
   const [phone, setPhone] = useState('');
   const [email, setEmail] = useState('');
-  const [linkedin, setLinkedin] = useState(''); // Campo LinkedIn independiente
+  const [linkedin, setLinkedin] = useState('');
   const [priority, setPriority] = useState(false);
   const [selectedInterests, setSelectedInterests] = useState<string[]>(['IA']);
   const [selectedSources, setSelectedSources] = useState<string[]>(['Visita Stand']);
@@ -243,17 +243,17 @@ export const MobileQuickCapture: React.FC<MobileQuickCaptureProps> = ({
         <div className="lg:col-span-8 space-y-3">
           <div className="bg-white rounded-2xl border border-slate-200/80 shadow-xs overflow-hidden">
             
-            {/* Header del Formulario */}
-            <div className="bg-slate-900 text-white px-4 py-3 flex items-center justify-between gap-3 border-b border-slate-800">
+            {/* Header del Formulario Claro */}
+            <div className="bg-slate-50/80 px-4 py-3 flex items-center justify-between gap-3 border-b border-slate-200/80">
               <div className="flex items-center gap-2.5">
-                <div className="w-7 h-7 rounded-lg bg-blue-600/20 text-blue-400 flex items-center justify-center border border-blue-500/30">
-                  <Zap className="w-4 h-4 text-blue-400" />
+                <div className="w-7 h-7 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center border border-blue-200">
+                  <Zap className="w-4 h-4 text-blue-600" />
                 </div>
                 <div>
-                  <h2 className="text-sm font-bold text-white tracking-tight flex items-center gap-2">
+                  <h2 className="text-sm font-bold text-slate-900 tracking-tight flex items-center gap-2">
                     Captura Rápida de Lead
-                    <span className="inline-flex items-center gap-1 bg-emerald-500/10 text-emerald-400 text-[10px] font-semibold px-2 py-0.5 rounded-full border border-emerald-500/20">
-                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                    <span className="inline-flex items-center gap-1 bg-emerald-50 text-emerald-700 text-[10px] font-semibold px-2 py-0.5 rounded-full border border-emerald-200">
+                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
                       En Vivo
                     </span>
                   </h2>
@@ -283,40 +283,42 @@ export const MobileQuickCapture: React.FC<MobileQuickCaptureProps> = ({
               <form onSubmit={handleFormSubmit} className="p-4 sm:p-5 space-y-4">
                 
                 {/* Barra de Herramientas / Aceleradores */}
-                <div className="flex items-center justify-between bg-slate-50 p-2 rounded-xl border border-slate-200/60 gap-2">
-                  <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider pl-1 flex items-center gap-1.5">
+                <div className="flex items-center justify-between bg-slate-50 p-1.5 sm:p-2 rounded-xl border border-slate-200/60 gap-1.5 overflow-x-auto no-scrollbar">
+                  <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider pl-1 flex items-center gap-1 shrink-0">
                     <Sparkles className="w-3.5 h-3.5 text-blue-500" />
-                    Aceleradores
+                    <span className="hidden sm:inline">Aceleradores</span>
                   </span>
 
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-1.5 shrink-0">
                     {onOpenNewLeadModal && (
                       <button
                         type="button"
                         onClick={onOpenNewLeadModal}
-                        className="px-2.5 py-1 bg-white hover:bg-slate-100 text-slate-700 border border-slate-200 rounded-lg text-xs font-medium flex items-center gap-1.5 transition-all cursor-pointer shadow-2xs"
+                        className="px-2 py-1 bg-white hover:bg-slate-100 text-slate-700 border border-slate-200 rounded-lg text-xs font-medium flex items-center gap-1 transition-all cursor-pointer shadow-2xs whitespace-nowrap shrink-0"
                       >
                         <FileText className="w-3.5 h-3.5 text-slate-500" />
-                        <span>Formulario Completo</span>
+                        <span className="hidden sm:inline">Formulario Completo</span>
+                        <span className="sm:hidden">Formulario</span>
                       </button>
                     )}
 
                     <button
                       type="button"
                       onClick={() => setIsScannerOpen(true)}
-                      className="px-2.5 py-1 bg-white hover:bg-slate-100 text-slate-700 border border-slate-200 rounded-lg text-xs font-medium flex items-center gap-1.5 transition-all cursor-pointer shadow-2xs"
+                      className="px-2 py-1 bg-white hover:bg-slate-100 text-slate-700 border border-slate-200 rounded-lg text-xs font-medium flex items-center gap-1 transition-all cursor-pointer shadow-2xs whitespace-nowrap shrink-0"
                     >
                       <Camera className="w-3.5 h-3.5 text-blue-600" />
-                      <span>Escanear Tarjeta</span>
+                      <span className="hidden sm:inline">Escanear Tarjeta</span>
+                      <span className="sm:hidden">Escanear</span>
                     </button>
 
                     <button
                       type="button"
                       onClick={handleQuickScan}
-                      className="px-2.5 py-1 bg-slate-200/60 hover:bg-slate-200 text-slate-700 rounded-lg text-xs font-medium flex items-center gap-1.5 transition-all cursor-pointer"
+                      className="px-2 py-1 bg-slate-200/70 hover:bg-slate-200 text-slate-700 rounded-lg text-xs font-medium flex items-center gap-1 transition-all cursor-pointer whitespace-nowrap shrink-0"
                       title="Llenar con datos de prueba"
                     >
-                      <Wand2 className="w-3 h-3 text-slate-600" />
+                      <Wand2 className="w-3.5 h-3.5 text-slate-600" />
                       <span>Demo</span>
                     </button>
                   </div>
@@ -408,7 +410,7 @@ export const MobileQuickCapture: React.FC<MobileQuickCaptureProps> = ({
                     </div>
                   </div>
 
-                  {/* Campo LinkedIn (Sin disparador a BD) */}
+                  {/* Campo LinkedIn */}
                   <div>
                     <label className="block text-xs font-semibold text-slate-700 mb-1 flex items-center justify-between">
                       <span className="flex items-center gap-1.5">
@@ -471,7 +473,7 @@ export const MobileQuickCapture: React.FC<MobileQuickCaptureProps> = ({
                           onClick={() => toggleSource(src)}
                           className={`px-2.5 py-1 rounded-lg text-xs transition-all cursor-pointer ${
                             active
-                              ? 'bg-slate-800 text-white font-medium'
+                              ? 'bg-blue-600 text-white font-medium'
                               : 'bg-slate-100/80 text-slate-600 hover:bg-slate-200/60'
                           }`}
                         >

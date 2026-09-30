@@ -2,10 +2,7 @@ import React from 'react';
 import { 
   LayoutGrid, 
   Users, 
-  Target, 
   CalendarClock, 
-  Settings, 
-  Sparkles,
   Zap
 } from 'lucide-react';
 import { ActiveView } from '../types';
@@ -47,11 +44,6 @@ export const BottomNavBar: React.FC<BottomNavBarProps> = ({
       icon: CalendarClock,
       badge: pendingAlertsCount > 0 ? pendingAlertsCount : undefined,
       badgeColor: 'bg-rose-500'
-    },
-    {
-      id: 'configuracion' as ActiveView,
-      label: 'Configuración',
-      icon: Settings
     }
   ];
 
