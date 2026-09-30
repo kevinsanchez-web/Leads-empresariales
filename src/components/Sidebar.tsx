@@ -2,8 +2,6 @@ import React from 'react';
 import { 
   Star, 
   BarChart3, 
-  ChevronRight, 
-  Sparkles,
   Calendar,
   Bell,
   ChevronUp,
@@ -60,8 +58,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
     { id: 'intereses' as ActiveView, label: 'Intereses & Tags', icon: Star },
     { id: 'reportes' as ActiveView, label: 'Reportes y Analítica', icon: BarChart3 },
     { id: 'notificaciones' as ActiveView, label: 'Notificaciones', icon: Bell, badge: pendingAlertsCount ? `${pendingAlertsCount}` : undefined, alertBadge: pendingAlertsCount ? pendingAlertsCount > 0 : false },
-    { id: 'usuarios' as ActiveView, label: 'Cuentas & Equipo', icon: Shield, badge: `${users.length}` },
-    { id: 'enriquecimiento' as ActiveView, label: 'Enriquecimiento', icon: Sparkles }
+    { id: 'usuarios' as ActiveView, label: 'Cuentas & Equipo', icon: Shield, badge: `${users.length}` }
   ];
 
   const currentMenuItems = isAdmin ? adminMenuItems : executiveMenuItems;

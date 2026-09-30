@@ -36,7 +36,6 @@ interface HeaderProps {
   onSelectLead?: (lead: Lead) => void;
   onNavigateToNotifications?: () => void;
   onUpdateLead?: (lead: Lead) => void;
-  // Props de Configuración y Tema
   activeTheme?: AccentTheme;
   onChangeTheme?: (theme: AccentTheme) => void;
   companyName?: string;
@@ -78,7 +77,7 @@ export const Header: React.FC<HeaderProps> = ({
   const userDropdownRef = useRef<HTMLDivElement>(null);
   const eventDropdownRef = useRef<HTMLDivElement>(null);
 
-  // Close dropdowns when clicking outside
+  // Cerrar desplegables al hacer clic fuera
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
       if (userDropdownRef.current && !userDropdownRef.current.contains(e.target as Node)) {
@@ -92,51 +91,62 @@ export const Header: React.FC<HeaderProps> = ({
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-  // Show search and filters only on views where lead search applies
-  const showSearchAndFilters = activeView === 'personas' || activeView === 'empresas' || activeView === 'intereses' || activeView === 'seguimientos';
+  const showSearchAndFilters = 
+    activeView === 'personas' || 
+    activeView === 'empresas' || 
+    activeView === 'intereses' || 
+    activeView === 'seguimientos';
+
   const isAdmin = currentUser.accountType === 'admin' || (currentUser.role && currentUser.role.toLowerCase().includes('admin'));
 
   return (
-    <header className="bg-white/95 backdrop-blur-md border-b border-black/[0.06] sticky top-0 z-30 shadow-xs">
-      {/* Top Navbar Row */}
-      <div className="px-3 sm:px-6 py-2 flex items-center justify-between gap-2 sm:gap-3 max-w-[1600px] mx-auto w-full">
+    // Se elimina overflow-hidden para permitir que los menús flotantes sobresalgan del header
+    <header className="bg-white/95 backdrop-blur-md border-b border-black/[0.06] sticky top-0 z-30 shadow-xs w-full max-w-full">
+      {/* Fila Principal del Navbar */}
+      <div className="px-2 sm:px-4 md:px-6 py-1.5 sm:py-2 flex items-center justify-between gap-1 sm:gap-2 max-w-[1600px] mx-auto w-full">
         
-        {/* Left Group: Menu Trigger + Brand + Event Selector */}
-        <div className="flex items-center gap-1.5 sm:gap-3 min-w-0">
-          {/* Universal Menu Drawer Button */}
+        {/* Bloque Izquierdo: Menú + Logo + Selector de Eventos */}
+        <div className="flex items-center gap-1 sm:gap-2 min-w-0 shrink">
+          {/* Botón de Menú */}
           <button 
             onClick={onToggleMobileMenu}
-            className="w-9 h-9 sm:w-8 sm:h-8 rounded-xl text-slate-700 hover:bg-[#F5F5F7] hover:text-[#0071E3] active:bg-slate-200 flex items-center justify-center cursor-pointer shrink-0 transition-colors"
+            className="w-8 h-8 rounded-xl text-slate-700 hover:bg-[#F5F5F7] hover:text-[#0071E3] active:bg-slate-200 flex items-center justify-center cursor-pointer shrink-0 transition-colors"
             title="Abrir menú de navegación"
             aria-label="Abrir menú de navegación"
           >
             <Menu className="w-5 h-5 sm:w-4 sm:h-4 stroke-[2.2]" />
           </button>
           
-          {/* Brand Logo & Name */}
-          <div className="flex items-center gap-2 shrink-0">
-            <DivergencyLogo variant="full" size="md" />
+          {/* Logo Adaptativo */}
+          <div className="flex items-center shrink-0">
+            <div className="block sm:hidden">
+              <DivergencyLogo variant="icon" size="sm" />
+            </div>
+            <div className="hidden sm:block">
+              <DivergencyLogo variant="full" size="md" />
+            </div>
           </div>
 
-          <div className="h-4 w-px bg-slate-200 hidden sm:block shrink-0" />
+          {/* Separador vertical */}
+          <div className="h-4 w-px bg-slate-200 hidden min-[400px]:block shrink-0" />
 
-          {/* Interactive Event Selector */}
-          <div className="relative" ref={eventDropdownRef}>
+          {/* Selector de Eventos */}
+          <div className="relative min-w-0" ref={eventDropdownRef}>
             <button
               onClick={() => setShowEventDropdown(!showEventDropdown)}
-              className="inline-flex items-center gap-1 sm:gap-1.5 px-2 sm:px-2.5 py-1.5 sm:py-1 text-slate-700 hover:text-[#0071E3] hover:bg-[#F5F5F7] rounded-lg text-xs font-semibold shrink-0 transition-colors cursor-pointer"
+              className="inline-flex items-center gap-1 px-1.5 sm:px-2 py-1 text-slate-700 hover:text-[#0071E3] hover:bg-[#F5F5F7] rounded-lg text-xs font-semibold shrink transition-colors cursor-pointer max-w-full"
               title="Cambiar o crear evento"
             >
               <Calendar className="w-3.5 h-3.5 text-[#0071E3] shrink-0" />
-              <span className="truncate max-w-[75px] min-[380px]:max-w-[110px] sm:max-w-[200px] font-bold text-xs">
+              <span className="truncate max-w-[45px] min-[360px]:max-w-[75px] min-[420px]:max-w-[120px] sm:max-w-[180px] font-bold text-xs">
                 {currentEvent.name}
               </span>
               <ChevronDown className={`w-3 h-3 text-slate-400 transition-transform shrink-0 ${showEventDropdown ? 'rotate-180' : ''}`} />
             </button>
 
-            {/* Event Popover */}
+            {/* Desplegable de Eventos */}
             {showEventDropdown && (
-              <div className="absolute left-0 mt-2 w-72 max-w-[calc(100vw-1.5rem)] bg-white border border-black/[0.08] rounded-2xl shadow-xl z-50 p-2 animate-fade-in divide-y divide-black/[0.04]">
+              <div className="absolute left-0 mt-2 w-72 max-w-[calc(100vw-1rem)] bg-white border border-black/[0.08] rounded-2xl shadow-xl z-50 p-2 animate-fade-in divide-y divide-black/[0.04]">
                 <div className="px-2 py-1 text-[11px] font-semibold text-slate-400 uppercase tracking-wider flex items-center justify-between">
                   <span>Seleccionar Evento</span>
                   <span className="text-[10px] text-slate-400 font-normal">{events.length} disponibles</span>
@@ -150,7 +160,7 @@ export const Header: React.FC<HeaderProps> = ({
                         if (onSelectEvent) onSelectEvent(evt);
                         setShowEventDropdown(false);
                       }}
-                      className={`w-full text-left p-2.5 sm:p-2 rounded-xl text-xs transition-colors cursor-pointer flex items-center justify-between ${
+                      className={`w-full text-left p-2 rounded-xl text-xs transition-colors cursor-pointer flex items-center justify-between ${
                         evt.id === currentEvent.id 
                           ? 'bg-[#0071E3]/10 text-[#0071E3] font-bold' 
                           : 'hover:bg-[#F5F5F7] active:bg-slate-100 text-[#1D1D1F]'
@@ -172,7 +182,7 @@ export const Header: React.FC<HeaderProps> = ({
                         setShowEventDropdown(false);
                         onOpenCreateEventModal();
                       }}
-                      className="w-full py-2.5 sm:py-2 px-3 bg-[#0071E3] hover:bg-[#0077ED] text-white rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 shadow-xs transition-colors cursor-pointer"
+                      className="w-full py-2 px-3 bg-[#0071E3] hover:bg-[#0077ED] text-white rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 shadow-xs transition-colors cursor-pointer"
                     >
                       <Plus className="w-3.5 h-3.5" />
                       <span>+ Crear Nuevo Evento</span>
@@ -184,10 +194,10 @@ export const Header: React.FC<HeaderProps> = ({
           </div>
         </div>
 
-        {/* Right Group: Notifications + ConfiguracionView User Dropdown */}
-        <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
+        {/* Bloque Derecho: Notificaciones + Avatar & Configuración */}
+        <div className="flex items-center gap-1 sm:gap-2 shrink-0 ml-auto">
           
-          {/* Notifications Bell Popover */}
+          {/* Popover de Notificaciones */}
           {onSelectLead && onNavigateToNotifications && onUpdateLead && (
             <HeaderNotificationsPopover
               leads={leads}
@@ -197,11 +207,11 @@ export const Header: React.FC<HeaderProps> = ({
             />
           )}
 
-          {/* User Trigger Button & ConfiguracionView Popover */}
-          <div className="relative" ref={userDropdownRef}>
+          {/* Trigger de Usuario */}
+          <div className="relative shrink-0" ref={userDropdownRef}>
             <button
               onClick={() => setShowUserDropdown(!showUserDropdown)}
-              className={`p-1 sm:px-2 sm:py-1 rounded-xl flex items-center gap-1.5 sm:gap-2 transition-all cursor-pointer border ${
+              className={`p-0.5 sm:px-2 sm:py-1 rounded-xl flex items-center gap-1.5 transition-all cursor-pointer border ${
                 showUserDropdown 
                   ? 'bg-[#F5F5F7] border-black/10' 
                   : 'border-transparent hover:bg-[#F5F5F7] active:bg-slate-100'
@@ -209,7 +219,7 @@ export const Header: React.FC<HeaderProps> = ({
               title={`Usuario activo: ${currentUser.name}`}
               aria-expanded={showUserDropdown}
             >
-              <div className={`w-8 h-8 sm:w-7 sm:h-7 rounded-full ${currentUser.avatar ? 'bg-[#0071E3]' : (isAdmin ? 'bg-slate-900' : 'bg-[#0071E3]')} text-white font-bold text-[11px] flex items-center justify-center shadow-2xs shrink-0 ring-2 ring-white`}>
+              <div className={`w-7 h-7 sm:w-7 sm:h-7 rounded-full ${currentUser.avatar ? 'bg-[#0071E3]' : (isAdmin ? 'bg-slate-900' : 'bg-[#0071E3]')} text-white font-bold text-[11px] flex items-center justify-center shadow-2xs shrink-0 ring-2 ring-white`}>
                 {currentUser.avatar || 'AD'}
               </div>
               <div className="hidden md:flex flex-col items-start leading-none text-left">
@@ -225,12 +235,12 @@ export const Header: React.FC<HeaderProps> = ({
               <ChevronDown className={`w-3 h-3 text-slate-400 hidden sm:inline transition-transform duration-200 ${showUserDropdown ? 'rotate-180 text-slate-700' : ''}`} />
             </button>
 
-            {/* ConfiguracionView alojado dentro del Desplegable */}
+            {/* Contenedor del Desplegable ConfiguracionView con ancho explícito */}
             {showUserDropdown && (
-              <div className="absolute right-0 mt-2 z-50 animate-fade-in">
+              <div className="absolute right-0 mt-2 z-50 animate-fade-in w-[calc(100vw-1.5rem)] sm:w-[380px] max-w-[420px]">
                 <ConfiguracionView
-                  currentUser={currentUser}
-                  users={users}
+                  currentUser={currentUser as any}
+                  users={users as any}
                   currentEvent={currentEvent}
                   companyName={companyName}
                   companyCategory={companyCategory}
@@ -249,36 +259,33 @@ export const Header: React.FC<HeaderProps> = ({
 
       </div>
 
-      {/* Clean Compact Search & Filter Toolbar */}
+      {/* Toolbar Inferior de Búsqueda y Filtros */}
       {showSearchAndFilters && (
-        <div className="px-3 sm:px-6 pb-2 pt-1.5 border-t border-black/[0.03] bg-[#FAFBFD]/80">
+        <div className="px-2 sm:px-4 md:px-6 pb-2 pt-1 border-t border-black/[0.03] bg-[#FAFBFD]/80">
           <div className="flex items-center gap-1.5 sm:gap-2">
-            
-            {/* Search Box */}
             <div className="relative flex-1 min-w-0">
-              <Search className="w-4 h-4 sm:w-3.5 sm:h-3.5 absolute left-2.5 sm:left-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
+              <Search className="w-3.5 h-3.5 absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
               <input
                 type="text"
                 placeholder="Buscar por nombre o empresa..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full pl-8 sm:pl-8 pr-7 sm:pr-7 py-2 sm:py-1.5 bg-white border border-black/[0.06] rounded-xl text-xs text-[#1D1D1F] focus:outline-none focus:ring-2 focus:ring-[#0071E3] shadow-2xs placeholder:text-slate-400 transition-all"
+                className="w-full pl-8 pr-7 py-1.5 bg-white border border-black/[0.06] rounded-xl text-xs text-[#1D1D1F] focus:outline-none focus:ring-2 focus:ring-[#0071E3] shadow-2xs placeholder:text-slate-400 transition-all truncate"
               />
               {searchQuery && (
                 <button
                   onClick={() => setSearchQuery('')}
-                  className="absolute right-1.5 top-1/2 -translate-y-1/2 w-6 h-6 flex items-center justify-center text-slate-400 hover:text-slate-600 active:text-slate-800 cursor-pointer"
+                  className="absolute right-1.5 top-1/2 -translate-y-1/2 w-5 h-5 flex items-center justify-center text-slate-400 hover:text-slate-600 active:text-slate-800 cursor-pointer"
                   aria-label="Limpiar búsqueda"
                 >
-                  <X className="w-3.5 h-3.5" />
+                  <X className="w-3 h-3" />
                 </button>
               )}
             </div>
 
-            {/* Filter Icon Button with badge */}
             <button
               onClick={onToggleFilters}
-              className={`h-9 sm:h-8 px-2.5 sm:px-3 rounded-xl border text-xs font-semibold flex items-center justify-center gap-1.5 transition-all cursor-pointer shrink-0 active:scale-95 ${
+              className={`h-8 px-2 sm:px-3 rounded-xl border text-xs font-semibold flex items-center justify-center gap-1 transition-all cursor-pointer shrink-0 active:scale-95 ${
                 activeFilterCount > 0 
                   ? 'bg-[#0071E3] border-[#0071E3] text-white shadow-xs' 
                   : 'bg-white border-black/[0.06] text-slate-700 hover:bg-slate-50'
@@ -288,18 +295,15 @@ export const Header: React.FC<HeaderProps> = ({
               <Filter className="w-3.5 h-3.5" />
               <span className="hidden sm:inline">Filtros</span>
               {activeFilterCount > 0 && (
-                <span className={`w-4 h-4 rounded-full text-[10px] font-bold flex items-center justify-center ${
-                  activeFilterCount > 0 ? 'bg-white text-[#0071E3]' : ''
-                }`}>
+                <span className="w-4 h-4 rounded-full text-[10px] font-bold flex items-center justify-center bg-white text-[#0071E3]">
                   {activeFilterCount}
                 </span>
               )}
             </button>
 
-            {/* "Mis Leads" / "Todos" Toggle Button */}
             <button
               onClick={() => setShowOnlyMyLeads(!showOnlyMyLeads)}
-              className={`h-9 sm:h-8 px-2.5 sm:px-3 rounded-xl text-xs font-semibold flex items-center justify-center gap-1.5 transition-all border cursor-pointer shrink-0 active:scale-95 ${
+              className={`h-8 px-2 sm:px-3 rounded-xl text-xs font-semibold flex items-center justify-center gap-1 transition-all border cursor-pointer shrink-0 active:scale-95 ${
                 showOnlyMyLeads 
                   ? 'bg-[#0071E3]/10 border-[#0071E3]/30 text-[#0071E3]' 
                   : 'bg-white border-black/[0.06] text-slate-600 hover:bg-slate-50'
@@ -311,7 +315,6 @@ export const Header: React.FC<HeaderProps> = ({
                 {showOnlyMyLeads ? "Mis Leads" : "Todos"}
               </span>
             </button>
-
           </div>
         </div>
       )}

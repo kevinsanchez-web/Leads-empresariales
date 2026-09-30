@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Bell, AlertTriangle, Clock, CheckCircle2, ChevronRight, X, Volume2, ShieldCheck, Zap } from 'lucide-react';
+import { Bell, AlertTriangle, Clock, CheckCircle2, ChevronRight, X, ShieldCheck, Zap } from 'lucide-react';
 import { Lead, NotificationAlert } from '../types';
 import { getNotificationAlerts } from '../utils/notifications';
 import { 
@@ -119,18 +119,18 @@ export const HeaderNotificationsPopover: React.FC<HeaderNotificationsPopoverProp
         <div className="fixed inset-x-3 top-14 sm:inset-x-auto sm:right-0 sm:top-full sm:mt-2.5 w-auto sm:w-96 max-w-full bg-white border border-slate-200/90 rounded-3xl shadow-2xl z-50 overflow-hidden animate-fade-in">
           
           {/* Header */}
-          <div className="p-3.5 sm:p-4 bg-slate-900 text-white flex items-center justify-between">
+          <div className="p-3.5 sm:p-4 bg-white border-b border-slate-100 flex items-center justify-between">
             <div className="flex items-center gap-2">
-              <Bell className="w-4 h-4 text-blue-400" />
-              <h3 className="font-extrabold text-xs sm:text-sm text-white">Alertas de Seguimiento</h3>
+              <Bell className="w-4 h-4 text-blue-600" />
+              <h3 className="font-extrabold text-xs sm:text-sm text-slate-900">Alertas de Seguimiento</h3>
             </div>
             <div className="flex items-center gap-2">
-              <span className="px-2 py-0.5 rounded-full bg-rose-500/20 text-rose-300 border border-rose-500/30 text-[10px] sm:text-[11px] font-bold">
+              <span className="px-2 py-0.5 rounded-full bg-rose-100 text-rose-700 border border-rose-200 text-[10px] sm:text-[11px] font-bold">
                 {urgentCount} urgentes
               </span>
               <button 
                 onClick={() => setIsOpen(false)}
-                className="p-1 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition-colors sm:hidden cursor-pointer"
+                className="p-1 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors sm:hidden cursor-pointer"
                 aria-label="Cerrar"
               >
                 <X className="w-4 h-4" />

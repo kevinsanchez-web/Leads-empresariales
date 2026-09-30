@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Building2, Users, Star, DollarSign, Search, ChevronRight, Sparkles, Globe, ExternalLink, Loader2 } from 'lucide-react';
+import { Building2, Star, Search, ChevronRight, Sparkles, Globe, Loader2, Filter } from 'lucide-react';
 import { Lead, CompanyResearchInfo } from '../types';
 import { researchCompany, isAiFailure, AI_SIMULATED_WARNING } from '../services/aiService';
 import { cleanCompanyName, companyKey } from '../utils/company';
@@ -13,6 +13,7 @@ interface EmpresasViewProps {
 
 export const EmpresasView: React.FC<EmpresasViewProps> = ({ leads, onSelectLead, onUpdateLead }) => {
   const [searchTerm, setSearchTerm] = useState('');
+  const [selectedCompanyFilter, setSelectedCompanyFilter] = useState<string>('ALL');
   const [researchingCompanies, setResearchingCompanies] = useState<{ [key: string]: boolean }>({});
   const [localCompanyInfo, setLocalCompanyInfo] = useState<{ [key: string]: CompanyResearchInfo }>({});
   const [researchErrors, setResearchErrors] = useState<{ [key: string]: { message: string; simulated: boolean } }>({});
@@ -25,8 +26,9 @@ export const EmpresasView: React.FC<EmpresasViewProps> = ({ leads, onSelectLead,
     companyMap[key].push(l);
   });
 
-  const companiesList = Object.entries(companyMap)
-    .map(([key, companyLeads]) => {
+  // Generate full list of unique companies
+  const allCompanies = Object.entries(companyMap)
+    .map(([, companyLeads]) => {
       const name = cleanCompanyName(companyLeads[0].company);
       const totalPipeline = companyLeads.reduce((acc, curr) => acc + (curr.estimatedValue || 35000), 0);
       const hasPriority = companyLeads.some(l => l.priority);
@@ -43,11 +45,17 @@ export const EmpresasView: React.FC<EmpresasViewProps> = ({ leads, onSelectLead,
         companyInfo: existingInfo
       };
     })
-    .filter(c => 
-      c.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      c.leads.some(l => l.name.toLowerCase().includes(searchTerm.toLowerCase()))
-    )
     .sort((a, b) => b.leadCount - a.leadCount);
+
+  // Filter companies based on dropdown selection and search input
+  const companiesList = allCompanies.filter(c => {
+    const matchesDropdown = selectedCompanyFilter === 'ALL' || c.name === selectedCompanyFilter;
+    const matchesSearch = 
+      c.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      c.leads.some(l => l.name.toLowerCase().includes(searchTerm.toLowerCase()));
+
+    return matchesDropdown && matchesSearch;
+  });
 
   const handleResearchCompany = async (companyName: string, companyLeads: Lead[]) => {
     setResearchingCompanies(prev => ({ ...prev, [companyName]: true }));
@@ -59,6 +67,7 @@ export const EmpresasView: React.FC<EmpresasViewProps> = ({ leads, onSelectLead,
         leadName: firstLead?.name,
         role: firstLead?.role
       });
+
       if (isAiFailure(data)) {
         setResearchErrors(prev => ({ ...prev, [companyName]: { message: data.error, simulated: data.simulated } }));
         return;
@@ -67,18 +76,23 @@ export const EmpresasView: React.FC<EmpresasViewProps> = ({ leads, onSelectLead,
         setResearchErrors(prev => ({ ...prev, [companyName]: { message: 'La IA no devolvió información de la empresa.', simulated: data.simulated } }));
         return;
       }
+
+      const info = data.companyInfo;
+
       if (data.simulated) {
-        // Solo se previsualiza: una muestra de desarrollo no debe llegar a Firestore ni a los leads.
-        setLocalCompanyInfo(prev => ({ ...prev, [companyName]: data.companyInfo! }));
+        setLocalCompanyInfo(prev => ({ ...prev, [companyName]: info }));
         setResearchErrors(prev => ({ ...prev, [companyName]: { message: AI_SIMULATED_WARNING, simulated: true } }));
         return;
       }
-      setLocalCompanyInfo(prev => ({ ...prev, [companyName]: data.companyInfo! }));
+
+      setLocalCompanyInfo(prev => ({ ...prev, [companyName]: info }));
+
       if (onUpdateLead) {
         companyLeads.forEach(l => {
-          onUpdateLead({ ...l, companyInfo: data.companyInfo });
+          onUpdateLead({ ...l, companyInfo: info });
         });
       }
+
       if (data.usedSearch === false) {
         setResearchErrors(prev => ({ ...prev, [companyName]: { message: 'La IA respondió sin buscar en la web: este perfil no está verificado.', simulated: true } }));
       }
@@ -92,28 +106,56 @@ export const EmpresasView: React.FC<EmpresasViewProps> = ({ leads, onSelectLead,
   return (
     <div className="space-y-4 animate-fade-in">
       
-      {/* Simple Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-white p-4 rounded-2xl border border-slate-200/60 shadow-xs">
-        <div className="flex items-center gap-2">
-          <div className="w-9 h-9 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center font-bold shrink-0">
+      {/* Header con Filtros Integrados */}
+      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3 bg-white p-4 rounded-2xl border border-slate-200/60 shadow-xs">
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center font-bold shrink-0">
             <Building2 className="w-5 h-5" />
           </div>
           <div>
-            <h2 className="text-lg font-bold text-slate-900 leading-tight">Directorio de Empresas & Grounding IA</h2>
+            <div className="flex items-center gap-2">
+              <h2 className="text-lg font-bold text-slate-900 leading-tight">Directorio de Empresas & Grounding IA</h2>
+              <span className="text-xs px-2.5 py-0.5 rounded-full bg-blue-50 text-blue-700 font-bold border border-blue-200/60">
+                {companiesList.length} de {allCompanies.length} empresas
+              </span>
+            </div>
             <p className="text-xs text-slate-500">Investigación profunda de empresas en tiempo real mediante Google Search</p>
           </div>
-          <span className="text-xs px-2.5 py-0.5 rounded-full bg-slate-100 font-bold text-slate-600 ml-auto sm:ml-2">{companiesList.length}</span>
         </div>
 
-        <div className="relative w-full sm:w-60">
-          <Search className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
-          <input
-            type="text"
-            placeholder="Buscar empresa..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full pl-8 pr-3 py-1.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium focus:outline-none focus:ring-2 focus:ring-blue-500"
-          />
+        {/* Controles de Filtro: Desplegable + Buscador */}
+        <div className="flex flex-col sm:flex-row items-center gap-2 w-full lg:w-auto">
+          
+          {/* Desplegable para Filtrar Empresa */}
+          <div className="relative w-full sm:w-56">
+            <Filter className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
+            <select
+              value={selectedCompanyFilter}
+              onChange={(e) => setSelectedCompanyFilter(e.target.value)}
+              className="w-full pl-8 pr-8 py-1.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-500 appearance-none cursor-pointer truncate"
+            >
+              <option value="ALL">Todas las empresas ({allCompanies.length})</option>
+              {allCompanies.map((c) => (
+                <option key={c.name} value={c.name}>
+                  {c.name} ({c.leadCount} contacto{c.leadCount > 1 ? 's' : ''})
+                </option>
+              ))}
+            </select>
+            <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-slate-400 text-[10px]">▼</div>
+          </div>
+
+          {/* Búsqueda por Texto */}
+          <div className="relative w-full sm:w-56">
+            <Search className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+            <input
+              type="text"
+              placeholder="Buscar por nombre o contacto..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="w-full pl-8 pr-3 py-1.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium focus:outline-none focus:ring-2 focus:ring-blue-500"
+            />
+          </div>
+
         </div>
       </div>
 
@@ -121,7 +163,7 @@ export const EmpresasView: React.FC<EmpresasViewProps> = ({ leads, onSelectLead,
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
         {companiesList.length === 0 ? (
           <div className="col-span-full bg-white rounded-2xl p-8 text-center border border-slate-200/60 text-slate-400 font-medium text-xs">
-            No se encontraron empresas.
+            No se encontraron empresas con los criterios seleccionados.
           </div>
         ) : (
           companiesList.map(comp => {

@@ -3,7 +3,8 @@ import {
   LayoutGrid, 
   Users, 
   CalendarClock, 
-  Zap
+  Zap,
+  Sparkles
 } from 'lucide-react';
 import { ActiveView } from '../types';
 
@@ -34,6 +35,11 @@ export const BottomNavBar: React.FC<BottomNavBarProps> = ({
       badge: leadsCount > 0 ? leadsCount : undefined
     },
     {
+      id: 'enriquecimiento' as ActiveView,
+      label: 'Enriquecimiento',
+      icon: Sparkles
+    },
+    {
       id: 'empresas' as ActiveView,
       label: 'Clientes',
       icon: Users
@@ -49,10 +55,10 @@ export const BottomNavBar: React.FC<BottomNavBarProps> = ({
 
   return (
     <nav 
-      className="fixed bottom-0 left-0 right-0 z-40 bg-white/95 backdrop-blur-md border-t border-black/[0.08] shadow-[0_-2px_10px_rgba(0,0,0,0.03)] px-1 sm:px-4 py-1 sm:py-1.5 transition-all"
+      className="fixed bottom-0 left-0 right-0 z-40 bg-white/95 backdrop-blur-md border-t border-black/[0.08] shadow-[0_-2px_10px_rgba(0,0,0,0.03)] px-0.5 sm:px-4 py-1 sm:py-1.5 transition-all"
       aria-label="Navegación inferior"
     >
-      <div className="max-w-md md:max-w-2xl mx-auto flex items-center justify-around">
+      <div className="max-w-md md:max-w-2xl mx-auto flex items-center justify-between sm:justify-around">
         {navItems.map((item) => {
           const Icon = item.icon;
           const isActive = activeView === item.id;
@@ -61,7 +67,7 @@ export const BottomNavBar: React.FC<BottomNavBarProps> = ({
             <button
               key={item.id}
               onClick={() => setActiveView(item.id)}
-              className={`relative flex flex-col items-center justify-center py-1 px-2 sm:px-3 rounded-xl transition-all cursor-pointer min-w-[58px] sm:min-w-[70px] ${
+              className={`relative flex flex-col items-center justify-center py-1 px-1 sm:px-2 rounded-xl transition-all cursor-pointer min-w-[52px] sm:min-w-[64px] ${
                 isActive
                   ? 'text-[var(--primary-accent,#0071E3)] font-bold'
                   : 'text-slate-500 hover:text-slate-800'
@@ -69,7 +75,7 @@ export const BottomNavBar: React.FC<BottomNavBarProps> = ({
             >
               {/* Icon Container */}
               <div className="relative">
-                <Icon className={`w-5 h-5 sm:w-5.5 sm:h-5.5 transition-transform ${isActive ? 'scale-110 stroke-[2.4]' : 'stroke-[1.8]'}`} />
+                <Icon className={`w-4.5 h-4.5 sm:w-5 sm:h-5 transition-transform ${isActive ? 'scale-110 stroke-[2.4]' : 'stroke-[1.8]'}`} />
                 
                 {/* Badge if present */}
                 {item.badge !== undefined && (
@@ -80,7 +86,7 @@ export const BottomNavBar: React.FC<BottomNavBarProps> = ({
               </div>
 
               {/* Label */}
-              <span className={`text-[10px] sm:text-[11px] mt-0.5 tracking-tight truncate max-w-[65px] ${
+              <span className={`text-[9px] sm:text-[10px] mt-0.5 tracking-tight truncate max-w-[56px] sm:max-w-[65px] ${
                 isActive ? 'text-[var(--primary-accent,#0071E3)] font-bold' : 'text-slate-500 font-semibold'
               }`}>
                 {item.label}

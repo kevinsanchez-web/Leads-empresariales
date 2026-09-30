@@ -96,8 +96,6 @@ export const CardScannerModal: React.FC<CardScannerModalProps> = ({
         return;
       }
 
-      // Sin VITE_AI_WORKER_URL la respuesta es una muestra. No se aplica sola: el comercial
-      // tiene que ver el aviso y aceptarla, o estos datos entran al CRM como si fueran reales.
       if (resData.simulated) {
         setSampleData(resData.data);
         return;
@@ -145,43 +143,56 @@ export const CardScannerModal: React.FC<CardScannerModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 bg-slate-900/75 backdrop-blur-md flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-3xl max-w-lg w-full overflow-hidden shadow-2xl border border-slate-200">
+    <div className="fixed inset-0 bg-slate-900/30 backdrop-blur-xl flex items-center justify-center z-50 p-4 transition-all animate-fade-in">
+      <div className="bg-white/90 backdrop-blur-2xl rounded-3xl max-w-lg w-full overflow-hidden shadow-2xl border border-white/80 ring-1 ring-black/5">
         
-        {/* Header */}
-        <div className="bg-slate-900 text-white p-5 flex items-center justify-between">
-          <div className="flex items-center gap-2.5">
-            <div className="w-9 h-9 rounded-xl bg-blue-600 flex items-center justify-center text-white font-bold">
+        {/* Header Claro con Único Botón de Salida (X) */}
+        <div className="bg-white/80 backdrop-blur-md p-5 border-b border-slate-200/60 flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="w-9 h-9 rounded-xl bg-blue-50 border border-blue-200/60 flex items-center justify-center text-blue-600 font-bold shadow-xs">
               <QrCode className="w-5 h-5" />
             </div>
             <div>
-              <h3 className="font-extrabold text-base tracking-tight flex items-center gap-2">
+              <h3 className="font-extrabold text-base tracking-tight text-slate-900 flex items-center gap-2">
                 Escáner Inteligente IA
-                <span className="text-[10px] bg-blue-500/30 text-blue-300 font-bold px-2 py-0.5 rounded-full">Gemini 2.5</span>
+                <span className="text-[10px] bg-blue-100 text-blue-700 border border-blue-200/60 font-bold px-2 py-0.5 rounded-full">
+                  Gemini 2.5
+                </span>
               </h3>
-              <p className="text-xs text-slate-400">Escanea tarjetas de presentación, escarapelas o códigos QR</p>
+              <p className="text-xs text-slate-500">Escanea tarjetas de presentación, escarapelas o QR</p>
             </div>
           </div>
-          <button onClick={() => { stopCamera(); onClose(); }} className="text-slate-400 hover:text-white cursor-pointer">
-            <X className="w-6 h-6" />
+          <button 
+            type="button"
+            onClick={() => { stopCamera(); onClose(); }} 
+            className="w-8 h-8 rounded-full bg-slate-100 hover:bg-slate-200/80 text-slate-500 hover:text-slate-800 flex items-center justify-center transition-colors cursor-pointer"
+            title="Cerrar modal"
+          >
+            <X className="w-4 h-4" />
           </button>
         </div>
 
-        {/* Tab Selection */}
-        <div className="flex border-b border-slate-100 bg-slate-50 p-1.5">
+        {/* Tab Selection Glass */}
+        <div className="flex border-b border-slate-200/60 bg-slate-100/60 backdrop-blur-sm p-1.5">
           <button
+            type="button"
             onClick={() => setActiveTab('camera')}
             className={`flex-1 py-2 rounded-xl text-xs font-bold flex items-center justify-center gap-2 transition-all cursor-pointer ${
-              activeTab === 'camera' ? 'bg-white text-blue-600 shadow-2xs' : 'text-slate-500 hover:text-slate-800'
+              activeTab === 'camera' 
+                ? 'bg-white text-blue-600 shadow-xs border border-slate-200/60' 
+                : 'text-slate-500 hover:text-slate-800 hover:bg-white/40'
             }`}
           >
             <Camera className="w-4 h-4" />
             <span>Usar Cámara en Vivo</span>
           </button>
           <button
+            type="button"
             onClick={() => setActiveTab('upload')}
             className={`flex-1 py-2 rounded-xl text-xs font-bold flex items-center justify-center gap-2 transition-all cursor-pointer ${
-              activeTab === 'upload' ? 'bg-white text-blue-600 shadow-2xs' : 'text-slate-500 hover:text-slate-800'
+              activeTab === 'upload' 
+                ? 'bg-white text-blue-600 shadow-xs border border-slate-200/60' 
+                : 'text-slate-500 hover:text-slate-800 hover:bg-white/40'
             }`}
           >
             <Upload className="w-4 h-4" />
@@ -201,7 +212,7 @@ export const CardScannerModal: React.FC<CardScannerModalProps> = ({
                 <button
                   type="button"
                   onClick={() => setActiveTab('upload')}
-                  className="px-3 py-1 bg-rose-600 hover:bg-rose-700 text-white rounded-xl text-[11px] font-bold shrink-0 cursor-pointer"
+                  className="px-3 py-1.5 bg-rose-600 hover:bg-rose-700 text-white rounded-xl text-[11px] font-bold shrink-0 cursor-pointer shadow-xs transition-colors"
                 >
                   Subir Foto / Archivo
                 </button>
@@ -223,14 +234,14 @@ export const CardScannerModal: React.FC<CardScannerModalProps> = ({
                     onScanSuccess(sampleData);
                     onClose();
                   }}
-                  className="flex-1 px-3 py-1.5 bg-amber-500 hover:bg-amber-600 text-white rounded-xl text-[11px] font-bold cursor-pointer"
+                  className="flex-1 px-3 py-2 bg-amber-500 hover:bg-amber-600 text-white rounded-xl text-[11px] font-bold cursor-pointer shadow-xs transition-colors"
                 >
                   Aplicar los datos de ejemplo
                 </button>
                 <button
                   type="button"
                   onClick={() => setSampleData(null)}
-                  className="flex-1 px-3 py-1.5 bg-[#F5F5F7] hover:bg-[#EBEBEF] text-slate-700 rounded-xl text-[11px] font-bold cursor-pointer"
+                  className="flex-1 px-3 py-2 bg-slate-100 hover:bg-slate-200/80 text-slate-700 border border-slate-200/60 rounded-xl text-[11px] font-bold cursor-pointer transition-colors"
                 >
                   Descartar
                 </button>
@@ -238,17 +249,17 @@ export const CardScannerModal: React.FC<CardScannerModalProps> = ({
             </div>
           )}
 
-          {/* Loading Overlay */}
+          {/* Frosted Glass Loading Overlay */}
           {isScanning && (
-            <div className="absolute inset-0 bg-white/95 backdrop-blur-xs z-20 flex flex-col items-center justify-center p-6 text-center animate-fade-in">
-              <div className="w-16 h-16 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center mb-4 animate-bounce">
+            <div className="absolute inset-0 bg-white/85 backdrop-blur-md z-20 flex flex-col items-center justify-center p-6 text-center animate-fade-in rounded-2xl">
+              <div className="w-16 h-16 rounded-2xl bg-blue-50 border border-blue-200/60 text-blue-600 flex items-center justify-center mb-4 animate-bounce shadow-xs">
                 <Sparkles className="w-8 h-8" />
               </div>
               <h4 className="text-lg font-black text-slate-900">Extrayendo Datos con Gemini IA...</h4>
               <p className="text-xs text-slate-500 mt-1 max-w-xs">
                 Analizando nombre, empresa, cargo, correo y número telefónico de la tarjeta.
               </p>
-              <div className="flex items-center gap-2 text-xs font-bold text-blue-600 mt-4">
+              <div className="flex items-center gap-2 text-xs font-bold text-blue-600 mt-4 bg-blue-50/80 px-3 py-1.5 rounded-full border border-blue-200/60">
                 <Loader2 className="w-4 h-4 animate-spin" />
                 <span>Procesando imagen</span>
               </div>
@@ -257,7 +268,7 @@ export const CardScannerModal: React.FC<CardScannerModalProps> = ({
 
           {activeTab === 'camera' ? (
             <div className="space-y-4">
-              <div className="relative aspect-4/3 bg-slate-900 rounded-2xl overflow-hidden flex items-center justify-center border-2 border-dashed border-slate-300">
+              <div className="relative aspect-4/3 bg-slate-950 rounded-2xl overflow-hidden flex items-center justify-center border border-slate-200/60 shadow-inner">
                 <video
                   ref={videoRef}
                   autoPlay
@@ -266,18 +277,18 @@ export const CardScannerModal: React.FC<CardScannerModalProps> = ({
                   className="w-full h-full object-cover"
                 />
                 
-                {/* Target Frame Guide Overlay */}
+                {/* Frame Guide with Glass Label */}
                 <div className="absolute inset-8 border-2 border-blue-400/80 rounded-2xl pointer-events-none flex flex-col justify-between p-3">
                   <div className="flex justify-between">
-                    <div className="w-4 h-4 border-t-2 border-l-2 border-blue-500"></div>
-                    <div className="w-4 h-4 border-t-2 border-r-2 border-blue-500"></div>
+                    <div className="w-4 h-4 border-t-2 border-l-2 border-blue-400"></div>
+                    <div className="w-4 h-4 border-t-2 border-r-2 border-blue-400"></div>
                   </div>
-                  <div className="text-center text-[11px] font-bold text-white bg-slate-900/70 py-1 px-3 rounded-full mx-auto backdrop-blur-xs">
+                  <div className="text-center text-[11px] font-bold text-slate-800 bg-white/85 backdrop-blur-md py-1 px-3.5 rounded-full mx-auto shadow-sm border border-white/50">
                     Apunta la tarjeta o escarapela aquí
                   </div>
                   <div className="flex justify-between">
-                    <div className="w-4 h-4 border-b-2 border-l-2 border-blue-500"></div>
-                    <div className="w-4 h-4 border-b-2 border-r-2 border-blue-500"></div>
+                    <div className="w-4 h-4 border-b-2 border-l-2 border-blue-400"></div>
+                    <div className="w-4 h-4 border-b-2 border-r-2 border-blue-400"></div>
                   </div>
                 </div>
 
@@ -288,7 +299,7 @@ export const CardScannerModal: React.FC<CardScannerModalProps> = ({
                 type="button"
                 onClick={handleCapturePhoto}
                 disabled={isScanning || !isCameraActive}
-                className="w-full py-3.5 bg-blue-600 hover:bg-blue-700 disabled:bg-slate-300 text-white rounded-2xl text-sm font-extrabold flex items-center justify-center gap-2 shadow-lg shadow-blue-500/20 active:scale-98 transition-all cursor-pointer"
+                className="w-full py-3.5 bg-blue-600 hover:bg-blue-700 disabled:bg-slate-200 disabled:text-slate-400 disabled:shadow-none text-white rounded-2xl text-sm font-extrabold flex items-center justify-center gap-2 shadow-lg shadow-blue-500/20 active:scale-[0.98] transition-all cursor-pointer"
               >
                 <Camera className="w-5 h-5" />
                 <span>Tomar Foto y Escanear</span>
@@ -298,9 +309,9 @@ export const CardScannerModal: React.FC<CardScannerModalProps> = ({
             <div className="space-y-4">
               <div
                 onClick={() => fileInputRef.current?.click()}
-                className="aspect-4/3 border-2 border-dashed border-slate-300 hover:border-blue-500 bg-slate-50 hover:bg-blue-50/50 rounded-2xl flex flex-col items-center justify-center p-6 text-center cursor-pointer transition-all"
+                className="aspect-4/3 border-2 border-dashed border-slate-300/80 hover:border-blue-500 bg-white/50 hover:bg-blue-50/40 backdrop-blur-sm rounded-2xl flex flex-col items-center justify-center p-6 text-center cursor-pointer transition-all shadow-xs"
               >
-                <div className="w-12 h-12 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center mb-3">
+                <div className="w-12 h-12 rounded-2xl bg-blue-50 border border-blue-200/60 text-blue-600 flex items-center justify-center mb-3 shadow-xs">
                   <Upload className="w-6 h-6" />
                 </div>
                 <p className="text-sm font-bold text-slate-800">Haz clic para seleccionar o arrastra una foto</p>
@@ -317,7 +328,7 @@ export const CardScannerModal: React.FC<CardScannerModalProps> = ({
               <button
                 type="button"
                 onClick={() => fileInputRef.current?.click()}
-                className="w-full py-3.5 bg-slate-900 hover:bg-slate-800 text-white rounded-2xl text-sm font-extrabold flex items-center justify-center gap-2 cursor-pointer"
+                className="w-full py-3.5 bg-slate-900 hover:bg-slate-800 text-white rounded-2xl text-sm font-extrabold flex items-center justify-center gap-2 transition-all cursor-pointer shadow-md"
               >
                 <Upload className="w-4 h-4" />
                 <span>Elegir archivo del dispositivo</span>
@@ -327,12 +338,9 @@ export const CardScannerModal: React.FC<CardScannerModalProps> = ({
 
         </div>
 
-        {/* Footer */}
-        <div className="bg-slate-50 px-6 py-3 border-t border-slate-100 flex items-center justify-between text-xs text-slate-500 font-medium">
+        {/* Footer Limpio (Informativo) */}
+        <div className="bg-slate-50/80 backdrop-blur-sm px-6 py-3 border-t border-slate-200/60 text-center text-xs text-slate-500 font-medium">
           <span>Soporta OCR multilingüe e IA generativa</span>
-          <button onClick={() => { stopCamera(); onClose(); }} className="text-slate-600 font-bold hover:underline cursor-pointer">
-            Cancelar
-          </button>
         </div>
 
       </div>

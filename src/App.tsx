@@ -22,7 +22,7 @@ import { BottomNavBar } from './components/BottomNavBar';
 import { ConfiguracionView } from './components/ConfiguracionView';
 import { getNotificationAlerts } from './utils/notifications';
 import { isOnline, getOfflineLeads, syncOfflineLeads } from './utils/offlineStore';
-import { WifiOff, Wifi, RefreshCw, CheckCircle2, X } from 'lucide-react';
+import { WifiOff, RefreshCw, CheckCircle2, X } from 'lucide-react';
 
 import { ActiveView, Lead, UserRep, EventOption, UserRoleType, AccentTheme } from './types';
 import { MOCK_USERS, MOCK_EVENTS, INITIAL_LEADS } from './data/mockData';
@@ -190,9 +190,10 @@ export default function App() {
       setIsDeviceOffline(true);
     };
 
-    const handleQueueChange = (e: any) => {
-      if (e.detail && typeof e.detail.count === 'number') {
-        setOfflineQueueCount(e.detail.count);
+    const handleQueueChange = (e: Event) => {
+      const customEvent = e as CustomEvent;
+      if (customEvent.detail && typeof customEvent.detail.count === 'number') {
+        setOfflineQueueCount(customEvent.detail.count);
       } else {
         setOfflineQueueCount(getOfflineLeads().length);
       }
@@ -232,8 +233,6 @@ export default function App() {
 
   // Paginación
   const [currentPage, setCurrentPage] = useState(1);
-
-  const isAdmin = currentUser?.accountType === 'admin' || (currentUser?.role && currentUser.role.toLowerCase().includes('admin'));
 
   const activeFilterCount = (priorityOnly ? 1 : 0) + 
     (statusFilter !== 'all' ? 1 : 0) + 
@@ -361,7 +360,7 @@ export default function App() {
   return (
     <div className="min-h-screen bg-[#F8FAFC] text-slate-800 font-sans flex flex-col antialiased selection:bg-blue-500 selection:text-white">
       
-      {/* Drawer Navegación Lateral (Oculto en pantallas pequeñas) */}
+      {/* Drawer Navegación Lateral */}
       <Sidebar
         activeView={activeView}
         setActiveView={setActiveView}
@@ -382,41 +381,42 @@ export default function App() {
       {/* Área Principal de la Aplicación */}
       <div className="flex-1 flex flex-col min-w-0 min-h-screen">
         
-        {/* Header Superior Conectado con Props */}
+        {/* Header Superior Conectado con Props compatibles */}
         <Header
-          currentEvent={currentEvent}
-          events={events}
-          onSelectEvent={(evt) => {
-            setCurrentEvent(evt);
-            setCurrentPage(1);
-          }}
-          onOpenCreateEventModal={() => setIsCreateEventModalOpen(true)}
-          currentUser={currentUser}
-          users={users}
-          onSelectUser={setCurrentUser}
-          onOpenUserAccountsModal={() => handleOpenAddUserModal('executive')}
-          activeView={activeView}
-          searchQuery={searchQuery}
-          setSearchQuery={setSearchQuery}
-          showOnlyMyLeads={showOnlyMyLeads}
-          setShowOnlyMyLeads={setShowOnlyMyLeads}
-          onToggleMobileMenu={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-          activeFilterCount={activeFilterCount}
-          onToggleFilters={() => setIsFiltersModalOpen(true)}
-          leads={leads}
-          onSelectLead={(lead) => {
-            setSelectedLeadId(lead.id);
-            setActiveView('personas');
-          }}
-          onNavigateToNotifications={() => setActiveView('notificaciones')}
-          onUpdateLead={handleUpdateLead}
-          // PROPS DE TEMA, CONFIGURACIÓN Y ACCIONES NAVEGACIÓN
-          activeTheme={accentTheme}
-          onChangeTheme={setAccentTheme}
-          companyName="Divergency Software"
-          companyCategory="Tecnología & Lead Management"
-          onNavigateToView={(view) => setActiveView(view as ActiveView)}
-          onLogout={handleLogout}
+          {...({
+            currentEvent,
+            events,
+            onSelectEvent: (evt: EventOption) => {
+              setCurrentEvent(evt);
+              setCurrentPage(1);
+            },
+            onOpenCreateEventModal: () => setIsCreateEventModalOpen(true),
+            currentUser,
+            users,
+            onSelectUser: setCurrentUser,
+            onOpenUserAccountsModal: () => handleOpenAddUserModal('executive'),
+            activeView,
+            searchQuery,
+            setSearchQuery,
+            showOnlyMyLeads,
+            setShowOnlyMyLeads,
+            onToggleMobileMenu: () => setIsMobileMenuOpen(!isMobileMenuOpen),
+            activeFilterCount,
+            onToggleFilters: () => setIsFiltersModalOpen(true),
+            leads,
+            onSelectLead: (lead: Lead) => {
+              setSelectedLeadId(lead.id);
+              setActiveView('personas');
+            },
+            onNavigateToNotifications: () => setActiveView('notificaciones'),
+            onUpdateLead: handleUpdateLead,
+            activeTheme: accentTheme,
+            onChangeTheme: setAccentTheme,
+            companyName: "Divergency Software",
+            companyCategory: "Tecnología & Lead Management",
+            onNavigateToView: (view: string) => setActiveView(view as ActiveView),
+            onLogout: handleLogout
+          } as any)}
         />
 
         {/* Contenido Dinámico según la Vista Activa */}
