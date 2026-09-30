@@ -17,6 +17,7 @@ import {
 } from 'lucide-react';
 import { UserRep, EventOption, AccentTheme } from '../types';
 import { DivergencyLogo } from './DivergencyLogo';
+import { hasContact, displayContact } from '../utils/contactInfo';
 
 interface ConfiguracionViewProps {
   currentUser: UserRep;
@@ -368,7 +369,7 @@ export const ConfiguracionView: React.FC<ConfiguracionViewProps> = ({
               </div>
               <div className="flex justify-between py-1 border-b border-black/[0.03]">
                 <span className="text-slate-400">Teléfono:</span>
-                <span className="font-semibold text-slate-800">{currentUser.phone || '+57 300 123 4567'}</span>
+                <span className={`font-semibold text-right truncate ${hasContact(currentUser.phone) ? 'text-slate-800' : 'text-slate-400 font-medium'}`}>{displayContact(currentUser.phone)}</span>
               </div>
               <div className="flex justify-between py-1 border-b border-black/[0.03]">
                 <span className="text-slate-400">Tipo de cuenta:</span>

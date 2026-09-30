@@ -32,13 +32,10 @@ interface HeaderProps {
   onSelectUser: (user: UserRep) => void;
   onOpenUserAccountsModal?: () => void;
   activeView?: ActiveView;
-  setActiveView?: (view: ActiveView) => void;
   searchQuery: string;
   setSearchQuery: (query: string) => void;
   showOnlyMyLeads: boolean;
   setShowOnlyMyLeads: (val: boolean) => void;
-  onOpenNewLeadModal: () => void;
-  onOpenQuickCapture: () => void;
   onToggleMobileMenu: () => void;
   activeFilterCount: number;
   onToggleFilters: () => void;
@@ -58,13 +55,10 @@ export const Header: React.FC<HeaderProps> = ({
   onSelectUser,
   onOpenUserAccountsModal,
   activeView = 'personas',
-  setActiveView,
   searchQuery,
   setSearchQuery,
   showOnlyMyLeads,
   setShowOnlyMyLeads,
-  onOpenNewLeadModal,
-  onOpenQuickCapture,
   onToggleMobileMenu,
   activeFilterCount,
   onToggleFilters,
@@ -277,15 +271,6 @@ export const Header: React.FC<HeaderProps> = ({
               </div>
             )}
           </div>
-
-          {/* Single Primary Action: + Nuevo Lead */}
-          <button
-            onClick={onOpenNewLeadModal}
-            className="flex items-center gap-1.5 px-3.5 py-1.5 bg-[#0071E3] hover:bg-[#0077ED] text-white rounded-xl text-xs font-semibold shadow-[0_1px_3px_rgba(0,113,227,0.3)] active:scale-95 transition-all cursor-pointer whitespace-nowrap"
-          >
-            <Plus className="w-3.5 h-3.5 stroke-[2.5]" />
-            <span className="hidden xs:inline">Nuevo Lead</span>
-          </button>
 
         </div>
 

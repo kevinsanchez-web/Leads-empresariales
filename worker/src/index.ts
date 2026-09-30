@@ -74,7 +74,10 @@ function geminiFailure(path: string, error: any): Response {
   );
 }
 
-const MODELS_TO_TRY = ["gemini-2.5-flash", "gemini-3.7-flash"];
+// El grounding con Google Search cuesta $14/1.000 búsquedas en Gemini 3 y $35 en Gemini 2.5,
+// así que el más reciente y barato va primero. Invertirlo es un ahorro directo de 2,5x, no
+// una mejora de calidad.
+const MODELS_TO_TRY = ["gemini-3.8-flash", "gemini-3.7-flash"];
 
 async function generateContent(apiKey: string, model: string, body: Record<string, unknown>) {
   const res = await fetch(
@@ -272,28 +275,24 @@ Formato de respuesta obligatorio (JSON estricto):
 Responde ÚNICAMENTE con el objeto JSON válido.`;
 
   let response: { text: string; candidates?: any[] } | null = null;
-  let usedSearch = true;
 
   try {
-    response = await generateContent(apiKey, "gemini-2.5-flash", {
+    response = await generateContent(apiKey, MODELS_TO_TRY[0], {
       contents: [{ parts: [{ text: prompt }] }],
       tools: [{ googleSearch: {} }],
     });
   } catch {
     try {
-      response = await generateContent(apiKey, "gemini-3.7-flash", {
+      response = await generateContent(apiKey, MODELS_TO_TRY[1], {
         contents: [{ parts: [{ text: prompt }] }],
         tools: [{ googleSearch: {} }],
       });
-    } catch {
-      // Último reintento sin grounding: el modelo puede inventarse la empresa con el formato
-      // JSON esperado, así que la respuesta viaja marcada con usedSearch:false y la app avisa.
-      usedSearch = false;
-      try {
-        response = await generateContent(apiKey, "gemini-2.5-flash", { contents: [{ parts: [{ text: prompt }] }] });
-      } catch (err3) {
-        return geminiFailure("research-company", err3);
-      }
+    } catch (err2) {
+      // No hay tercer intento sin grounding a propósito: un modelo sin búsqueda inventa la
+      // empresa con el formato JSON esperado y devuelve success:true, así que el perfil falso
+      // se persistía en lead.companyInfo. Si Google Search falla, la respuesta es un error
+      // visible y el comercial completa los datos a mano.
+      return geminiFailure("research-company", err2);
     }
   }
 
@@ -321,10 +320,140 @@ Responde ÚNICAMENTE con el objeto JSON válido.`;
     keyHighlights: Array.isArray(parsed.keyHighlights) ? parsed.keyHighlights : [],
     sources: uniqueSources,
     researchedAt: new Date().toISOString().slice(0, 10),
-    usedSearch,
+    usedSearch: true,
   };
 
   return json({ success: true, companyInfo });
+}
+
+// Enriquece un lead con datos de su empresa y su perfil público. No hay caché en el Worker a
+// propósito: no tiene credenciales de Firestore y añadir un service account sería meter
+// infraestructura nueva. El endpoint es stateless y la caché vive en el cliente, que ya
+// tiene el SDK de Firestore y las reglas permiten cualquier colección.
+export async function handleEnrichLead(req: Request, apiKey: string): Promise<Response> {
+  const body = (await req.json()) as any;
+  const { leadName, companyName, role } = body || {};
+  if (!companyName || typeof companyName !== "string" || !companyName.trim()) {
+    return json({ error: "Se requiere el nombre de la empresa" }, 400);
+  }
+  const trimmedCompany = companyName.trim();
+  const trimmedName = typeof leadName === "string" ? leadName.trim() : "";
+  const trimmedRole = typeof role === "string" ? role.trim() : "";
+
+  if (!apiKey) return aiUnavailable("El asistente de IA no está configurado en este Worker.");
+
+  const prompt = `Busca en Google información pública y verificable sobre esta persona y su empresa.
+Persona: ${trimmedName || "(no informada)"}
+Cargo registrado: ${trimmedRole || "(no informado)"}
+Empresa: ${trimmedCompany}
+
+Para CADA campo responde con el valor y la URL exacta de la fuente donde aparece ese dato
+literalmente. Si no encuentras el dato, responde value como cadena vacía y source como cadena
+vacía. No completes con suposiciones, no deduzcas y no inventes URLs.
+
+Formato de respuesta obligatorio (JSON estricto):
+{
+  "linkedinUrl": { "value": "URL de su perfil público de LinkedIn, o vacío", "source": "URL donde ese perfil está citado" },
+  "email": { "value": "Correo corporativo publicado en un canal oficial de la empresa, o vacío", "source": "URL donde ese correo aparece citado" },
+  "companyPhone": { "value": "Teléfono central de la empresa, o vacío", "source": "URL donde ese teléfono aparece citado" },
+  "currentTitle": { "value": "Cargo actual confirmado de la persona, o vacío", "source": "URL donde ese cargo aparece citado" }
+}
+
+Reglas:
+- Un correo solo vale si aparece escrito en la fuente. No lo deduzcas del dominio ni del nombre.
+- El teléfono de la empresa es el central, no el celular personal de la persona.
+- Un cargo cuenta como actual solo si la fuente es reciente.
+Responde ÚNICAMENTE con el objeto JSON válido.`;
+
+  let response: { text: string; candidates?: any[] } | null = null;
+
+  try {
+    response = await generateContent(apiKey, MODELS_TO_TRY[0], {
+      contents: [{ parts: [{ text: prompt }] }],
+      tools: [{ googleSearch: {} }],
+    });
+  } catch {
+    try {
+      response = await generateContent(apiKey, MODELS_TO_TRY[1], {
+        contents: [{ parts: [{ text: prompt }] }],
+        tools: [{ googleSearch: {} }],
+      });
+    } catch (err2) {
+      // Sin tercer intento sin grounding: un modelo sin búsqueda devuelve una URL de LinkedIn
+      // y un correo con forma de reales, que es exactamente el dato falso que este gate existe
+      // para impedir. Sin búsqueda la respuesta correcta es un error visible.
+      return geminiFailure("enrich-lead", err2);
+    }
+  }
+
+  const text = response?.text || "";
+  const groundingChunks = response?.candidates?.[0]?.groundingMetadata?.groundingChunks || [];
+  const sources: { title: string; url: string }[] = [];
+  groundingChunks.forEach((chunk: any) => {
+    if (chunk.web && chunk.web.uri) {
+      sources.push({ title: chunk.web.title || chunk.web.uri, url: chunk.web.uri });
+    }
+  });
+  const uniqueSources = sources
+    .filter((s, idx, self) => idx === self.findIndex((t) => t.url === s.url))
+    .slice(0, 5);
+
+  const parsed = extractJson(text);
+  if (!parsed || typeof parsed !== "object") {
+    console.warn("enrich-lead: Gemini no devolvió JSON legible para", trimmedCompany);
+    return json({ error: "La IA no pudo leer los datos del lead. Intenta de nuevo o complétalos a mano." }, 502);
+  }
+
+  // Gate de anti-alucinación: un campo solo se acepta si el modelo declaró una fuente y esa
+  // fuente está entre las citas reales que devolvió el grounding. Si no, el valor se descarta
+  // aunque el modelo lo afirmara. Esto es lo que impide que un correo deducido o una URL de
+  // LinkedIn inventada entren como dato bueno: se ven idénticos a un dato verdadero.
+  const citedUrls = new Set(uniqueSources.map((s) => normalizeSourceUrl(s.url)));
+  const accepted: Record<string, string> = {};
+  const rejected: string[] = [];
+
+  for (const field of ["linkedinUrl", "email", "companyPhone", "currentTitle"]) {
+    const raw = parsed[field];
+    const value = typeof raw?.value === "string" ? raw.value.trim() : "";
+    const source = typeof raw?.source === "string" ? raw.source.trim() : "";
+    if (!value) {
+      rejected.push(`${field}: no se encontró`);
+      continue;
+    }
+    if (!source || !citedUrls.has(normalizeSourceUrl(source))) {
+      rejected.push(`${field}: la fuente declarada no está entre las citas de Google`);
+      continue;
+    }
+    accepted[field] = value;
+  }
+
+  const found = Object.keys(accepted).length;
+  return json({
+    success: true,
+    enrichment: {
+      ...accepted,
+      status: found === 0 ? "not_found" : found < 4 ? "partial" : "ok",
+      usedSearch: true,
+      sources: uniqueSources,
+      model: MODELS_TO_TRY[0],
+      enrichedAt: new Date().toISOString(),
+      reason: rejected.length ? rejected.join(". ") : undefined,
+    },
+  });
+}
+
+// Compara fuentes ignorando el esquema, la barra final y la www, porque la URL que declara el
+// modelo y la que devuelve el grounding se escriben casi igual pero no idénticamente.
+function normalizeSourceUrl(url: string): string {
+  return url
+    .trim()
+    .replace(/^https?:\/\//, "")
+    .replace(/^www\./, "")
+    // Los parámetros de seguimiento no cambian qué página respalda el dato y se cuelan mucho en
+    // las citas: sin esto, una fuente real se descartaría por differing en "?utm_source=...".
+    .split(/[?#]/)[0]
+    .replace(/\/$/, "")
+    .toLowerCase();
 }
 
 export default {
@@ -360,6 +489,9 @@ export default {
       }
       if (req.method === "POST" && url.pathname === "/api/ai/research-company") {
         return await handleResearchCompany(req, apiKey);
+      }
+      if (req.method === "POST" && url.pathname === "/api/ai/enrich-lead") {
+        return await handleEnrichLead(req, apiKey);
       }
       return json({ error: "Ruta no encontrada" }, 404);
     } catch (err: any) {

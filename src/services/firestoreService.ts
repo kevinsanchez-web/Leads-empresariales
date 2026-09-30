@@ -1,6 +1,7 @@
 import {
   collection,
   doc,
+  getDoc,
   setDoc,
   deleteDoc,
   onSnapshot,
@@ -9,11 +10,12 @@ import {
   orderBy,
 } from "firebase/firestore";
 import { db } from "../firebase";
-import { Lead, UserRep, EventOption } from "../types";
+import { Lead, UserRep, EventOption, ContactEnrichment } from "../types";
 
 const leadsCol = collection(db, "leads");
 const usersCol = collection(db, "users");
 const eventsCol = collection(db, "events");
+const enrichmentCol = collection(db, "enrichmentCache");
 
 export function subscribeToLeads(onChange: (leads: Lead[]) => void) {
   const q = query(leadsCol, orderBy("capturedAt", "desc"));
@@ -46,6 +48,53 @@ export function subscribeToEvents(onChange: (events: EventOption[]) => void) {
     (snap) => onChange(snap.docs.map((d) => d.data() as EventOption)),
     (err) => console.error("Error escuchando eventos:", err)
   );
+}
+
+// La caché del enriquecimiento vive aquí y no en el Worker, que no tiene credenciales de
+// Firestore. Dos claves porque lo que se busca por persona y lo que se busca por empresa tienen
+// cadencias distintas: el teléfono central y el sector duran, el cargo actual caduca. Si 300
+// leads vienen de 120 empresas, las de empresa evitan 180 búsquedas.
+const COMPANY_TTL_DAYS = 90;
+const LEAD_TTL_DAYS = 30;
+
+function cacheKey(kind: "company" | "lead", value: string): string {
+  return `${kind}_${value.trim().toLowerCase().replace(/[^a-z0-9]+/g, "_")}`;
+}
+
+function isFresh(enrichedAt?: string, ttlDays?: number): boolean {
+  if (!enrichedAt || !ttlDays) return false;
+  const age = Date.now() - new Date(enrichedAt).getTime();
+  return Number.isFinite(age) && age >= 0 && age < ttlDays * 24 * 60 * 60 * 1000;
+}
+
+export async function getCachedEnrichment(
+  kind: "company" | "lead",
+  value: string
+): Promise<ContactEnrichment | null> {
+  try {
+    const snap = await getDoc(doc(enrichmentCol, cacheKey(kind, value)));
+    if (!snap.exists()) return null;
+    const cached = snap.data() as ContactEnrichment;
+    return isFresh(cached.enrichedAt, kind === "company" ? COMPANY_TTL_DAYS : LEAD_TTL_DAYS)
+      ? cached
+      : null;
+  } catch (err) {
+    // Un fallo de caché no debe impedir enriquecer: el peor caso es volver a pagar la búsqueda.
+    console.warn("No se pudo leer la caché de enriquecimiento:", err);
+    return null;
+  }
+}
+
+export async function cacheEnrichment(
+  kind: "company" | "lead",
+  value: string,
+  enrichment: ContactEnrichment
+): Promise<void> {
+  try {
+    await setDoc(doc(enrichmentCol, cacheKey(kind, value)), enrichment);
+  } catch (err) {
+    console.warn("No se pudo guardar la caché de enriquecimiento:", err);
+  }
 }
 
 export async function createOrUpdateLead(lead: Lead) {

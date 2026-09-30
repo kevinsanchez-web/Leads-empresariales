@@ -3,6 +3,7 @@ import {
   handleAnalyzeLead,
   handleDraftEmail,
   handleResearchCompany,
+  handleEnrichLead,
 } from "../worker/src/index";
 
 const DATO_INVENTADO = [
@@ -86,6 +87,31 @@ const ANALISIS_OK = JSON.stringify({ resumenEstrategico: "r", oportunidadClave: 
 const EMAIL_OK = JSON.stringify({ asunto: "a", cuerpo: "c" });
 const EMPRESA_OK = JSON.stringify({ summary: "Ecopetrol explota petróleo.", industry: "Energía", productsAndServices: ["x"], targetMarket: "y", keyHighlights: ["z"] });
 const GROUNDING = [{ web: { uri: "https://ecopetrol.com/sobre-nosotros", title: "Ecopetrol" } }];
+
+// Cada campo trae su valor y la fuente donde dice estar escrito. Un valor sin cita es dato
+// inventado por definición, y eso es lo que el gate debe descartar.
+const ENRIQUECIDO_OK = JSON.stringify({
+  linkedinUrl: { value: "https://www.linkedin.com/in/laura-martinez", source: "https://www.linkedin.com/in/laura-martinez" },
+  email: { value: "contacto@ecopetrol.com", source: "https://ecopetrol.com/contacto" },
+  companyPhone: { value: "+57 601 2345678", source: "https://ecopetrol.com/contacto" },
+  currentTitle: { value: "Directora de Transformación Digital", source: "https://www.linkedin.com/in/laura-martinez" },
+});
+
+const ENRIQUECIMIENTO_DEDUCIDO = JSON.stringify({
+  // Sin ninguna cita: el patrón clásico de un correo deducido del dominio y del nombre.
+  linkedinUrl: { value: "https://www.linkedin.com/in/inventado-999", source: "" },
+  email: { value: "laura.martinez@ecopetrol.com", source: "" },
+  companyPhone: { value: "", source: "" },
+  currentTitle: { value: "Directora", source: "" },
+});
+
+const ENRIQUECIMIENTO_FUENTE_Falsa = JSON.stringify({
+  // Cita una URL que el grounding no devolvió: el dato parece bueno pero nadie lo respalda.
+  linkedinUrl: { value: "https://www.linkedin.com/in/otra-persona", source: "https://sitio-falso.example/perfil" },
+  email: { value: "info@ecopetrol.com", source: "https://sitio-falso.example/contacto" },
+  companyPhone: { value: "+57 601 0000000", source: "https://sitio-falso.example" },
+  currentTitle: { value: "CEO", source: "https://sitio-falso.example" },
+});
 
 async function run() {
   console.log("\n== Worker: sin GEMINI_API_KEY configurada ==");
@@ -195,7 +221,8 @@ async function run() {
     setGemini({ kind: "soloSinSearch", text: EMPRESA_OK });
     const res = await handleResearchCompany(req({ companyName: "Constructora XYZ 3000" }), "key");
     const cuerpo = await res.json();
-    check("research-company tercer intento responde usedSearch:false", res.status === 200 && cuerpo.companyInfo?.usedSearch === false, JSON.stringify(cuerpo).slice(0, 140));
+    assertNoEsExito("research-company sin grounding disponible", res, cuerpo);
+    check("research-company sin grounding NO devuelve companyInfo", cuerpo.companyInfo === undefined, JSON.stringify(cuerpo).slice(0, 120));
   }
   {
     setGemini({ kind: "texto", text: "respuesta sin summary" });
@@ -207,6 +234,74 @@ async function run() {
     setGemini({ kind: "texto", text: EMPRESA_OK, grounding: GROUNDING });
     const res = await handleResearchCompany(req({}), "key");
     check("research-company sin nombre da 400", res.status === 400, String(res.status));
+  }
+
+  console.log("\n== enrich-lead (el gate de citas anti-alucinación) ==");
+  {
+    setGemini({ kind: "texto", text: ENRIQUECIDO_OK, grounding: [
+      { web: { uri: "https://www.linkedin.com/in/laura-martinez", title: "Laura" } },
+      { web: { uri: "https://ecopetrol.com/contacto", title: "Contacto" } },
+    ] });
+    const res = await handleEnrichLead(req({ leadName: "Laura", companyName: "Ecopetrol" }), "key");
+    const cuerpo = await res.json();
+    check("enrich-lead con grounding responde 200", res.status === 200 && cuerpo.success === true, JSON.stringify(cuerpo).slice(0, 140));
+    check("enrich-lead entrega la URL de LinkedIn citada", cuerpo.enrichment?.linkedinUrl === "https://www.linkedin.com/in/laura-martinez", JSON.stringify(cuerpo.enrichment?.linkedinUrl));
+    check("enrich-lead entrega el teléfono central", cuerpo.enrichment?.companyPhone === "+57 601 2345678", JSON.stringify(cuerpo.enrichment?.companyPhone));
+    check("enrich-lead marca status ok", cuerpo.enrichment?.status === "ok", JSON.stringify(cuerpo.enrichment?.status));
+    check("enrich-lead expone las fuentes", Array.isArray(cuerpo.enrichment?.sources) && cuerpo.enrichment.sources.length === 2, JSON.stringify(cuerpo.enrichment?.sources));
+    check("enrich-lead no inventa url de Google", !JSON.stringify(cuerpo).includes("google.com/search"));
+  }
+  {
+    setGemini({ kind: "texto", text: ENRIQUECIMIENTO_DEDUCIDO, grounding: GROUNDING });
+    const res = await handleEnrichLead(req({ leadName: "Laura", companyName: "Ecopetrol" }), "key");
+    const cuerpo = await res.json();
+    check("enrich-lead descarta el email deducido", cuerpo.enrichment?.email === undefined, JSON.stringify(cuerpo.enrichment?.email));
+    check("enrich-lead descarta la URL sin cita", cuerpo.enrichment?.linkedinUrl === undefined, JSON.stringify(cuerpo.enrichment?.linkedinUrl));
+    check("enrich-lead con todo descartado queda not_found", cuerpo.enrichment?.status === "not_found", JSON.stringify(cuerpo.enrichment?.status));
+    check("enrich-lead explica por qué descartó", typeof cuerpo.enrichment?.reason === "string" && cuerpo.enrichment.reason.includes("linkedinUrl"), JSON.stringify(cuerpo.enrichment?.reason));
+    check("enrich-lead no filtra el email deducido al cliente", !JSON.stringify(cuerpo).includes("laura.martinez@ecopetrol.com"), JSON.stringify(cuerpo).slice(0, 160));
+  }
+  {
+    setGemini({ kind: "texto", text: ENRIQUECIMIENTO_FUENTE_Falsa, grounding: GROUNDING });
+    const res = await handleEnrichLead(req({ leadName: "Laura", companyName: "Ecopetrol" }), "key");
+    const cuerpo = await res.json();
+    check("enrich-lead descarta la fuente que el grounding no devolvió", cuerpo.enrichment?.status === "not_found", JSON.stringify(cuerpo.enrichment?.status));
+    check("enrich-lead no filtra datos de la fuente falsa", !JSON.stringify(cuerpo).includes("otra-persona"), JSON.stringify(cuerpo).slice(0, 160));
+  }
+  {
+    setGemini({ kind: "texto", text: ENRIQUECIDO_OK, grounding: [
+      { web: { uri: "https://www.linkedin.com/in/laura-martinez?utm_source=google", title: "Laura" } },
+      { web: { uri: "https://ecopetrol.com/contacto/", title: "Contacto" } },
+    ] });
+    const res = await handleEnrichLead(req({ companyName: "Ecopetrol" }), "key");
+    const cuerpo = await res.json();
+    check("enrich-lead acepta una cita con utm y barra final", cuerpo.enrichment?.linkedinUrl === "https://www.linkedin.com/in/laura-martinez", JSON.stringify(cuerpo.enrichment?.status));
+    check("enrich-lead acepta la segunda fuente también", cuerpo.enrichment?.email === "contacto@ecopetrol.com", JSON.stringify(cuerpo.enrichment?.email));
+  }
+  {
+    setGemini({ kind: "soloSinSearch", text: ENRIQUECIDO_OK });
+    const res = await handleEnrichLead(req({ leadName: "Laura", companyName: "Ecopetrol" }), "key");
+    const cuerpo = await res.json();
+    assertNoEsExito("enrich-lead sin grounding", res, cuerpo);
+    check("enrich-lead sin grounding NO devuelve enrichment", cuerpo.enrichment === undefined, JSON.stringify(cuerpo).slice(0, 120));
+    check("enrich-lead sin grounding no filtra la URL inventada", !JSON.stringify(cuerpo).includes("laura-martinez"), JSON.stringify(cuerpo).slice(0, 160));
+  }
+  {
+    setGemini({ kind: "error", status: 500, message: "boom" });
+    const res = await handleEnrichLead(req({ companyName: "Ecopetrol" }), "key");
+    const cuerpo = await res.json();
+    assertNoEsExito("enrich-lead todos los intentos fallan", res, cuerpo);
+  }
+  {
+    setGemini({ kind: "texto", text: ENRIQUECIDO_OK, grounding: GROUNDING });
+    const res = await handleEnrichLead(req({}), "key");
+    check("enrich-lead sin empresa da 400", res.status === 400, String(res.status));
+  }
+  {
+    setGemini({ kind: "texto", text: "esto no es json", grounding: GROUNDING });
+    const res = await handleEnrichLead(req({ companyName: "Ecopetrol" }), "key");
+    const cuerpo = await res.json();
+    assertNoEsExito("enrich-lead sin JSON legible", res, cuerpo);
   }
 
   console.log(`\n== Worker: ${pass} ok, ${fail} fallas ==`);

@@ -26,6 +26,7 @@ import {
 import { QRCodeCanvas } from 'qrcode.react';
 import { Lead, LeadStatus, InteractionItem, CompanyResearchInfo } from '../types';
 import { researchCompany, analyzeLead, draftEmail, isAiFailure, LeadAnalysis, DraftEmail, AI_SIMULATED_WARNING } from '../services/aiService';
+import { hasContact, displayContact } from '../utils/contactInfo';
 import { AiNotice } from './AiNotice';
 
 interface LeadDetailDrawerProps {
@@ -594,6 +595,18 @@ END:VCARD`;
 
             {/* Key Attributes List */}
             <div className="divide-y divide-black/[0.04]">
+              <div className="flex items-center justify-between py-1.5 gap-3">
+                <span className="text-slate-400 font-medium shrink-0">Teléfono</span>
+                <span className={`font-semibold text-right truncate ${hasContact(lead.phone) ? 'text-slate-800' : 'text-slate-400 font-medium'}`}>
+                  {displayContact(lead.phone)}
+                </span>
+              </div>
+              <div className="flex items-center justify-between py-1.5 gap-3">
+                <span className="text-slate-400 font-medium shrink-0">Email</span>
+                <span className={`font-semibold text-right truncate ${hasContact(lead.email) ? 'text-slate-800' : 'text-slate-400 font-medium'}`}>
+                  {displayContact(lead.email)}
+                </span>
+              </div>
               <div className="flex items-center justify-between py-1.5">
                 <span className="text-slate-400 font-medium">Evento</span>
                 <span className="font-semibold text-[#1D1D1F]">{lead.event}</span>

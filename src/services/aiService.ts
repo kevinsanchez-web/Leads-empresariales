@@ -1,5 +1,5 @@
 import { auth } from "../firebase";
-import { CompanyResearchInfo } from "../types";
+import { CompanyResearchInfo, ContactEnrichment } from "../types";
 import { aiRequest, AiOutcome, AiFailure, AI_SIMULATED_WARNING, AI_FALLBACK_REJECTED, AI_SIMULATED_DISABLED, isAiFailure } from "./aiTransport";
 import { devScannedCard, devLeadAnalysis, devDraftEmail, devCompanyProfile, ScannedCard } from "./aiDevSamples";
 
@@ -36,6 +36,10 @@ export interface DraftEmailPayload { email?: DraftEmail }
 export interface ResearchCompanyPayload {
   companyInfo?: CompanyResearchInfo | null;
   usedSearch?: boolean;
+}
+
+export interface EnrichLeadPayload {
+  enrichment?: ContactEnrichment;
 }
 
 function getIdToken(): Promise<string | undefined> {
@@ -83,6 +87,24 @@ export function draftEmail(params: {
     body: params,
     getIdToken,
     devSample: isAiSimulatedMode() ? () => devDraftEmail(params) : undefined,
+  });
+}
+
+/**
+ * Busca datos públicos y citados de una persona y su empresa. No hay muestra simulada: sin
+ * GEMINI real esta ruta no puede devolver nada verificable, y una muestra presentada como dato
+ * bueno es justo lo que el gate de citas del Worker existe para impedir.
+ */
+export function enrichLead(params: {
+  leadName?: string;
+  companyName: string;
+  role?: string;
+}): Promise<AiOutcome<EnrichLeadPayload>> {
+  return aiRequest<EnrichLeadPayload>({
+    workerUrl: WORKER_URL,
+    path: "/api/ai/enrich-lead",
+    body: params,
+    getIdToken,
   });
 }
 

@@ -1,22 +1,15 @@
 import React from 'react';
 import { 
-  Users, 
-  Building2, 
   Star, 
-  CheckCircle2, 
   BarChart3, 
   Smartphone, 
   ChevronRight, 
   Sparkles,
   Calendar,
   Bell,
-  UserCheck,
   ChevronUp,
-  UserPlus,
   Shield,
-  Settings,
   Briefcase,
-  Zap,
   Layers,
   LogOut,
   X
@@ -33,13 +26,9 @@ interface SidebarProps {
   onOpenCreateEventModal?: () => void;
   currentUser?: UserRep;
   users?: UserRep[];
-  onSelectUser?: (user: UserRep) => void;
-  onOpenUserAccountsModal?: () => void;
   isMobileOpen?: boolean;
   setIsMobileOpen?: (open: boolean) => void;
   pendingAlertsCount?: number;
-  leadsCount?: number;
-  myLeadsCount?: number;
 }
 
 export const Sidebar: React.FC<SidebarProps> = ({
@@ -51,71 +40,46 @@ export const Sidebar: React.FC<SidebarProps> = ({
   onOpenCreateEventModal,
   currentUser,
   users = [],
-  onSelectUser,
-  onOpenUserAccountsModal,
   isMobileOpen,
   setIsMobileOpen,
-  pendingAlertsCount,
-  leadsCount = 128,
-  myLeadsCount = 0
+  pendingAlertsCount
 }) => {
   const [showEventDropdown, setShowEventDropdown] = React.useState(false);
-  const [showUserDropdown, setShowUserDropdown] = React.useState(false);
 
   const isAdmin = currentUser?.accountType === 'admin' || (currentUser?.role && currentUser.role.toLowerCase().includes('admin'));
 
-  // Menu items for Executive (Clean, simplified, focused on fast lead capture)
+  // El Sidebar ya no navega la operativa diaria: eso es de la BottomNavBar (5 destinos,
+  // siempre visible). Aquí solo queda lo que la Down Bar no trae.
+  //
+  // La garantía de que no queda ninguna vista sin entrada es aritmética: la Down Bar cubre
+  // captura_movil, personas, empresas, seguimientos y configuracion (5); este menú cubre
+  // eventos, intereses, reportes, notificaciones, usuarios y enriquecimiento (6). Son las 11
+  // vistas que App.tsx sabe renderizar. Si mañana se agrega una vista a una de las dos listas,
+  // hay que agregarla a la otra — no hay router que lo detecte.
+  //
+  // Para el ejecutivo no queda ningún destino propio salvo Notificaciones: la campana del
+  // Header siempre navega a esa vista (App.tsx pasa onNavigateToNotifications sin condición),
+  // así que el acceso no se pierde, solo queda duplicado en dos sitios.
+
+  // Menu items for Executive (admin tools only; daily operation lives in the BottomNavBar)
   const executiveMenuItems = [
-    { 
-      id: 'captura_movil' as ActiveView, 
-      label: 'Inicio (Captura en Vivo)', 
-      icon: Zap, 
-      badge: 'Voz & IA',
-      highlight: true
-    },
-    { 
-      id: 'personas' as ActiveView, 
-      label: 'Mis Leads Capturados', 
-      icon: Users, 
-      badge: myLeadsCount > 0 ? `${myLeadsCount}` : `${leadsCount}` 
-    },
-    { 
-      id: 'seguimientos' as ActiveView, 
-      label: 'Mis Seguimientos', 
-      icon: CheckCircle2 
-    },
     { 
       id: 'notificaciones' as ActiveView, 
       label: 'Notificaciones', 
       icon: Bell, 
       badge: pendingAlertsCount ? `${pendingAlertsCount}` : undefined, 
       alertBadge: pendingAlertsCount ? pendingAlertsCount > 0 : false 
-    },
-    { 
-      id: 'configuracion' as ActiveView, 
-      label: 'Configuración', 
-      icon: Settings 
     }
   ];
 
-  // Menu items for Admin (Full access to all sections and administrative controls)
+  // Menu items for Admin (administración y analítica global, lo que la Down Bar no cubre)
   const adminMenuItems = [
-    { 
-      id: 'captura_movil' as ActiveView, 
-      label: 'Inicio (Captura en Vivo)', 
-      icon: Zap, 
-      badge: 'Voz & IA',
-      highlight: true 
-    },
-    { id: 'personas' as ActiveView, label: 'Personas (Leads)', icon: Users, badge: `${leadsCount}` },
     { id: 'eventos' as ActiveView, label: 'Eventos & Sedes', icon: Calendar, badge: `${events.length}` },
-    { id: 'seguimientos' as ActiveView, label: 'Seguimientos', icon: CheckCircle2 },
-    { id: 'empresas' as ActiveView, label: 'Empresas', icon: Building2 },
     { id: 'intereses' as ActiveView, label: 'Intereses & Tags', icon: Star },
     { id: 'reportes' as ActiveView, label: 'Reportes y Analítica', icon: BarChart3 },
     { id: 'notificaciones' as ActiveView, label: 'Notificaciones', icon: Bell, badge: pendingAlertsCount ? `${pendingAlertsCount}` : undefined, alertBadge: pendingAlertsCount ? pendingAlertsCount > 0 : false },
     { id: 'usuarios' as ActiveView, label: 'Cuentas & Equipo', icon: Shield, badge: `${users.length}` },
-    { id: 'configuracion' as ActiveView, label: 'Configuración', icon: Settings }
+    { id: 'enriquecimiento' as ActiveView, label: 'Enriquecimiento', icon: Sparkles }
   ];
 
   const currentMenuItems = isAdmin ? adminMenuItems : executiveMenuItems;
@@ -223,7 +187,6 @@ export const Sidebar: React.FC<SidebarProps> = ({
             <button
               onClick={() => {
                 setShowEventDropdown(!showEventDropdown);
-                setShowUserDropdown(false);
               }}
               className="w-full flex items-center justify-between p-2.5 rounded-xl bg-blue-950/60 hover:bg-blue-900/50 border border-blue-800/40 text-left transition-colors cursor-pointer"
             >
@@ -276,93 +239,6 @@ export const Sidebar: React.FC<SidebarProps> = ({
               </div>
             )}
           </div>
-
-          {/* Logged In User Panel (Bottom Left) */}
-          {currentUser && (
-            <div className="relative">
-              <button
-                onClick={() => {
-                  setShowUserDropdown(!showUserDropdown);
-                  setShowEventDropdown(false);
-                }}
-                className="w-full flex items-center justify-between p-2.5 rounded-2xl bg-white/10 hover:bg-white/15 border border-white/10 text-left transition-all cursor-pointer group"
-              >
-                <div className="flex items-center gap-2.5 overflow-hidden">
-                  <div className="relative">
-                    <div className={`w-8 h-8 rounded-full ${currentUser.color || (isAdmin ? 'bg-slate-900' : 'bg-blue-500')} text-white font-black text-xs flex items-center justify-center ring-2 ring-white/20 shrink-0`}>
-                      {currentUser.avatar}
-                    </div>
-                    <span className="w-2.5 h-2.5 bg-emerald-400 rounded-full absolute bottom-0 right-0 ring-2 ring-[#0B193C]"></span>
-                  </div>
-                  <div className="truncate">
-                    <div className="text-[10px] font-bold text-blue-300/70 uppercase flex items-center gap-1">
-                      <UserCheck className="w-3 h-3 text-emerald-400" />
-                      <span>{isAdmin ? 'Admin Conectado' : 'Ejecutivo Conectado'}</span>
-                    </div>
-                    <div className="font-bold text-xs text-white truncate leading-tight">{currentUser.name}</div>
-                    <div className="text-[10px] text-blue-200/60 truncate">{currentUser.role}</div>
-                  </div>
-                </div>
-                <ChevronUp className={`w-3.5 h-3.5 text-blue-300 transition-transform ${showUserDropdown ? '' : 'rotate-180'}`} />
-              </button>
-
-              {/* User Dropdown Selector */}
-              {showUserDropdown && (
-                <div className="absolute bottom-full left-0 right-0 mb-2 bg-[#0f234f] border border-blue-700/50 rounded-2xl shadow-2xl p-2 z-50 space-y-1">
-                  <div className="text-[10px] font-bold text-blue-300 px-2 py-1 uppercase border-b border-blue-800/60 mb-1 flex items-center justify-between">
-                    <span>Cambiar Usuario</span>
-                    <span className="text-[9px] text-emerald-400 font-bold">● En Línea</span>
-                  </div>
-                  {users.map((u) => {
-                    const isUAdmin = u.accountType === 'admin' || u.role.toLowerCase().includes('admin');
-                    return (
-                      <button
-                        key={u.id}
-                        onClick={() => {
-                          onSelectUser?.(u);
-                          setShowUserDropdown(false);
-                        }}
-                        className={`w-full flex items-center justify-between p-2 rounded-xl text-left transition-colors cursor-pointer ${
-                          u.id === currentUser.id 
-                            ? 'bg-blue-600 text-white font-bold' 
-                            : 'text-blue-100 hover:bg-blue-900/60'
-                        }`}
-                      >
-                        <div className="flex items-center gap-2.5 overflow-hidden">
-                          <div className={`w-7 h-7 rounded-full ${u.color || (isUAdmin ? 'bg-slate-900' : 'bg-blue-800')} text-white font-extrabold text-[11px] flex items-center justify-center shrink-0`}>
-                            {u.avatar}
-                          </div>
-                          <div className="truncate">
-                            <div className="text-xs font-bold leading-none truncate">{u.name}</div>
-                            <div className="text-[10px] text-blue-200/70 truncate">{u.role}</div>
-                          </div>
-                        </div>
-                        <span className={`text-[8px] font-black px-1.5 py-0.5 rounded ${
-                          isUAdmin ? 'bg-slate-900 text-amber-300' : 'bg-blue-950 text-blue-300'
-                        }`}>
-                          {isUAdmin ? 'ADMIN' : 'EJEC'}
-                        </span>
-                      </button>
-                    );
-                  })}
-
-                  {/* Add / Manage Users trigger inside dropdown */}
-                  <div className="pt-2 border-t border-blue-800/60 mt-1">
-                    <button
-                      onClick={() => {
-                        setShowUserDropdown(false);
-                        onOpenUserAccountsModal?.();
-                      }}
-                      className="w-full py-1.5 px-2 bg-blue-600 hover:bg-blue-500 text-white rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 cursor-pointer shadow-xs"
-                    >
-                      <UserPlus className="w-3.5 h-3.5" />
-                      <span>+ Gestionar / Cambiar Roles</span>
-                    </button>
-                  </div>
-                </div>
-              )}
-            </div>
-          )}
 
         </div>
       </aside>

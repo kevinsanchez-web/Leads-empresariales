@@ -8,6 +8,7 @@ import { ReportsDashboard } from './components/ReportsDashboard';
 import { NewLeadModal } from './components/NewLeadModal';
 import { MobileQuickCapture } from './components/MobileQuickCapture';
 import { EmpresasView } from './components/EmpresasView';
+import { EnriquecimientoView } from './components/EnriquecimientoView';
 import { InteresesView } from './components/InteresesView';
 import { SeguimientosView } from './components/SeguimientosView';
 import { FiltersModal } from './components/FiltersModal';
@@ -285,6 +286,27 @@ export default function App() {
     }
   };
 
+  /**
+   * Escribe el resultado del enriquecimiento sin pisar nada que el comercial haya escrito.
+   * Solo se copian los campos que llegan citados; un campo ausente o vacío conserva el valor
+   * previo, que puede venir de la tarjeta escaneada o de un Ditto escrito a mano.
+   */
+  const handleApplyEnrichment = async (
+    leadId: string,
+    patch: { linkedinUrl?: string | null; email?: string | null; phone?: string | null; enrichment?: Lead['enrichment'] }
+  ) => {
+    const lead = leads.find(l => l.id === leadId);
+    if (!lead) return;
+
+    const next: Lead = { ...lead };
+    if (patch.linkedinUrl) next.linkedinUrl = patch.linkedinUrl;
+    if (patch.email) next.email = patch.email;
+    if (patch.phone) next.phone = patch.phone;
+    if (patch.enrichment) next.enrichment = patch.enrichment;
+
+    await handleUpdateLead(next);
+  };
+
   const handleSaveNewLead = async (newLead: Lead) => {
     setSelectedLeadId(newLead.id);
     try {
@@ -340,7 +362,6 @@ export default function App() {
 
   const pendingAlerts = getNotificationAlerts(leads);
   const pendingAlertsCount = pendingAlerts.filter(a => a.category === 'overdue' || a.category === 'today' || a.category === 'priority').length;
-  const myLeadsCount = leads.filter(l => l.capturedBy === currentUser.name).length;
 
   return (
     <div className="min-h-screen bg-[#F8FAFC] text-slate-800 font-sans flex flex-col antialiased selection:bg-blue-500 selection:text-white">
@@ -358,13 +379,9 @@ export default function App() {
         onOpenCreateEventModal={() => setIsCreateEventModalOpen(true)}
         currentUser={currentUser}
         users={users}
-        onSelectUser={setCurrentUser}
-        onOpenUserAccountsModal={() => handleOpenAddUserModal('executive')}
         isMobileOpen={isMobileMenuOpen}
         setIsMobileOpen={setIsMobileMenuOpen}
         pendingAlertsCount={pendingAlertsCount}
-        leadsCount={leads.length}
-        myLeadsCount={myLeadsCount}
       />
 
       {/* Main App Canvas (Full width for maximum visual space) */}
@@ -384,13 +401,10 @@ export default function App() {
           onSelectUser={setCurrentUser}
           onOpenUserAccountsModal={() => handleOpenAddUserModal('executive')}
           activeView={activeView}
-          setActiveView={setActiveView}
           searchQuery={searchQuery}
           setSearchQuery={setSearchQuery}
           showOnlyMyLeads={showOnlyMyLeads}
           setShowOnlyMyLeads={setShowOnlyMyLeads}
-          onOpenNewLeadModal={() => setIsNewLeadModalOpen(true)}
-          onOpenQuickCapture={() => setActiveView('captura_movil')}
           onToggleMobileMenu={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
           activeFilterCount={activeFilterCount}
           onToggleFilters={() => setIsFiltersModalOpen(true)}
@@ -562,6 +576,15 @@ export default function App() {
             />
           )}
 
+          {/* ENRIQUECIMIENTO */}
+          {activeView === 'enriquecimiento' && (
+            <EnriquecimientoView
+              leads={leads.filter(l => l.event === currentEvent.name)}
+              onSelectLead={(lead) => setSelectedLeadId(lead.id)}
+              onApplyEnrichment={handleApplyEnrichment}
+            />
+          )}
+
           {/* VIEW 4: INTERESES */}
           {activeView === 'intereses' && (
             <InteresesView
@@ -590,10 +613,8 @@ export default function App() {
               onSaveLead={handleSaveNewLead}
               currentUser={currentUser}
               currentEvent={currentEvent}
-              events={events}
               allLeads={leads}
-              onSelectEvent={(evt) => setCurrentEvent(evt)}
-              onOpenCreateEventModal={() => setIsCreateEventModalOpen(true)}
+              onOpenNewLeadModal={() => setIsNewLeadModalOpen(true)}
               onDone={() => setActiveView('personas')}
             />
           )}

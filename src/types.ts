@@ -21,6 +21,22 @@ export interface CompanyResearchSource {
   url: string;
 }
 
+// Datos encontrados por IA para un lead. Todo campo que no venga acompañado de una cita real
+// queda en null con su motivo en `reason`: un dato sin fuente se ve igual que uno bueno, y esa
+// es exactamente la debilidad que no se puede dejar pasar.
+export interface ContactEnrichment {
+  linkedinUrl: string | null;
+  email: string | null;
+  companyPhone: string | null;
+  currentTitle: string | null;
+  status: "ok" | "partial" | "not_found" | "error";
+  usedSearch: boolean;
+  sources?: CompanyResearchSource[];
+  model?: string;
+  enrichedAt: string;
+  reason?: string;
+}
+
 export interface CompanyResearchInfo {
   summary: string;
   industry?: string;
@@ -54,6 +70,10 @@ export interface Lead {
   history: InteractionItem[];
   suggestedAction?: SuggestedAction;
   companyInfo?: CompanyResearchInfo;
+  // Datos adicionales de contacto ampliados por la vista de Enriquecimiento. linkedinUrl es un
+  // dato citado: solo llega con la fuente que lo respalda, o no se escribe.
+  linkedinUrl?: string;
+  enrichment?: ContactEnrichment;
 }
 
 export interface NotificationAlert {
@@ -109,7 +129,7 @@ export interface EventOption {
   isCurrent?: boolean;
 }
 
-export type ActiveView = "personas" | "empresas" | "eventos" | "intereses" | "seguimientos" | "reportes" | "captura_movil" | "notificaciones" | "usuarios" | "mis_leads" | "configuracion";
+export type ActiveView = "personas" | "empresas" | "eventos" | "intereses" | "seguimientos" | "reportes" | "captura_movil" | "notificaciones" | "usuarios" | "configuracion" | "enriquecimiento";
 
 export type AccentTheme = 'azul' | 'verde' | 'naranja' | 'purpura';
 

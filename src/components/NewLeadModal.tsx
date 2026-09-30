@@ -30,6 +30,7 @@ import { ParsedVoiceLead } from '../utils/voiceLeadParser';
 import { isOnline, saveLeadOffline } from '../utils/offlineStore';
 import { todayISODate } from '../utils/date';
 import { cleanCompanyName } from '../utils/company';
+import { cleanContact } from '../utils/contactInfo';
 import { sendPriorityLeadPushNotification } from '../utils/pushNotifications';
 import { AiNotice } from './AiNotice';
 import { researchCompany, isAiFailure, AI_SIMULATED_WARNING } from '../services/aiService';
@@ -231,8 +232,8 @@ export const NewLeadModal: React.FC<NewLeadModalProps> = ({
       name,
       role: role || 'Visitante Comercial',
       company: cleanCompany,
-      email: email || `${name.toLowerCase().replace(/\s+/g, '.')}@${cleanCompany.toLowerCase().replace(/\s+/g, '')}.com`,
-      phone: phone || '+57 300 000 0000',
+      email: cleanContact(email),
+      phone: cleanContact(phone),
       event: selectedEvent,
       interests: selectedInterests.length > 0 ? selectedInterests : ['IA'],
       experiences: selectedExperiences,
