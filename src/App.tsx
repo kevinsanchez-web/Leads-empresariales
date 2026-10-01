@@ -3,7 +3,7 @@ import { Sidebar } from './components/Sidebar';
 import { Header } from './components/Header';
 import { MetricsHeader } from './components/MetricsHeader';
 import { LeadsTable } from './components/LeadsTable';
-import { LeadDetailDrawer } from './components/LeadDetailDrawer';
+import { LeadDrawerHost } from './components/LeadDrawerHost';
 import { ReportsDashboard } from './components/ReportsDashboard';
 import { NewLeadModal } from './components/NewLeadModal';
 import { MobileQuickCapture } from './components/MobileQuickCapture';
@@ -21,6 +21,7 @@ import { LeadsTrendChart } from './components/LeadsTrendChart';
 import { BottomNavBar } from './components/BottomNavBar';
 import { ConfiguracionView } from './components/ConfiguracionView';
 import { getNotificationAlerts } from './utils/notifications';
+import { cleanContact } from './utils/contactInfo';
 import { isOnline, getOfflineLeads, syncOfflineLeads } from './utils/offlineStore';
 import { WifiOff, RefreshCw, CheckCircle2, X } from 'lucide-react';
 
@@ -129,13 +130,8 @@ export default function App() {
     };
   }, []);
 
-  // Lead seleccionado
-  const [selectedLeadId, setSelectedLeadId] = useState<string | null>(() => {
-    if (typeof window !== 'undefined' && window.innerWidth >= 1024) {
-      return INITIAL_LEADS[0].id;
-    }
-    return null;
-  });
+  // Lead seleccionado (el drawer flotante se abre solo por acción del usuario)
+  const [selectedLeadId, setSelectedLeadId] = useState<string | null>(null);
 
   // Estado de Red y Sincronización Offline
   const [isDeviceOffline, setIsDeviceOffline] = useState<boolean>(() => !isOnline());
@@ -277,6 +273,14 @@ export default function App() {
 
   const selectedLead = leads.find(l => l.id === selectedLeadId) || null;
 
+  const openLead = useCallback((lead: Lead) => {
+    setSelectedLeadId(lead.id);
+  }, []);
+
+  const closeLead = useCallback(() => {
+    setSelectedLeadId(null);
+  }, []);
+
   const handleUpdateLead = async (updatedLead: Lead) => {
     try {
       await createOrUpdateLead(updatedLead);
@@ -293,9 +297,12 @@ export default function App() {
     if (!lead) return;
 
     const next: Lead = { ...lead };
-    if (patch.linkedinUrl) next.linkedinUrl = patch.linkedinUrl;
-    if (patch.email) next.email = patch.email;
-    if (patch.phone) next.phone = patch.phone;
+    // Lo que cargó el comercial a mano es la fuente de verdad: la IA solo rellena lo vacío.
+    // Sin esta guarda, el teléfono central de la empresa pisa el celular que dejó el rep y un
+    // correo encontrado reemplaza al del formulario.
+    if (patch.linkedinUrl && !cleanContact(next.linkedinUrl)) next.linkedinUrl = patch.linkedinUrl;
+    if (patch.email && !cleanContact(next.email)) next.email = patch.email;
+    if (patch.phone && !cleanContact(next.phone)) next.phone = patch.phone;
     if (patch.enrichment) next.enrichment = patch.enrichment;
 
     await handleUpdateLead(next);
@@ -404,10 +411,7 @@ export default function App() {
             activeFilterCount,
             onToggleFilters: () => setIsFiltersModalOpen(true),
             leads,
-            onSelectLead: (lead: Lead) => {
-              setSelectedLeadId(lead.id);
-              setActiveView('personas');
-            },
+            onSelectLead: openLead,
             onNavigateToNotifications: () => setActiveView('notificaciones'),
             onUpdateLead: handleUpdateLead,
             activeTheme: accentTheme,
@@ -482,48 +486,16 @@ export default function App() {
               />
 
               <div className="grid grid-cols-1 lg:grid-cols-12 gap-3.5 items-start">
-                <div className={`${selectedLead ? 'lg:col-span-7 xl:col-span-8' : 'lg:col-span-12'} min-w-0 transition-all duration-300`}>
+                <div className="lg:col-span-12 min-w-0">
                   <LeadsTable
                     leads={filteredLeads}
                     selectedLeadId={selectedLeadId}
-                    onSelectLead={(lead) => setSelectedLeadId(lead.id)}
+                    onSelectLead={openLead}
                     currentPage={currentPage}
                     setCurrentPage={setCurrentPage}
                   />
                 </div>
-
-                {selectedLead && (
-                  <div className="hidden lg:block lg:col-span-5 xl:col-span-4 min-w-0 sticky top-20">
-                    <LeadDetailDrawer
-                      lead={selectedLead}
-                      onClose={() => setSelectedLeadId(null)}
-                      onUpdateLead={handleUpdateLead}
-                      onDeleteLead={handleDeleteLead}
-                      currentUser={currentUser.name}
-                    />
-                  </div>
-                )}
               </div>
-
-              {selectedLead && (
-                <div 
-                  className="fixed inset-0 z-50 lg:hidden flex flex-col justify-end bg-black/50 backdrop-blur-xs p-2 sm:p-4"
-                  onClick={() => setSelectedLeadId(null)}
-                >
-                  <div 
-                    className="w-full max-w-lg mx-auto bg-white rounded-3xl shadow-2xl overflow-hidden max-h-[90vh] flex flex-col animate-in fade-in slide-in-from-bottom-6 duration-200"
-                    onClick={(e) => e.stopPropagation()}
-                  >
-                    <LeadDetailDrawer
-                      lead={selectedLead}
-                      onClose={() => setSelectedLeadId(null)}
-                      onUpdateLead={handleUpdateLead}
-                      onDeleteLead={handleDeleteLead}
-                      currentUser={currentUser.name}
-                    />
-                  </div>
-                </div>
-              )}
             </div>
           )}
 
@@ -560,10 +532,7 @@ export default function App() {
           {activeView === 'empresas' && (
             <EmpresasView
               leads={leads.filter(l => l.event === currentEvent.name)}
-              onSelectLead={(lead) => {
-                setSelectedLeadId(lead.id);
-                setActiveView('personas');
-              }}
+              onSelectLead={openLead}
               onUpdateLead={handleUpdateLead}
             />
           )}
@@ -572,7 +541,7 @@ export default function App() {
           {activeView === 'enriquecimiento' && (
             <EnriquecimientoView
               leads={leads.filter(l => l.event === currentEvent.name)}
-              onSelectLead={(lead) => setSelectedLeadId(lead.id)}
+              onSelectLead={openLead}
               onApplyEnrichment={handleApplyEnrichment}
             />
           )}
@@ -581,10 +550,7 @@ export default function App() {
           {activeView === 'intereses' && (
             <InteresesView
               leads={leads.filter(l => l.event === currentEvent.name)}
-              onSelectLead={(lead) => {
-                setSelectedLeadId(lead.id);
-                setActiveView('personas');
-              }}
+              onSelectLead={openLead}
             />
           )}
 
@@ -592,10 +558,7 @@ export default function App() {
           {activeView === 'seguimientos' && (
             <SeguimientosView
               leads={leads.filter(l => l.event === currentEvent.name)}
-              onSelectLead={(lead) => {
-                setSelectedLeadId(lead.id);
-                setActiveView('personas');
-              }}
+              onSelectLead={openLead}
             />
           )}
 
@@ -616,10 +579,7 @@ export default function App() {
             <NotificationsView
               leads={leads}
               users={users}
-              onSelectLead={(lead) => {
-                setSelectedLeadId(lead.id);
-                setActiveView('personas');
-              }}
+              onSelectLead={openLead}
               onUpdateLead={handleUpdateLead}
             />
           )}
@@ -642,10 +602,8 @@ export default function App() {
             <ConfiguracionView
               currentUser={currentUser}
               users={users}
-              onSelectUser={setCurrentUser}
               onOpenUserAccountsModal={() => setIsUserAccountsModalOpen(true)}
               currentEvent={currentEvent}
-              onOpenCreateEventModal={() => setIsCreateEventModalOpen(true)}
               onNavigateToView={(view) => setActiveView(view)}
               activeTheme={accentTheme}
               onChangeTheme={setAccentTheme}
@@ -708,6 +666,15 @@ export default function App() {
         setSourceFilter={setSourceFilter}
         users={users}
         onResetFilters={handleResetFilters}
+      />
+
+      <LeadDrawerHost
+        lead={selectedLead}
+        onClose={closeLead}
+        onUpdateLead={handleUpdateLead}
+        onDeleteLead={handleDeleteLead}
+        currentUser={currentUser.name}
+        onGoToLeadsView={() => setActiveView('personas')}
       />
 
     </div>

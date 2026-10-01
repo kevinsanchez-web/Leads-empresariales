@@ -21,9 +21,13 @@ import {
   segmentByCompany,
   buildQueue,
   FIELD_LABELS,
+  FIELD_GAP_LABELS,
+  FIELD_RESULT_LABELS,
+  ENRICHMENT_WORKER_FIELDS,
   EnrichmentField,
   LeadGaps,
 } from '../utils/enrichmentSegments';
+import { cleanContact } from '../utils/contactInfo';
 
 interface EnriquecimientoViewProps {
   leads: Lead[];
@@ -108,15 +112,22 @@ export const EnriquecimientoView: React.FC<EnriquecimientoViewProps> = ({
     });
   };
 
-  const applyEnrichment = async (lead: Lead, enrichment: ContactEnrichment): Promise<string> => {
-    const found = [
-      enrichment.linkedinUrl ? 'LinkedIn' : null,
-      enrichment.email ? 'correo' : null,
-      enrichment.companyPhone ? 'teléfono' : null,
-    ].filter(Boolean);
+  const hasAnyValue = (enrichment: ContactEnrichment): boolean =>
+    !!(enrichment.linkedinUrl || enrichment.email || enrichment.companyPhone);
 
-    // Sin ningún campo citado no se llama al merge: el lead queda exactamente como está.
-    if (found.length === 0) return '';
+  const applyEnrichment = async (
+    lead: Lead,
+    enrichment: ContactEnrichment
+  ): Promise<{ written: EnrichmentField[]; message: string }> => {
+    // Solo cuenta lo que de verdad se va a escribir: si el lead ya tenía el dato, la guarda no
+    // destructiva de App lo descarta y no debe aparecer como "Completado".
+    const written: EnrichmentField[] = [];
+    if (enrichment.linkedinUrl && !cleanContact(lead.linkedinUrl)) written.push('linkedin');
+    if (enrichment.email && !cleanContact(lead.email)) written.push('email');
+    if (enrichment.companyPhone && !cleanContact(lead.phone)) written.push('phone');
+
+    // Sin ningún campo para escribir no se llama al merge: el lead queda exactamente como está.
+    if (written.length === 0) return { written, message: '' };
 
     await onApplyEnrichment(lead.id, {
       linkedinUrl: enrichment.linkedinUrl,
@@ -125,7 +136,13 @@ export const EnriquecimientoView: React.FC<EnriquecimientoViewProps> = ({
       enrichment,
     });
 
-    return `Completado: ${found.join(', ')}`;
+    const labels = written.map(field => {
+      const key = ENRICHMENT_WORKER_FIELDS[field] as 'linkedinUrl' | 'email' | 'companyPhone';
+      const label = FIELD_RESULT_LABELS[field];
+      return enrichment.confidence?.[key] === 'unverified' ? `${label} (aparente)` : label;
+    });
+
+    return { written, message: `Completado: ${labels.join(', ')}` };
   };
 
   const runLead = async (item: LeadGaps): Promise<LeadRun> => {
@@ -133,22 +150,27 @@ export const EnriquecimientoView: React.FC<EnriquecimientoViewProps> = ({
 
     const cached = await getCachedEnrichment('lead', lead.id);
     if (cached) {
-      const wrote = await applyEnrichment(lead, cached);
-      if (!wrote) {
+      const outcome = await applyEnrichment(lead, cached);
+      if (outcome.written.length === 0) {
         return {
           leadId: lead.id,
           state: 'skipped',
           fromCache: true,
-          message: cached.reason || 'Sin dato citado en la caché.',
+          message: hasAnyValue(cached)
+            ? 'La caché traía datos que el lead ya tenía.'
+            : cached.reason || 'Sin dato citado en la caché.',
         };
       }
-      return { leadId: lead.id, state: 'written', fromCache: true, message: `${wrote} · caché` };
+      return { leadId: lead.id, state: 'written', fromCache: true, message: `${outcome.message} · caché` };
     }
 
     const data = await enrichLead({
       leadName: lead.name,
       companyName: lead.company,
       role: lead.role,
+      city: lead.city,
+      // Solo los campos que le faltan a este lead: el Worker arma el prompt con ellos.
+      fields: item.missing.map(field => ENRICHMENT_WORKER_FIELDS[field]),
     });
 
     if (isAiFailure(data)) {
@@ -161,15 +183,17 @@ export const EnriquecimientoView: React.FC<EnriquecimientoViewProps> = ({
     const enrichment = data.enrichment;
     await cacheEnrichment('lead', lead.id, enrichment);
 
-    const wrote = await applyEnrichment(lead, enrichment);
-    if (!wrote) {
+    const outcome = await applyEnrichment(lead, enrichment);
+    if (outcome.written.length === 0) {
       return {
         leadId: lead.id,
         state: 'skipped',
-        message: enrichment.reason || 'Sin datos citados que escribir.',
+        message: hasAnyValue(enrichment)
+          ? 'La IA devolvió datos que el lead ya tenía.'
+          : enrichment.reason || 'Sin datos citados que escribir.',
       };
     }
-    return { leadId: lead.id, state: 'written', message: wrote };
+    return { leadId: lead.id, state: 'written', message: outcome.message };
   };
 
   const handleRun = async () => {
@@ -264,9 +288,18 @@ export const EnriquecimientoView: React.FC<EnriquecimientoViewProps> = ({
         </div>
       </div>
 
+      <div className="flex items-start gap-2 rounded-2xl border border-amber-200 bg-amber-50 px-3 py-2 text-[11px] text-amber-800 font-medium leading-snug">
+        <AlertTriangle className="w-3.5 h-3.5 shrink-0 mt-px text-amber-600" />
+        <span>
+          Los datos provienen de búsqueda web y son indicativos: verificá la identidad y el medio
+          de contacto antes de escribir o llamar. Los marcados como «aparente» solo coinciden por
+          dominio.
+        </span>
+      </div>
+
       {incompleteCompanies.length === 0 ? (
         <div className="bg-white rounded-2xl p-8 text-center border border-slate-200/60 text-slate-400 font-medium text-xs">
-          Todos los leads tienen al menos un correo o un teléfono. No hay nada que enriquecer.
+          Todos los leads ya tienen LinkedIn, correo y teléfono. No hay nada que enriquecer.
         </div>
       ) : (
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-3 sm:gap-4">
@@ -297,7 +330,7 @@ export const EnriquecimientoView: React.FC<EnriquecimientoViewProps> = ({
                     <div className="min-w-0">
                       <div className="font-bold text-slate-900 text-xs truncate">{comp.name}</div>
                       <div className="text-[10px] text-slate-500">
-                        {comp.totalIncomplete} de {comp.totalLeads} sin vía de contacto
+                        {comp.totalIncomplete} de {comp.totalLeads} por completar
                       </div>
                     </div>
                     <ChevronRight
@@ -337,7 +370,7 @@ export const EnriquecimientoView: React.FC<EnriquecimientoViewProps> = ({
                           className="p-2.5 rounded-xl bg-slate-50 border border-slate-200/70"
                         >
                           <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
-                            Sin {FIELD_LABELS[field].toLowerCase()}
+                            Sin {FIELD_GAP_LABELS[field]}
                           </div>
                           <div className="text-xl font-black text-slate-900">{count}</div>
                           {count > 0 && (
@@ -355,7 +388,7 @@ export const EnriquecimientoView: React.FC<EnriquecimientoViewProps> = ({
                     <p className="text-[10px] text-slate-500 leading-snug">
                       {company.completeLeads.length}{' '}
                       {company.completeLeads.length === 1 ? 'contacto ya tiene' : 'contactos ya tienen'}{' '}
-                      correo o teléfono, y quedan fuera de la cola.
+                      LinkedIn, correo y teléfono, y quedan fuera de la cola.
                     </p>
                   )}
 
@@ -394,8 +427,8 @@ export const EnriquecimientoView: React.FC<EnriquecimientoViewProps> = ({
                       ))}
                     </div>
                     <p className="text-[10px] text-slate-400 leading-snug mt-1">
-                      Todas las búsquedas piden los tres campos. El orden decide qué se guarda
-                      primero si la cuota se agota.
+                      Cada lead se busca solo por los campos que le faltan. El orden define en qué
+                      orden se recorre la cola.
                     </p>
                   </div>
 
@@ -468,7 +501,7 @@ export const EnriquecimientoView: React.FC<EnriquecimientoViewProps> = ({
                       >
                         <div className="flex items-center justify-between mb-2">
                           <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
-                            Sin {FIELD_LABELS[field].toLowerCase()}
+                            Sin {FIELD_GAP_LABELS[field]}
                           </span>
                           <span className="text-[10px] font-bold text-slate-500 bg-slate-100 px-2 py-0.5 rounded-full">
                             {items.length}

@@ -14,6 +14,7 @@ import {
 } from 'lucide-react';
 import { Lead, NotificationAlert, UserRep } from '../types';
 import { getNotificationAlerts } from '../utils/notifications';
+import { leadHistoryDate, leadTime, leadTimestampNow } from '../utils/date';
 
 interface NotificationsViewProps {
   leads: Lead[];
@@ -55,13 +56,13 @@ export const NotificationsView: React.FC<NotificationsViewProps> = ({
     const updatedLead: Lead = {
       ...lead,
       status: lead.status === 'Nuevo' ? 'Contactado' : lead.status,
-      lastContact: 'Hoy, ' + new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+      lastContact: leadTimestampNow(),
       nextContactDate: undefined,
       history: [
         {
           id: `hist-notif-${Date.now()}`,
-          date: 'Hoy',
-          time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+          date: leadHistoryDate(),
+          time: leadTime(),
           author: alert.capturedBy || 'Sistema',
           text: `Seguimiento completado: "${alert.title}"`,
           type: 'note'
@@ -84,8 +85,8 @@ export const NotificationsView: React.FC<NotificationsViewProps> = ({
       history: [
         {
           id: `hist-resched-${Date.now()}`,
-          date: 'Hoy',
-          time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+          date: leadHistoryDate(),
+          time: leadTime(),
           author: lead.capturedBy || 'Sistema',
           text: `Fecha de contacto reprogramada para ${newDateValue}.`,
           type: 'meeting'

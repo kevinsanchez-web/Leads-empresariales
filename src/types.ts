@@ -21,6 +21,10 @@ export interface CompanyResearchSource {
   url: string;
 }
 
+// Nivel de evidencia de un dato enriquecido. "cited" exige que la fuente sea la página exacta;
+// "unverified" admite una cita del mismo dominio y la UI lo marca como dato aparente a revisar.
+export type EnrichmentConfidence = "cited" | "unverified";
+
 // Datos encontrados por IA para un lead. Todo campo que no venga acompañado de una cita real
 // queda en null con su motivo en `reason`: un dato sin fuente se ve igual que uno bueno, y esa
 // es exactamente la debilidad que no se puede dejar pasar.
@@ -28,9 +32,9 @@ export interface ContactEnrichment {
   linkedinUrl: string | null;
   email: string | null;
   companyPhone: string | null;
-  currentTitle: string | null;
   status: "ok" | "partial" | "not_found" | "error";
   usedSearch: boolean;
+  confidence?: Partial<Record<"linkedinUrl" | "email" | "companyPhone", EnrichmentConfidence>>;
   sources?: CompanyResearchSource[];
   model?: string;
   enrichedAt: string;

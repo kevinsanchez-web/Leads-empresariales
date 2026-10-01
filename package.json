@@ -8,6 +8,7 @@
     "build": "vite build",
     "preview": "vite preview",
     "seed": "tsx scripts/seed.ts",
+    "migrate:dates": "tsx scripts/migrate-dates.ts",
     "verify:ai": "tsx scripts/verify-ai-transport.ts && tsx scripts/verify-ai-worker.ts",
     "lint": "tsc --noEmit"
   },

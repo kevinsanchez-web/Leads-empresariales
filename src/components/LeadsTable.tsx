@@ -20,6 +20,7 @@ import {
   CheckCircle2
 } from 'lucide-react';
 import { Lead, LeadStatus } from '../types';
+import { compareLeadTimestamps, formatLeadTimestamp } from '../utils/date';
 
 interface LeadsTableProps {
   leads: Lead[];
@@ -58,6 +59,10 @@ export const LeadsTable: React.FC<LeadsTableProps> = ({
       } else if (sortField === 'priority') {
         valA = a.priority ? 1 : 0;
         valB = b.priority ? 1 : 0;
+      } else if (sortField === 'lastContact') {
+        return sortAsc
+          ? compareLeadTimestamps(valA, valB)
+          : compareLeadTimestamps(valB, valA);
       } else if (typeof valA === 'string') {
         valA = valA.toLowerCase();
         valB = (valB || '').toLowerCase();
@@ -483,7 +488,7 @@ export const LeadsTable: React.FC<LeadsTableProps> = ({
 
                         {/* Last Activity */}
                         <td className="hidden 2xl:table-cell py-3 px-3 text-right text-xs font-medium text-slate-500 whitespace-nowrap">
-                          {lead.lastContact}
+                          {formatLeadTimestamp(lead.lastContact)}
                         </td>
 
                         {/* Chevron Arrow */}
@@ -552,7 +557,7 @@ export const LeadsTable: React.FC<LeadsTableProps> = ({
                   </div>
 
                   <div className="mt-4 pt-3 border-t border-black/[0.04] flex items-center justify-between text-xs text-slate-500">
-                    <span>{lead.lastContact}</span>
+                    <span>{formatLeadTimestamp(lead.lastContact)}</span>
                     <span className="text-[#0071E3] font-semibold flex items-center gap-0.5">
                       Ver Detalles
                       <ChevronRight className="w-3 h-3" />

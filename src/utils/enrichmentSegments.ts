@@ -12,6 +12,29 @@ export const FIELD_LABELS: Record<EnrichmentField, string> = {
   phone: "Teléfono",
 };
 
+// Cómo se llama cada campo del lado del Worker. El mapeo es explícito y no por posición: los
+// nombres no coinciden ("linkedin" es "linkedinUrl", "phone" es "companyPhone").
+export const ENRICHMENT_WORKER_FIELDS: Record<EnrichmentField, string> = {
+  linkedin: "linkedinUrl",
+  email: "email",
+  phone: "companyPhone",
+};
+
+// Etiqueta de un campo para armar el mensaje de resultado.
+export const FIELD_RESULT_LABELS: Record<EnrichmentField, string> = {
+  linkedin: "LinkedIn",
+  email: "correo",
+  phone: "teléfono",
+};
+
+// Etiqueta de "lo que le falta" al lead. La de teléfono aclara que lo que se busca es el central
+// de la empresa, para que no se lea como si le faltara el número personal del contacto.
+export const FIELD_GAP_LABELS: Record<EnrichmentField, string> = {
+  linkedin: "LinkedIn",
+  email: "correo",
+  phone: "teléfono (central de la empresa)",
+};
+
 export interface FieldGap {
   field: EnrichmentField;
   label: string;
@@ -26,7 +49,9 @@ export interface CompanyGaps {
   key: string;
   name: string;
   totalLeads: number;
-  // Leads que ya tienen al menos una vía de contacto y por tanto no entran a la cola.
+  // Leads que ya tienen los tres campos (LinkedIn, correo y teléfono) y por tanto no entran a la
+  // cola. Tener una vía de contacto no alcanza: mientras falte cualquiera de los tres, el lead
+  // sigue siendo incompleto y se puede enriquecer.
   completeLeads: Lead[];
   // Leads incompletos agrupados por campo faltante. Los grupos no son excluyentes: un lead sin
   // las tres cosas aparece en los tres, que es exactamente lo que la segmentación debe mostrar.
@@ -40,14 +65,6 @@ export function missingFieldsFor(lead: Lead): EnrichmentField[] {
   if (!cleanContact(lead.phone)) missing.push("phone");
   if (!cleanContact(lead.linkedinUrl)) missing.push("linkedin");
   return missing;
-}
-
-/**
- * Un lead con email o teléfono ya tiene una vía de contacto: no entra a la cola. Es el mismo
- * filtro gratis de la idea 07 — si el dato ya está, no hay nada que buscar.
- */
-export function hasContactRoute(lead: Lead): boolean {
-  return !!cleanContact(lead.email) || !!cleanContact(lead.phone);
 }
 
 export function segmentByCompany(leads: Lead[]): CompanyGaps[] {
@@ -64,11 +81,12 @@ export function segmentByCompany(leads: Lead[]): CompanyGaps[] {
       const completeLeads: Lead[] = [];
 
       companyLeads.forEach((lead) => {
-        if (hasContactRoute(lead)) {
+        const missing = missingFieldsFor(lead);
+        if (missing.length === 0) {
           completeLeads.push(lead);
           return;
         }
-        missingFieldsFor(lead).forEach((field) => byField[field].push(lead));
+        missing.forEach((field) => byField[field].push(lead));
       });
 
       const totalIncomplete = companyLeads.length - completeLeads.length;

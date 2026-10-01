@@ -50,9 +50,11 @@ type Plan =
   | { kind: "error"; status: number; message: string }
   | { kind: "soloSinSearch"; text: string };
 
+let lastGeminiBody: any = null;
 function setGemini(plan: Plan) {
   (globalThis as any).fetch = async (_url: string, init: any) => {
     const body = JSON.parse(init?.body || "{}");
+    lastGeminiBody = body;
     const conBusqueda = Array.isArray(body.tools) && body.tools.length > 0;
 
     if (plan.kind === "soloSinSearch" && conBusqueda) {
@@ -302,6 +304,84 @@ async function run() {
     const res = await handleEnrichLead(req({ companyName: "Ecopetrol" }), "key");
     const cuerpo = await res.json();
     assertNoEsExito("enrich-lead sin JSON legible", res, cuerpo);
+  }
+
+  console.log("\n== enrich-lead: prompts condicionales ==");
+  {
+    // El modelo devuelve de más, incluido un campo que el cliente no pidió. El prompt debe pedir
+    // solo LinkedIn, y el email devuelto se descarta aunque venga con una cita real.
+    setGemini({ kind: "texto", text: JSON.stringify({
+      linkedinUrl: { value: "https://www.linkedin.com/in/laura-martinez", source: "https://www.linkedin.com/in/laura-martinez" },
+      email: { value: "colado@ecopetrol.com", source: "https://ecopetrol.com/contacto" },
+    }), grounding: [
+      { web: { uri: "https://www.linkedin.com/in/laura-martinez", title: "Laura" } },
+      { web: { uri: "https://ecopetrol.com/contacto", title: "Contacto" } },
+    ] });
+    const res = await handleEnrichLead(req({ leadName: "Laura", companyName: "Ecopetrol", city: "Bogotá", fields: ["linkedinUrl"] }), "key");
+    const cuerpo = await res.json();
+    check("enrich-lead condicional: devuelve solo lo pedido", cuerpo.enrichment?.linkedinUrl === "https://www.linkedin.com/in/laura-martinez", JSON.stringify(cuerpo.enrichment));
+    check("enrich-lead condicional: descarta el campo no pedido", cuerpo.enrichment?.email === undefined, JSON.stringify(cuerpo.enrichment?.email));
+    check("enrich-lead condicional: status ok con un solo campo", cuerpo.enrichment?.status === "ok", JSON.stringify(cuerpo.enrichment?.status));
+    const promptTexto = lastGeminiBody?.contents?.[0]?.parts?.[0]?.text || "";
+    check("enrich-lead condicional: el prompt pide LinkedIn explícitamente", /linkedin\.com\/in/i.test(promptTexto), promptTexto.slice(0, 120));
+    check("enrich-lead condicional: el prompt lleva la ciudad", promptTexto.includes("Bogotá"));
+    check("enrich-lead condicional: el prompt no pide el teléfono", !promptTexto.includes("companyPhone"));
+  }
+  {
+    // Sin `fields`, se piden los tres: comportamiento previo a los prompts condicionales.
+    setGemini({ kind: "texto", text: ENRIQUECIDO_OK, grounding: GROUNDING });
+    await handleEnrichLead(req({ leadName: "Laura", companyName: "Ecopetrol" }), "key");
+    const promptTexto = lastGeminiBody?.contents?.[0]?.parts?.[0]?.text || "";
+    check("enrich-lead sin fields: pide los tres campos", promptTexto.includes("linkedinUrl") && promptTexto.includes("email") && promptTexto.includes("companyPhone"), promptTexto.slice(0, 120));
+  }
+
+  console.log("\n== enrich-lead: gate de dos niveles ==");
+  {
+    // Homónimo/otra página del mismo dominio: LinkedIn se acepta como "unverified"; el correo,
+    // que es del mismo dominio pero no de la página exacta, se descarta.
+    setGemini({ kind: "texto", text: JSON.stringify({
+      linkedinUrl: { value: "https://www.linkedin.com/in/laura-martinez", source: "https://es.linkedin.com/empresa/ecopetrol" },
+      email: { value: "contacto@ecopetrol.com", source: "https://ecopetrol.com/otra-pagina" },
+    }), grounding: [
+      { web: { uri: "https://www.linkedin.com/in/laura-martinez", title: "Laura" } },
+      { web: { uri: "https://ecopetrol.com/contacto", title: "Contacto" } },
+    ] });
+    const res = await handleEnrichLead(req({ leadName: "Laura", companyName: "Ecopetrol", fields: ["linkedinUrl", "email"] }), "key");
+    const cuerpo = await res.json();
+    check("gate dos niveles: LinkedIn con cita de host se acepta", cuerpo.enrichment?.linkedinUrl === "https://www.linkedin.com/in/laura-martinez", JSON.stringify(cuerpo.enrichment));
+    check("gate dos niveles: LinkedIn queda como unverified", cuerpo.enrichment?.confidence?.linkedinUrl === "unverified", JSON.stringify(cuerpo.enrichment?.confidence));
+    check("gate dos niveles: el correo sin cita exacta se descarta", cuerpo.enrichment?.email === undefined, JSON.stringify(cuerpo.enrichment?.email));
+    check("gate dos niveles: status partial", cuerpo.enrichment?.status === "partial", JSON.stringify(cuerpo.enrichment?.status));
+  }
+  {
+    // Un valor que no es de LinkedIn no pasa aunque la cita sea del dominio de LinkedIn.
+    setGemini({ kind: "texto", text: JSON.stringify({
+      linkedinUrl: { value: "https://facebook.com/laura", source: "https://www.linkedin.com/in/laura-martinez" },
+    }), grounding: [{ web: { uri: "https://www.linkedin.com/in/laura-martinez", title: "Laura" } }] });
+    const res = await handleEnrichLead(req({ leadName: "Laura", companyName: "Ecopetrol", fields: ["linkedinUrl"] }), "key");
+    const cuerpo = await res.json();
+    check("gate dos niveles: valor que no es LinkedIn se descarta", cuerpo.enrichment?.linkedinUrl === undefined, JSON.stringify(cuerpo.enrichment));
+  }
+  {
+    // Cita exacta: el campo queda como "cited", no "unverified".
+    setGemini({ kind: "texto", text: ENRIQUECIDO_OK, grounding: [
+      { web: { uri: "https://www.linkedin.com/in/laura-martinez", title: "Laura" } },
+      { web: { uri: "https://ecopetrol.com/contacto", title: "Contacto" } },
+    ] });
+    const res = await handleEnrichLead(req({ leadName: "Laura", companyName: "Ecopetrol", fields: ["linkedinUrl"] }), "key");
+    const cuerpo = await res.json();
+    check("gate dos niveles: cita exacta queda como cited", cuerpo.enrichment?.confidence?.linkedinUrl === "cited", JSON.stringify(cuerpo.enrichment?.confidence));
+  }
+  {
+    // Un campo que no está en la whitelist no se le pide a la IA ni se filtra al cliente.
+    setGemini({ kind: "texto", text: JSON.stringify({
+      hackingField: { value: "x", source: "https://www.linkedin.com/in/laura-martinez" },
+      linkedinUrl: { value: "https://www.linkedin.com/in/laura-martinez", source: "https://www.linkedin.com/in/laura-martinez" },
+    }), grounding: [{ web: { uri: "https://www.linkedin.com/in/laura-martinez", title: "Laura" } }] });
+    const res = await handleEnrichLead(req({ leadName: "Laura", companyName: "Ecopetrol", fields: ["hackingField"] }), "key");
+    const cuerpo = await res.json();
+    check("whitelist: campo desconocido no se filtra", !JSON.stringify(cuerpo.enrichment).includes("hackingField"), JSON.stringify(cuerpo.enrichment));
+    check("whitelist: cae al default de tres campos", cuerpo.enrichment?.linkedinUrl === "https://www.linkedin.com/in/laura-martinez", JSON.stringify(cuerpo.enrichment));
   }
 
   console.log(`\n== Worker: ${pass} ok, ${fail} fallas ==`);

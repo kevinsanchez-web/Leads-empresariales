@@ -26,6 +26,7 @@ import { isOnline, saveLeadOffline } from '../utils/offlineStore';
 import { cleanCompanyName } from '../utils/company';
 import { cleanContact } from '../utils/contactInfo';
 import { sendPriorityLeadPushNotification } from '../utils/pushNotifications';
+import { leadHistoryDate, leadTime, leadTimestampNow } from '../utils/date';
 
 interface MobileQuickCaptureProps {
   onSaveLead: (lead: Lead) => void;
@@ -177,8 +178,6 @@ export const MobileQuickCapture: React.FC<MobileQuickCaptureProps> = ({
   const submitForm = () => {
     if (!name.trim() || !company.trim()) return;
 
-    const now = new Date();
-    const timeStr = `${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}`;
     const cleanCompany = cleanCompanyName(company);
 
     const newLead: Lead = {
@@ -193,8 +192,8 @@ export const MobileQuickCapture: React.FC<MobileQuickCaptureProps> = ({
       experiences: ['Captura Rápida'],
       sources: selectedSources,
       capturedBy: currentUser.name,
-      capturedAt: `Hoy, ${timeStr}`,
-      lastContact: `Hoy, ${timeStr}`,
+      capturedAt: leadTimestampNow(),
+      lastContact: leadTimestampNow(),
       priority,
       status: "Nuevo",
       estimatedValue: 35000,
@@ -202,8 +201,8 @@ export const MobileQuickCapture: React.FC<MobileQuickCaptureProps> = ({
       history: [
         {
           id: `hist-${Date.now()}`,
-          date: "Hoy",
-          time: timeStr,
+          date: leadHistoryDate(),
+          time: leadTime(),
           author: currentUser.name,
           text: `Capturado vía Formulario Rápido en ${currentEvent.name}.`,
           type: 'note'

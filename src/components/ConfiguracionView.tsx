@@ -11,25 +11,7 @@ import {
   User,
   Building2
 } from 'lucide-react';
-
-export type AccentTheme = 'azul' | 'verde' | 'naranja' | 'purpura';
-
-export interface UserRep {
-  id: string;
-  name: string;
-  email: string;
-  role?: string;
-  team?: string;
-  accountType?: 'admin' | 'ejecutivo';
-  avatar?: string;
-}
-
-export interface EventOption {
-  id: string;
-  name: string;
-  location?: string;
-  dateRange?: string;
-}
+import { UserRep, EventOption, AccentTheme, ActiveView } from '../types';
 
 export interface ConfiguracionViewProps {
   currentUser?: UserRep;
@@ -40,7 +22,7 @@ export interface ConfiguracionViewProps {
   activeTheme?: AccentTheme;
   onChangeTheme?: (theme: AccentTheme) => void;
   onOpenUserAccountsModal?: () => void;
-  onNavigateToView?: (view: string) => void;
+  onNavigateToView?: (view: ActiveView) => void;
   onLogout?: () => void;
   onClose?: () => void;
   className?: string; // Para adaptar márgenes o sombras si se usa en modal/page

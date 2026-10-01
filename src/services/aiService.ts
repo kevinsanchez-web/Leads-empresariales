@@ -99,6 +99,9 @@ export function enrichLead(params: {
   leadName?: string;
   companyName: string;
   role?: string;
+  city?: string;
+  // Solo los campos que le faltan a este lead. El Worker los valida contra su whitelist.
+  fields?: string[];
 }): Promise<AiOutcome<EnrichLeadPayload>> {
   return aiRequest<EnrichLeadPayload>({
     workerUrl: WORKER_URL,

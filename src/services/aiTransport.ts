@@ -31,6 +31,11 @@ function containsSimulatedMarker(value: unknown): boolean {
 }
 
 function describeFailure(status: number | null, payload: any, err?: any): string {
+  // Un 404 acá significa que el Worker desplegado no tiene esta ruta: la operación existe en el
+  // código pero no en lo que está publicado. Es un fallo de despliegue, no de la IA.
+  if (status === 404) {
+    return "El asistente de IA no reconoce esta operación (HTTP 404). Probablemente el Worker desplegado está desactualizado.";
+  }
   const fromWorker = typeof payload?.error === "string" && payload.error.trim().length > 0 ? payload.error : null;
   if (fromWorker) return fromWorker;
   if (status === 401 || status === 403) return "Tu sesión no es válida. Cierra sesión y vuelve a entrar.";

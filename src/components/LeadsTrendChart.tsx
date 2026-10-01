@@ -6,13 +6,17 @@ import {
   YAxis,
   CartesianGrid,
   Tooltip,
-  ResponsiveContainer,
-  Area,
-  AreaChart,
-  Legend
+  ResponsiveContainer
 } from 'recharts';
-import { TrendingUp, Calendar, Zap, Sparkles, Star, ChevronDown } from 'lucide-react';
+import { TrendingUp } from 'lucide-react';
 import { Lead, EventOption } from '../types';
+import {
+  todayISODate,
+  parseLeadTimestamp,
+  parseEventDateRange,
+  enumerateDays,
+  formatShortDayLabel
+} from '../utils/date';
 
 interface LeadsTrendChartProps {
   leads: Lead[];
@@ -27,80 +31,104 @@ export const LeadsTrendChart: React.FC<LeadsTrendChartProps> = ({
 }) => {
   const [viewMode, setViewMode] = useState<'daily' | 'cumulative'>('daily');
 
-  // Filter leads for current event
+  // Filtrar leads del evento activo
   const eventLeads = useMemo(() => {
     return leads.filter(l => l.event === currentEvent.name || !currentEvent.name);
   }, [leads, currentEvent.name]);
 
-  // Aggregate leads by day from capturedAt or mock dates
+  // Agrupar leads por día y optimizar el rango visual
   const trendData = useMemo(() => {
-    // Collect dates
-    const dayMap: { [key: string]: { date: string; displayDate: string; total: number; priority: number; normal: number } } = {};
+    type DayBucket = {
+      date: string;
+      displayDate: string;
+      total: number;
+      priority: number;
+      normal: number;
+    };
 
-    // Standard days if event is fresh or has few leads
-    const defaultDays = [
-      { key: 'Día 1', label: '06 Sep (Día 1)' },
-      { key: 'Día 2', label: '07 Sep (Día 2)' },
-      { key: 'Día 3', label: '08 Sep (Día 3)' },
-    ];
-
-    eventLeads.forEach(lead => {
-      // Parse date from capturedAt e.g. "2026-09-06 10:18"
-      let dateKey = 'Día 1';
-      let displayDate = '06 Sep';
-
-      if (lead.capturedAt) {
-        const parts = lead.capturedAt.split(' ');
-        const datePart = parts[0];
-        if (datePart.includes('09-06') || datePart.includes('06')) {
-          dateKey = 'Día 1';
-          displayDate = '06 Sep';
-        } else if (datePart.includes('09-07') || datePart.includes('07')) {
-          dateKey = 'Día 2';
-          displayDate = '07 Sep';
-        } else if (datePart.includes('09-08') || datePart.includes('08')) {
-          dateKey = 'Día 3';
-          displayDate = '08 Sep';
-        } else {
-          dateKey = datePart;
-          displayDate = datePart.length > 5 ? datePart.slice(5) : datePart;
-        }
-      }
-
-      if (!dayMap[dateKey]) {
-        dayMap[dateKey] = {
+    const buckets = new Map<string, DayBucket>();
+    const ensure = (dateKey: string): DayBucket => {
+      let bucket = buckets.get(dateKey);
+      if (!bucket) {
+        bucket = {
           date: dateKey,
-          displayDate: displayDate,
+          displayDate: formatShortDayLabel(dateKey),
           total: 0,
           priority: 0,
           normal: 0
         };
+        buckets.set(dateKey, bucket);
       }
+      return bucket;
+    };
 
-      dayMap[dateKey].total += 1;
+    const todayStr = todayISODate();
+    const range = parseEventDateRange(currentEvent.dateRange);
+
+    // Obtener las fechas ISO de todos los leads válidos
+    const leadDates = eventLeads
+      .map(l => parseLeadTimestamp(l.capturedAt))
+      .filter((t): t is number => t !== null)
+      .map(t => todayISODate(new Date(t)));
+
+    const firstLeadDate =
+      leadDates.length > 0
+        ? leadDates.reduce((min, d) => (d < min ? d : min), todayStr)
+        : todayStr;
+
+    let startDate = range?.start || firstLeadDate;
+    let endDate = range?.end || todayStr;
+
+    // Extender fin hasta HOY si el rango venció
+    if (endDate < todayStr) {
+      endDate = todayStr;
+    }
+
+    // 💡 OPTIMIZACIÓN VISUAL: Si hay más de 10 días de ceros continuos al inicio,
+    // recortar la fecha de inicio a 3 días antes de la primera captura.
+    const startMs = new Date(startDate).getTime();
+    const firstLeadMs = new Date(firstLeadDate).getTime();
+    const gapDays = Math.round((firstLeadMs - startMs) / (1000 * 3600 * 24));
+
+    if (gapDays > 10) {
+      const trimmedDate = new Date(firstLeadMs);
+      trimmedDate.setDate(trimmedDate.getDate() - 3);
+      const trimmedStr = todayISODate(trimmedDate);
+      if (trimmedStr > startDate) {
+        startDate = trimmedStr;
+      }
+    }
+
+    const rangeDays = enumerateDays(startDate, endDate);
+    const rangeSet = new Set(rangeDays);
+
+    // Inicializar buckets en 0
+    rangeDays.forEach(ensure);
+
+    // Sumar conteos por día
+    eventLeads.forEach(lead => {
+      const time = parseLeadTimestamp(lead.capturedAt);
+      if (time === null) return;
+
+      const dateKey = todayISODate(new Date(time));
+      if (!rangeSet.has(dateKey)) return;
+
+      const bucket = ensure(dateKey);
+      bucket.total += 1;
       if (lead.priority) {
-        dayMap[dateKey].priority += 1;
+        bucket.priority += 1;
       } else {
-        dayMap[dateKey].normal += 1;
+        bucket.normal += 1;
       }
     });
 
-    // Ensure we have at least 3 points for a pretty curve
-    defaultDays.forEach(d => {
-      if (!dayMap[d.key]) {
-        dayMap[d.key] = {
-          date: d.key,
-          displayDate: d.label.split(' ')[0],
-          total: 0,
-          priority: 0,
-          normal: 0
-        };
-      }
-    });
+    if (rangeDays.length === 0 && buckets.size === 0) {
+      ensure(todayStr);
+    }
 
-    const sortedDays = Object.values(dayMap).sort((a, b) => a.date.localeCompare(b.date));
+    const sortedDays = [...buckets.values()].sort((a, b) => a.date.localeCompare(b.date));
 
-    // If cumulative, calculate running total
+    // Calcular totales acumulados
     let runningTotal = 0;
     let runningPriority = 0;
 
@@ -113,6 +141,16 @@ export const LeadsTrendChart: React.FC<LeadsTrendChartProps> = ({
         acumuladoPrioritarios: runningPriority
       };
     });
+  }, [eventLeads, currentEvent.dateRange]);
+
+  // Auditoría para leads sin fecha válida
+  const excludedLeads = useMemo(() => {
+    let undated = 0;
+    eventLeads.forEach(lead => {
+      const time = parseLeadTimestamp(lead.capturedAt);
+      if (time === null) undated += 1;
+    });
+    return { outsideRange: 0, undated };
   }, [eventLeads]);
 
   const totalEventLeads = eventLeads.length;
@@ -122,7 +160,7 @@ export const LeadsTrendChart: React.FC<LeadsTrendChartProps> = ({
   return (
     <div className="bg-white rounded-2xl sm:rounded-3xl p-3.5 sm:p-5 border border-black/[0.06] shadow-xs">
       
-      {/* Header Row */}
+      {/* Encabezado */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 mb-3.5 pb-2.5 border-b border-black/[0.04]">
         <div className="flex items-center gap-2.5 min-w-0">
           <div className="w-8 h-8 rounded-xl bg-[#0071E3]/10 text-[#0071E3] flex items-center justify-center font-bold shrink-0">
@@ -143,7 +181,7 @@ export const LeadsTrendChart: React.FC<LeadsTrendChartProps> = ({
           </div>
         </div>
 
-        {/* View Mode Toggle */}
+        {/* Conmutador de vista */}
         <div className="flex items-center gap-1 bg-[#F5F5F7] p-0.5 rounded-xl self-start sm:self-auto shrink-0">
           <button
             onClick={() => setViewMode('daily')}
@@ -168,7 +206,7 @@ export const LeadsTrendChart: React.FC<LeadsTrendChartProps> = ({
         </div>
       </div>
 
-      {/* Chart Canvas */}
+      {/* Gráfico Recharts */}
       <div className={`w-full ${compact ? 'h-44 sm:h-52' : 'h-52 sm:h-64'}`}>
         <ResponsiveContainer width="100%" height="100%">
           <LineChart
@@ -181,6 +219,7 @@ export const LeadsTrendChart: React.FC<LeadsTrendChartProps> = ({
               tick={{ fontSize: 11, fill: '#86868B', fontWeight: 500 }}
               axisLine={{ stroke: '#E5E5EA' }}
               tickLine={false}
+              minTickGap={25}
             />
             <YAxis
               tick={{ fontSize: 11, fill: '#86868B', fontWeight: 500 }}
@@ -189,7 +228,7 @@ export const LeadsTrendChart: React.FC<LeadsTrendChartProps> = ({
               allowDecimals={false}
             />
             <Tooltip
-              content={({ active, payload, label }) => {
+              content={({ active, payload }) => {
                 if (active && payload && payload.length) {
                   const data = payload[0].payload;
                   return (
@@ -216,21 +255,21 @@ export const LeadsTrendChart: React.FC<LeadsTrendChartProps> = ({
               }}
             />
             
-            {/* Main Total Leads Line */}
+            {/* Línea Principal de Leads (Linear para trazo limpio) */}
             <Line
-              type="monotone"
+              type="linear"
               dataKey={viewMode === 'daily' ? 'total' : 'acumulado'}
               name="Total Leads"
               stroke="#0071E3"
-              strokeWidth={3}
+              strokeWidth={2.5}
               dot={{ r: 4, fill: '#0071E3', stroke: '#ffffff', strokeWidth: 2 }}
               activeDot={{ r: 6, fill: '#0071E3', stroke: '#ffffff', strokeWidth: 2 }}
               isAnimationActive={false}
             />
 
-            {/* Priority Leads Secondary Line */}
+            {/* Línea Secundaria de Leads VIP */}
             <Line
-              type="monotone"
+              type="linear"
               dataKey={viewMode === 'daily' ? 'priority' : 'acumuladoPrioritarios'}
               name="VIP Prioritarios"
               stroke="#FF9500"
@@ -244,23 +283,39 @@ export const LeadsTrendChart: React.FC<LeadsTrendChartProps> = ({
         </ResponsiveContainer>
       </div>
 
-      {/* Footer Metrics Pills */}
+      {/* Tarjetas de Métricas */}
       <div className="grid grid-cols-3 gap-2 mt-3 pt-2.5 border-t border-black/[0.04] text-center">
         <div className="bg-[#FAFBFD] p-2 rounded-xl border border-black/[0.03]">
-          <span className="text-[9px] font-bold text-slate-400 uppercase tracking-tight block">Total Evento</span>
-          <span className="text-xs sm:text-sm font-bold text-[#0071E3]">{totalEventLeads}</span>
+          <span className="text-[9px] font-bold text-slate-400 uppercase tracking-tight block">
+            Total Evento
+          </span>
+          <span className="text-xs sm:text-sm font-bold text-[#0071E3]">
+            {totalEventLeads}
+          </span>
         </div>
         <div className="bg-[#FAFBFD] p-2 rounded-xl border border-black/[0.03]">
-          <span className="text-[9px] font-bold text-slate-400 uppercase tracking-tight block">Pico Diario</span>
+          <span className="text-[9px] font-bold text-slate-400 uppercase tracking-tight block">
+            Pico Diario
+          </span>
           <span className="text-xs sm:text-sm font-bold text-[#1D1D1F]">
             {bestDay ? `${bestDay.total} leads` : '0'}
           </span>
         </div>
         <div className="bg-[#FAFBFD] p-2 rounded-xl border border-black/[0.03]">
-          <span className="text-[9px] font-bold text-slate-400 uppercase tracking-tight block">Leads VIP</span>
-          <span className="text-xs sm:text-sm font-bold text-amber-600">{totalPriority}</span>
+          <span className="text-[9px] font-bold text-slate-400 uppercase tracking-tight block">
+            Leads VIP
+          </span>
+          <span className="text-xs sm:text-sm font-bold text-amber-600">
+            {totalPriority}
+          </span>
         </div>
       </div>
+
+      {excludedLeads.undated > 0 && (
+        <p className="text-[10px] text-slate-400 mt-2 text-center">
+          {excludedLeads.undated} lead(s) sin fecha válida de registro
+        </p>
+      )}
 
     </div>
   );

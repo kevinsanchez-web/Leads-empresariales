@@ -83,6 +83,7 @@ async function run() {
     { nombre: "sin sesión", plan: { kind: "throw" }, esperado: null },
     { nombre: "red caída", plan: { kind: "throw" }, esperado: "internet" },
     { nombre: "401", plan: { kind: "response", status: 401, body: { error: "No autorizado" } }, esperado: "No autorizado" },
+    { nombre: "404 ruta ausente", plan: { kind: "response", status: 404, body: { error: "Ruta no encontrada" } }, esperado: "404" },
     { nombre: "429 cuota", plan: { kind: "response", status: 429, body: {} }, esperado: "cuota" },
     { nombre: "500 con mensaje del Worker", plan: { kind: "response", status: 500, body: { error: "La IA no pudo completar la petición." } }, esperado: "no pudo completar" },
     { nombre: "500 sin mensaje", plan: { kind: "response", status: 500, body: {} }, esperado: "500" },

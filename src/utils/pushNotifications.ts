@@ -1,4 +1,5 @@
 import { Lead } from '../types';
+import { leadTimestampNow } from './date';
 
 export type NotificationPermissionStatus = 'granted' | 'denied' | 'default' | 'unsupported';
 
@@ -104,8 +105,8 @@ export async function sendTestPushNotification(): Promise<boolean> {
     experiences: ['Demo Push Test'],
     sources: ['Notificación Push'],
     capturedBy: 'Sistema Ejecutivo',
-    capturedAt: 'Ahora mismo',
-    lastContact: 'Ahora mismo',
+    capturedAt: leadTimestampNow(),
+    lastContact: leadTimestampNow(),
     priority: true,
     status: 'Nuevo',
     estimatedValue: 45000,

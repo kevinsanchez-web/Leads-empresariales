@@ -2,6 +2,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { Bell, AlertTriangle, Clock, CheckCircle2, ChevronRight, X, ShieldCheck, Zap } from 'lucide-react';
 import { Lead, NotificationAlert } from '../types';
 import { getNotificationAlerts } from '../utils/notifications';
+import { leadHistoryDate, leadTime, leadTimestampNow } from '../utils/date';
 import { 
   getNotificationPermissionStatus, 
   requestPushNotificationPermission, 
@@ -70,12 +71,12 @@ export const HeaderNotificationsPopover: React.FC<HeaderNotificationsPopoverProp
       ...lead,
       status: lead.status === 'Nuevo' ? 'Contactado' : lead.status,
       nextContactDate: undefined,
-      lastContact: 'Hoy, ' + new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+      lastContact: leadTimestampNow(),
       history: [
         {
           id: `hist-pop-${Date.now()}`,
-          date: 'Hoy',
-          time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+          date: leadHistoryDate(),
+          time: leadTime(),
           author: 'Sistema',
           text: `Atendido desde campana de notificaciones: ${alert.title}`,
           type: 'note'

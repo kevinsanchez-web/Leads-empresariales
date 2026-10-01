@@ -10,10 +10,10 @@ import {
   Check,
   Calendar
 } from 'lucide-react';
-import { UserRep, EventOption, Lead, ActiveView } from '../types';
+import { UserRep, EventOption, Lead, ActiveView, AccentTheme } from '../types';
 import { HeaderNotificationsPopover } from './HeaderNotificationsPopover';
 import { DivergencyLogo } from './DivergencyLogo';
-import { ConfiguracionView, AccentTheme } from './ConfiguracionView';
+import { ConfiguracionView } from './ConfiguracionView';
 
 interface HeaderProps {
   currentEvent: EventOption;
@@ -40,7 +40,7 @@ interface HeaderProps {
   onChangeTheme?: (theme: AccentTheme) => void;
   companyName?: string;
   companyCategory?: string;
-  onNavigateToView?: (view: string) => void;
+  onNavigateToView?: (view: ActiveView) => void;
   onLogout?: () => void;
 }
 
@@ -106,7 +106,7 @@ export const Header: React.FC<HeaderProps> = ({
       <div className="px-2 sm:px-4 md:px-6 py-1.5 sm:py-2 flex items-center justify-between gap-1 sm:gap-2 max-w-[1600px] mx-auto w-full">
         
         {/* Bloque Izquierdo: Menú + Logo + Selector de Eventos */}
-        <div className="flex items-center gap-1 sm:gap-2 min-w-0 shrink">
+        <div className="flex items-center gap-1 sm:gap-2 min-w-0 flex-1">
           {/* Botón de Menú */}
           <button 
             onClick={onToggleMobileMenu}
@@ -131,14 +131,14 @@ export const Header: React.FC<HeaderProps> = ({
           <div className="h-4 w-px bg-slate-200 hidden min-[400px]:block shrink-0" />
 
           {/* Selector de Eventos */}
-          <div className="relative min-w-0" ref={eventDropdownRef}>
+          <div className="relative min-w-0 flex-1" ref={eventDropdownRef}>
             <button
               onClick={() => setShowEventDropdown(!showEventDropdown)}
-              className="inline-flex items-center gap-1 px-1.5 sm:px-2 py-1 text-slate-700 hover:text-[#0071E3] hover:bg-[#F5F5F7] rounded-lg text-xs font-semibold shrink transition-colors cursor-pointer max-w-full"
+              className="flex w-full items-center gap-1 px-1.5 sm:px-2 py-1 text-slate-700 hover:text-[#0071E3] hover:bg-[#F5F5F7] rounded-lg text-xs font-semibold transition-colors cursor-pointer"
               title="Cambiar o crear evento"
             >
               <Calendar className="w-3.5 h-3.5 text-[#0071E3] shrink-0" />
-              <span className="truncate max-w-[45px] min-[360px]:max-w-[75px] min-[420px]:max-w-[120px] sm:max-w-[180px] font-bold text-xs">
+              <span className="min-w-0 truncate font-bold text-xs">
                 {currentEvent.name}
               </span>
               <ChevronDown className={`w-3 h-3 text-slate-400 transition-transform shrink-0 ${showEventDropdown ? 'rotate-180' : ''}`} />
@@ -239,8 +239,8 @@ export const Header: React.FC<HeaderProps> = ({
             {showUserDropdown && (
               <div className="absolute right-0 mt-2 z-50 animate-fade-in w-[calc(100vw-1.5rem)] sm:w-[380px] max-w-[420px]">
                 <ConfiguracionView
-                  currentUser={currentUser as any}
-                  users={users as any}
+                  currentUser={currentUser}
+                  users={users}
                   currentEvent={currentEvent}
                   companyName={companyName}
                   companyCategory={companyCategory}

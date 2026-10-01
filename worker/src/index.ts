@@ -326,44 +326,129 @@ Responde ÚNICAMENTE con el objeto JSON válido.`;
   return json({ success: true, companyInfo });
 }
 
+type EnrichFieldKey = "linkedinUrl" | "email" | "companyPhone";
+
+const ENRICH_FIELD_KEYS: EnrichFieldKey[] = ["linkedinUrl", "email", "companyPhone"];
+
+interface EnrichFieldSpec {
+  // Cómo buscar el dato. El modelo arma las queries del grounding a partir de estas líneas, así
+  // que sin un objetivo explícito de LinkedIn nunca genera una búsqueda de LinkedIn.
+  hint: string;
+  description: string;
+  sourceHint: string;
+  rules: string[];
+  // El correo exige una cita literal de la página exacta; LinkedIn y el teléfono admiten una
+  // cita del mismo dominio y quedan marcados como "unverified".
+  requireExactSource: boolean;
+  // El valor tiene que tener forma del campo, no cualquier enlace.
+  valuePattern?: RegExp;
+}
+
+const ENRICH_FIELD_SPECS: Record<EnrichFieldKey, EnrichFieldSpec> = {
+  linkedinUrl: {
+    hint: 'Perfil de LinkedIn de la persona: busca "site:linkedin.com/in <nombre> <empresa>" y también "<nombre>" "<empresa>" LinkedIn.',
+    description: "URL del perfil público de LinkedIn de la persona, o vacío",
+    sourceHint: "URL de la página donde apareció el perfil",
+    rules: [
+      "El perfil de LinkedIn solo sirve si la persona y la empresa coinciden; si hay homónimos, devuélvelo vacío.",
+    ],
+    requireExactSource: false,
+    valuePattern: /linkedin\.com\//i,
+  },
+  email: {
+    hint: 'Correo corporativo: busca "<empresa> contacto correo" y revisa las páginas oficiales de contacto.',
+    description: "Correo corporativo publicado en un canal oficial de la empresa, o vacío",
+    sourceHint: "URL exacta donde ese correo aparece escrito",
+    rules: [
+      "Un correo solo vale si aparece escrito literalmente en la fuente. No lo deduzcas del dominio, del nombre ni del patrón nombre.apellido.",
+    ],
+    requireExactSource: true,
+  },
+  companyPhone: {
+    hint: 'Teléfono de la empresa: busca "<empresa> contacto teléfono" y "<empresa> sedes directorio".',
+    description: "Teléfono central de la empresa, o vacío",
+    sourceHint: "URL donde ese teléfono aparece escrito",
+    rules: [
+      "El teléfono debe ser el central de la empresa, nunca el celular personal ni un WhatsApp de un empleado.",
+    ],
+    requireExactSource: false,
+  },
+};
+
+// Whitelist del parámetro `fields` que llega del cliente. Si no viene o no trae nada válido, se
+// buscan los tres campos, que es el comportamiento previo a los prompts condicionales.
+function normalizeEnrichFields(raw: unknown): EnrichFieldKey[] {
+  if (!Array.isArray(raw)) return [...ENRICH_FIELD_KEYS];
+  const requested = raw.filter((f): f is EnrichFieldKey =>
+    ENRICH_FIELD_KEYS.includes(f as EnrichFieldKey)
+  );
+  return requested.length > 0 ? Array.from(new Set(requested)) : [...ENRICH_FIELD_KEYS];
+}
+
+// Un solo constructor parametrizado por la lista de campos: las 7 combinaciones posibles salen
+// de aquí, sin siete prompts separados que se desincronicen entre sí.
+function buildEnrichPrompt(
+  ctx: { leadName: string; role: string; companyName: string; city: string },
+  fields: EnrichFieldKey[]
+): string {
+  const hints = fields.map((f) => `- ${ENRICH_FIELD_SPECS[f].hint}`).join("\n");
+  const rules = fields
+    .flatMap((f) => ENRICH_FIELD_SPECS[f].rules)
+    .map((r) => `- ${r}`)
+    .join("\n");
+  const schema = fields
+    .map(
+      (f) =>
+        `  "${f}": { "value": "${ENRICH_FIELD_SPECS[f].description}", "source": "${ENRICH_FIELD_SPECS[f].sourceHint}" }`
+    )
+    .join(",\n");
+
+  return `Busca en Google información pública y verificable sobre esta persona y su empresa.
+Persona: ${ctx.leadName || "(no informada)"}
+Cargo registrado: ${ctx.role || "(no informado)"}
+Empresa: ${ctx.companyName}
+Ciudad: ${ctx.city || "(no informada)"}
+
+Busca únicamente estos datos, e ignora cualquier otro:
+${hints}
+
+Para cada dato responde con el valor y la URL exacta de la fuente donde aparece escrito. Si no
+lo encuentras, responde value y source como cadena vacía. No deduzcas, no completes con
+suposiciones y no inventes URLs.
+
+Formato de respuesta obligatorio (JSON estricto):
+{
+${schema}
+}
+
+Reglas:
+${rules}
+Responde ÚNICAMENTE con el objeto JSON válido.`;
+}
+
 // Enriquece un lead con datos de su empresa y su perfil público. No hay caché en el Worker a
 // propósito: no tiene credenciales de Firestore y añadir un service account sería meter
 // infraestructura nueva. El endpoint es stateless y la caché vive en el cliente, que ya
 // tiene el SDK de Firestore y las reglas permiten cualquier colección.
 export async function handleEnrichLead(req: Request, apiKey: string): Promise<Response> {
   const body = (await req.json()) as any;
-  const { leadName, companyName, role } = body || {};
+  const { leadName, companyName, role, city } = body || {};
   if (!companyName || typeof companyName !== "string" || !companyName.trim()) {
     return json({ error: "Se requiere el nombre de la empresa" }, 400);
   }
   const trimmedCompany = companyName.trim();
   const trimmedName = typeof leadName === "string" ? leadName.trim() : "";
   const trimmedRole = typeof role === "string" ? role.trim() : "";
+  const trimmedCity = typeof city === "string" ? city.trim() : "";
 
   if (!apiKey) return aiUnavailable("El asistente de IA no está configurado en este Worker.");
 
-  const prompt = `Busca en Google información pública y verificable sobre esta persona y su empresa.
-Persona: ${trimmedName || "(no informada)"}
-Cargo registrado: ${trimmedRole || "(no informado)"}
-Empresa: ${trimmedCompany}
-
-Para CADA campo responde con el valor y la URL exacta de la fuente donde aparece ese dato
-literalmente. Si no encuentras el dato, responde value como cadena vacía y source como cadena
-vacía. No completes con suposiciones, no deduzcas y no inventes URLs.
-
-Formato de respuesta obligatorio (JSON estricto):
-{
-  "linkedinUrl": { "value": "URL de su perfil público de LinkedIn, o vacío", "source": "URL donde ese perfil está citado" },
-  "email": { "value": "Correo corporativo publicado en un canal oficial de la empresa, o vacío", "source": "URL donde ese correo aparece citado" },
-  "companyPhone": { "value": "Teléfono central de la empresa, o vacío", "source": "URL donde ese teléfono aparece citado" },
-  "currentTitle": { "value": "Cargo actual confirmado de la persona, o vacío", "source": "URL donde ese cargo aparece citado" }
-}
-
-Reglas:
-- Un correo solo vale si aparece escrito en la fuente. No lo deduzcas del dominio ni del nombre.
-- El teléfono de la empresa es el central, no el celular personal de la persona.
-- Un cargo cuenta como actual solo si la fuente es reciente.
-Responde ÚNICAMENTE con el objeto JSON válido.`;
+  // El cliente pide solo los campos que le faltan a este lead, y el prompt se arma con esos.
+  const requestedFields = normalizeEnrichFields(body?.fields);
+  const prompt = buildEnrichPrompt(
+    { leadName: trimmedName, role: trimmedRole, companyName: trimmedCompany, city: trimmedCity },
+    requestedFields
+  );
 
   let response: { text: string; candidates?: any[] } | null = null;
 
@@ -404,27 +489,56 @@ Responde ÚNICAMENTE con el objeto JSON válido.`;
     return json({ error: "La IA no pudo leer los datos del lead. Intenta de nuevo o complétalos a mano." }, 502);
   }
 
-  // Gate de anti-alucinación: un campo solo se acepta si el modelo declaró una fuente y esa
-  // fuente está entre las citas reales que devolvió el grounding. Si no, el valor se descarta
-  // aunque el modelo lo afirmara. Esto es lo que impide que un correo deducido o una URL de
-  // LinkedIn inventada entren como dato bueno: se ven idénticos a un dato verdadero.
-  const citedUrls = new Set(uniqueSources.map((s) => normalizeSourceUrl(s.url)));
+  // Gate de anti-alucinación con dos niveles de evidencia. Un campo solo se acepta si el modelo
+  // declaró una fuente y esa fuente está entre las citas reales que devolvió el grounding.
+  // - El correo exige la cita exacta de la página: un correo equivocado manda un mensaje real a
+  //   un desconocido, así que no admite tolerancia de dominio.
+  // - LinkedIn y el teléfono central admiten una cita del mismo dominio y quedan como
+  //   "unverified", que la UI muestra como dato aparente a revisar.
+  const exactCited = new Set(uniqueSources.map((s) => normalizeSourceUrl(s.url)));
+  const citedHosts = new Set(
+    uniqueSources.map((s) => normalizeSourceUrl(s.url).split("/")[0]).filter(Boolean)
+  );
+
   const accepted: Record<string, string> = {};
+  const confidence: Record<string, "cited" | "unverified"> = {};
   const rejected: string[] = [];
 
-  for (const field of ["linkedinUrl", "email", "companyPhone", "currentTitle"]) {
+  for (const field of requestedFields) {
+    const spec = ENRICH_FIELD_SPECS[field];
     const raw = parsed[field];
     const value = typeof raw?.value === "string" ? raw.value.trim() : "";
     const source = typeof raw?.source === "string" ? raw.source.trim() : "";
+
     if (!value) {
       rejected.push(`${field}: no se encontró`);
       continue;
     }
-    if (!source || !citedUrls.has(normalizeSourceUrl(source))) {
+    if (!source) {
+      rejected.push(`${field}: sin fuente`);
+      continue;
+    }
+    if (spec.valuePattern && !spec.valuePattern.test(value)) {
+      rejected.push(`${field}: el valor no tiene el formato esperado`);
+      continue;
+    }
+
+    const normalizedSource = normalizeSourceUrl(source);
+    const sourceHost = normalizedSource.split("/")[0];
+    const isExact = exactCited.has(normalizedSource);
+    const isSameHost = !!sourceHost && citedHosts.has(sourceHost);
+
+    if (spec.requireExactSource && !isExact) {
+      rejected.push(`${field}: la fuente declarada no está entre las citas exactas de Google`);
+      continue;
+    }
+    if (!isExact && !isSameHost) {
       rejected.push(`${field}: la fuente declarada no está entre las citas de Google`);
       continue;
     }
+
     accepted[field] = value;
+    confidence[field] = isExact ? "cited" : "unverified";
   }
 
   const found = Object.keys(accepted).length;
@@ -432,7 +546,8 @@ Responde ÚNICAMENTE con el objeto JSON válido.`;
     success: true,
     enrichment: {
       ...accepted,
-      status: found === 0 ? "not_found" : found < 4 ? "partial" : "ok",
+      confidence,
+      status: found === 0 ? "not_found" : found < requestedFields.length ? "partial" : "ok",
       usedSearch: true,
       sources: uniqueSources,
       model: MODELS_TO_TRY[0],
@@ -442,18 +557,31 @@ Responde ÚNICAMENTE con el objeto JSON válido.`;
   });
 }
 
-// Compara fuentes ignorando el esquema, la barra final y la www, porque la URL que declara el
-// modelo y la que devuelve el grounding se escriben casi igual pero no idénticamente.
+// Subdominios que no identifican una página distinta. Sin colapsarlos, "es.linkedin.com/in/x"
+// y "www.linkedin.com/in/x" se verían como fuentes diferentes.
+const DROPPABLE_SUBDOMAINS = ["www", "es", "m", "mobile"];
+
+function normalizeHost(host: string): string {
+  const parts = host.split(".");
+  while (parts.length > 2 && DROPPABLE_SUBDOMAINS.includes(parts[0])) parts.shift();
+  return parts.join(".");
+}
+
+// Compara fuentes ignorando el esquema, los parámetros de seguimiento, la barra final y los
+// subdominios que no cambian de página, porque la URL que declara el modelo y la que devuelve
+// el grounding se escriben casi igual pero no idénticamente. Devuelve "host/path".
 function normalizeSourceUrl(url: string): string {
-  return url
+  const withoutScheme = url
     .trim()
     .replace(/^https?:\/\//, "")
-    .replace(/^www\./, "")
-    // Los parámetros de seguimiento no cambian qué página respalda el dato y se cuelan mucho en
-    // las citas: sin esto, una fuente real se descartaría por differing en "?utm_source=...".
     .split(/[?#]/)[0]
     .replace(/\/$/, "")
     .toLowerCase();
+
+  const slash = withoutScheme.indexOf("/");
+  const host = slash === -1 ? withoutScheme : withoutScheme.slice(0, slash);
+  const path = slash === -1 ? "" : withoutScheme.slice(slash);
+  return `${normalizeHost(host)}${path}`;
 }
 
 export default {

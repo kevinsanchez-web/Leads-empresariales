@@ -28,7 +28,7 @@ import { CardScannerModal } from './CardScannerModal';
 import { VoiceLeadAssistant } from './VoiceLeadAssistant';
 import { ParsedVoiceLead } from '../utils/voiceLeadParser';
 import { isOnline, saveLeadOffline } from '../utils/offlineStore';
-import { todayISODate } from '../utils/date';
+import { leadHistoryDate, leadTime, leadTimestampNow, todayISODate } from '../utils/date';
 import { cleanCompanyName } from '../utils/company';
 import { cleanContact } from '../utils/contactInfo';
 import { sendPriorityLeadPushNotification } from '../utils/pushNotifications';
@@ -223,8 +223,6 @@ export const NewLeadModal: React.FC<NewLeadModalProps> = ({
     e.preventDefault();
     if (!name || !company) return;
 
-    const now = new Date();
-    const timeStr = `${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}`;
     const cleanCompany = cleanCompanyName(company);
 
     const newLead: Lead = {
@@ -239,8 +237,8 @@ export const NewLeadModal: React.FC<NewLeadModalProps> = ({
       experiences: selectedExperiences,
       sources: selectedSources.length > 0 ? selectedSources : ['Registro manual'],
       capturedBy: currentUser.name,
-      capturedAt: `Hoy, ${timeStr}`,
-      lastContact: `Hoy, ${timeStr}`,
+      capturedAt: leadTimestampNow(),
+      lastContact: leadTimestampNow(),
       priority,
       status: "Nuevo",
       estimatedValue: 40000,
@@ -249,8 +247,8 @@ export const NewLeadModal: React.FC<NewLeadModalProps> = ({
       history: [
         {
           id: `hist-${Date.now()}`,
-          date: "Hoy",
-          time: timeStr,
+          date: leadHistoryDate(),
+          time: leadTime(),
           author: currentUser.name,
           text: `Lead registrado durante ${selectedEvent} por ${currentUser.name}. ${notes}`,
           type: 'note'

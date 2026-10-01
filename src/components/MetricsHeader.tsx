@@ -15,7 +15,8 @@ export const MetricsHeader: React.FC<MetricsHeaderProps> = ({ leads }) => {
   const formattedValue = `$${(totalValue / 1000000).toFixed(2)}M`;
 
   return (
-    <div className="bg-white rounded-xl border border-black/[0.06] shadow-xs px-2.5 sm:px-4 py-1.5 sm:py-2 flex items-center justify-between gap-1 sm:gap-2 overflow-x-auto [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">
+    <div className="relative">
+    <div className="bg-white rounded-xl border border-black/[0.06] shadow-xs px-2.5 sm:px-4 py-1.5 sm:py-2 flex items-center justify-between gap-1 sm:gap-2 overflow-x-auto overscroll-x-contain [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">
       {/* Metric 1: Total Leads */}
       <div className="flex items-center gap-1.5 sm:gap-2.5 min-w-max pr-2 sm:pr-4">
         <div className="w-6 h-6 sm:w-7 sm:h-7 rounded-lg bg-[#0071E3]/10 text-[#0071E3] flex items-center justify-center shrink-0">
@@ -65,6 +66,9 @@ export const MetricsHeader: React.FC<MetricsHeaderProps> = ({ leads }) => {
           <span className="text-[10px] sm:text-[11px] font-medium text-slate-500">Prioritarios</span>
         </div>
       </div>
+    </div>
+      {/* Pista de scroll horizontal: visible solo cuando las 4 métricas no caben */}
+      <div className="pointer-events-none absolute inset-y-0 right-0 w-8 rounded-r-xl bg-gradient-to-l from-white to-transparent sm:hidden" aria-hidden="true" />
     </div>
   );
 };
