@@ -5,19 +5,12 @@ import {
   Shield, 
   Mail, 
   Phone, 
-  CheckCircle2, 
   Clock, 
   Search, 
-  Building, 
   ArrowRight, 
-  Sparkles, 
   Trash2, 
-  Lock, 
   UserCheck,
-  Briefcase,
-  Zap,
-  Smartphone,
-  Eye
+  Briefcase
 } from 'lucide-react';
 import { UserRep, Lead, UserRoleType } from '../types';
 
@@ -78,262 +71,272 @@ export const UsuariosView: React.FC<UsuariosViewProps> = ({
   };
 
   return (
-    <div className="space-y-6">
-      
-      {/* Top Banner & Action */}
-      <div className="bg-white rounded-3xl p-6 border border-slate-200/80 shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-4">
-        <div>
-          <div className="flex items-center gap-2 text-xs font-bold text-blue-600 uppercase tracking-wider mb-1">
-            <Shield className="w-4 h-4 text-slate-900" />
-            <span className="text-slate-900">Gestión de Cuentas & Roles</span>
-          </div>
-          <h2 className="text-2xl font-bold text-slate-900 tracking-tight">Equipo Comercial & Administradores</h2>
-          <p className="text-sm text-slate-500 font-medium mt-0.5 max-w-2xl">
-            Crea cuentas para los <strong>Ejecutivos de Cuentas</strong> (quienes disfrutarán de una interfaz simplificada para captura ágil de leads) y administra los perfiles con acceso total de <strong>Administrador</strong>.
-          </p>
-        </div>
-
-        <div className="flex flex-wrap items-center gap-2.5">
-          <button
-            onClick={() => onOpenAddUserModal('executive')}
-            className="px-4 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-2xl text-xs font-bold shadow-md shadow-blue-500/20 flex items-center justify-center gap-2 cursor-pointer transition-all active:scale-98 shrink-0"
-          >
-            <UserPlus className="w-4 h-4" />
-            <span>+ Crear Cuenta de Ejecutivo</span>
-          </button>
-
-          <button
-            onClick={() => onOpenAddUserModal('admin')}
-            className="px-4 py-2.5 bg-slate-900 hover:bg-black text-white rounded-2xl text-xs font-bold shadow-md shadow-slate-900/20 flex items-center justify-center gap-2 cursor-pointer transition-all active:scale-98 shrink-0"
-          >
-            <Shield className="w-4 h-4 text-amber-400" />
-            <span>+ Crear Administrador</span>
-          </button>
-        </div>
-      </div>
-
-      {/* Role Comparison Explanatory Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+    <div className="max-w-7xl mx-auto flex flex-col min-h-[calc(100vh-8.5rem)] pb-3">
+      {/* Contenedor Único Integrado de Alto Completo */}
+      <div className="bg-white rounded-2xl border border-slate-200/80 shadow-2xs overflow-hidden flex-1 flex flex-col">
         
-        {/* Ejecutivo Card */}
-        <div className="bg-gradient-to-br from-blue-50/60 to-white rounded-3xl p-4 sm:p-5 border border-blue-100 flex items-start gap-4">
-          <div className="w-10 h-10 rounded-2xl bg-blue-600 text-white flex items-center justify-center font-black shrink-0 shadow-md shadow-blue-500/20">
-            <Briefcase className="w-5 h-5" />
-          </div>
+        {/* 1. Encabezado y Acciones */}
+        <div className="p-4 sm:p-5 border-b border-slate-100 flex flex-col md:flex-row md:items-center justify-between gap-4 shrink-0">
           <div>
-            <div className="flex items-center gap-2 mb-1">
-              <span className="font-bold text-sm text-slate-900">Perfil: Ejecutivo de Cuentas</span>
-              <span className="text-[10px] font-extrabold px-2 py-0.5 rounded-full bg-blue-100 text-blue-700">
-                {executiveCount} Activos
-              </span>
+            <div className="flex items-center gap-2 text-xs font-bold text-slate-700 tracking-wide mb-1">
+              <Shield className="w-4 h-4 text-slate-600" />
+              <span>Gestión de Cuentas & Roles</span>
             </div>
-            <p className="text-xs text-slate-600 leading-relaxed font-medium">
-              ⚡ <strong>Menú simplificado y sin distracciones</strong>: Diseñado para capturar prospectos a máxima velocidad durante el evento. Tiene acceso a Escáner IA de Tarjetas, Escáner QR, notas de voz, Formulario Rápido y su lista personal de leads.
+            <h2 className="text-xl font-bold text-slate-900 tracking-tight">Equipo Comercial & Administradores</h2>
+            <p className="text-xs text-slate-500 font-medium mt-0.5 max-w-2xl">
+              Crea cuentas para los <strong>Ejecutivos de Cuentas</strong> (captura ágil de leads) y administra los perfiles con acceso total de <strong>Administrador</strong>.
             </p>
           </div>
-        </div>
 
-        {/* Administrador Card */}
-        <div className="bg-gradient-to-br from-slate-900 to-slate-800 text-white rounded-3xl p-4 sm:p-5 border border-slate-700 flex items-start gap-4 shadow-xs">
-          <div className="w-10 h-10 rounded-2xl bg-white/10 text-amber-400 flex items-center justify-center font-black shrink-0 ring-1 ring-white/20">
-            <Shield className="w-5 h-5" />
-          </div>
-          <div>
-            <div className="flex items-center gap-2 mb-1">
-              <span className="font-bold text-sm text-white">Perfil: Administrador</span>
-              <span className="text-[10px] font-extrabold px-2 py-0.5 rounded-full bg-white/20 text-white">
-                {adminCount} Activos
-              </span>
-            </div>
-            <p className="text-xs text-slate-300 leading-relaxed font-medium">
-              🛡️ <strong>Acceso y control total</strong>: Creación y gestión de cuentas de ejecutivos, creación de ferias/eventos, panel analítico global, reporte financiero de pipeline, exportación de bases de datos y configuración del sistema.
-            </p>
-          </div>
-        </div>
-
-      </div>
-
-      {/* Filter & Search Bar */}
-      <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
-        <div className="relative flex-1">
-          <Search className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
-          <input
-            type="text"
-            placeholder="Buscar usuario por nombre, cargo, correo o equipo..."
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            className="w-full pl-10 pr-4 py-2.5 bg-white border border-slate-200 rounded-2xl text-xs font-medium focus:outline-none focus:ring-2 focus:ring-blue-500 shadow-2xs placeholder:text-slate-400"
-          />
-        </div>
-
-        {/* Role Filter Tabs */}
-        <div className="flex items-center bg-slate-100 p-1 rounded-2xl">
-          <button
-            onClick={() => setRoleFilter('all')}
-            className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
-              roleFilter === 'all' ? 'bg-white text-slate-900 shadow-xs' : 'text-slate-600 hover:text-slate-900'
-            }`}
-          >
-            Todos ({users.length})
-          </button>
-          <button
-            onClick={() => setRoleFilter('executive')}
-            className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-1 ${
-              roleFilter === 'executive' ? 'bg-white text-blue-700 shadow-xs' : 'text-slate-600 hover:text-slate-900'
-            }`}
-          >
-            <Briefcase className="w-3 h-3 text-blue-600" />
-            <span>Ejecutivos ({executiveCount})</span>
-          </button>
-          <button
-            onClick={() => setRoleFilter('admin')}
-            className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-1 ${
-              roleFilter === 'admin' ? 'bg-white text-slate-900 shadow-xs' : 'text-slate-600 hover:text-slate-900'
-            }`}
-          >
-            <Shield className="w-3 h-3 text-amber-500" />
-            <span>Admins ({adminCount})</span>
-          </button>
-        </div>
-
-        <div className="flex items-center gap-2">
-          <select
-            value={teamFilter}
-            onChange={(e) => setTeamFilter(e.target.value)}
-            className="px-3 py-2.5 bg-white border border-slate-200 rounded-2xl text-xs font-bold text-slate-700 shadow-2xs cursor-pointer focus:outline-none focus:ring-2 focus:ring-blue-500"
-          >
-            <option value="all">Todas las Sedes / Equipos ({teams.length})</option>
-            {teams.map((t) => (
-              <option key={t} value={t}>{t}</option>
-            ))}
-          </select>
-        </div>
-      </div>
-
-      {/* Users Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
-        {filteredUsers.map((user) => {
-          const isCurrent = user.id === currentUser.id;
-          const isAdmin = user.accountType === 'admin' || user.role.toLowerCase().includes('admin');
-          const stats = getUserMetrics(user.name);
-
-          return (
-            <div
-              key={user.id}
-              className={`bg-white rounded-3xl border p-5 flex flex-col justify-between transition-all relative overflow-hidden shadow-2xs ${
-                isCurrent 
-                  ? 'border-blue-500 ring-2 ring-blue-400/30 bg-gradient-to-b from-blue-50/30 to-white' 
-                  : 'border-slate-200/80 hover:border-slate-300 hover:shadow-xs'
-              }`}
+          <div className="flex flex-wrap items-center gap-2">
+            <button
+              onClick={() => onOpenAddUserModal('executive')}
+              className="px-3.5 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-semibold shadow-2xs flex items-center justify-center gap-1.5 cursor-pointer transition-all active:scale-98 shrink-0"
             >
-              {isCurrent && (
-                <div className="absolute top-0 right-0 bg-blue-600 text-white text-[10px] font-extrabold px-3 py-1 rounded-bl-xl flex items-center gap-1 shadow-xs">
-                  <UserCheck className="w-3 h-3" />
-                  <span>SESIÓN ACTIVA</span>
-                </div>
-              )}
+              <UserPlus className="w-3.5 h-3.5" />
+              <span>+ Crear Cuenta de Ejecutivo</span>
+            </button>
 
-              <div>
-                {/* User Top Info */}
-                <div className="flex items-start gap-3.5 mb-4">
-                  <div className={`w-12 h-12 rounded-2xl ${user.color || (isAdmin ? 'bg-slate-900' : 'bg-blue-600')} text-white font-black text-base flex items-center justify-center shrink-0 shadow-md shadow-slate-200 ring-2 ring-white`}>
-                    {user.avatar}
-                  </div>
-                  <div className="min-w-0 pr-14">
-                    <div className="flex items-center gap-1.5 mb-0.5">
-                      <span className={`text-[10px] font-extrabold px-2 py-0.5 rounded-md flex items-center gap-1 ${
-                        isAdmin 
-                          ? 'bg-slate-900 text-white' 
-                          : 'bg-blue-100 text-blue-700'
-                      }`}>
-                        {isAdmin ? <Shield className="w-3 h-3 text-amber-400" /> : <Briefcase className="w-3 h-3 text-blue-600" />}
-                        <span>{isAdmin ? 'ADMINISTRADOR' : 'EJECUTIVO DE CUENTAS'}</span>
-                      </span>
-                    </div>
-                    <h3 className="font-bold text-base text-slate-900 truncate leading-tight">
-                      {user.name}
-                    </h3>
-                    <p className="text-xs font-medium text-slate-500 truncate mt-0.5">{user.role}</p>
-                    <span className="inline-block mt-1 px-2 py-0.5 bg-slate-100 text-slate-600 rounded-md text-[10px] font-bold">
-                      {user.team}
-                    </span>
-                  </div>
-                </div>
+            <button
+              onClick={() => onOpenAddUserModal('admin')}
+              className="px-3.5 py-2 bg-amber-50 hover:bg-amber-100/80 text-amber-900 border border-amber-200/80 rounded-xl text-xs font-semibold shadow-2xs flex items-center justify-center gap-1.5 cursor-pointer transition-all active:scale-98 shrink-0"
+            >
+              <Shield className="w-3.5 h-3.5 text-amber-600" />
+              <span>+ Crear Administrador</span>
+            </button>
+          </div>
+        </div>
 
-                {/* Contact details */}
-                <div className="space-y-1.5 py-3 border-y border-slate-100 text-xs text-slate-600">
-                  <div className="flex items-center gap-2 truncate">
-                    <Mail className="w-3.5 h-3.5 text-slate-400 shrink-0" />
-                    <span className="truncate">{user.email}</span>
-                  </div>
-                  {user.phone && (
-                    <div className="flex items-center gap-2">
-                      <Phone className="w-3.5 h-3.5 text-slate-400 shrink-0" />
-                      <span>{user.phone}</span>
-                    </div>
-                  )}
-                  <div className="flex items-center gap-2 text-slate-400 text-[11px]">
-                    <Clock className="w-3.5 h-3.5 shrink-0" />
-                    <span>Último acceso: {user.lastLogin || 'Hoy'}</span>
-                  </div>
-                </div>
-
-                {/* Metrics Breakdown */}
-                <div className="grid grid-cols-3 gap-2 my-4 text-center">
-                  <div className="bg-slate-50 rounded-2xl p-2 border border-slate-100">
-                    <div className="text-base font-black text-slate-900">{stats.total}</div>
-                    <div className="text-[10px] font-bold text-slate-400 uppercase">Leads</div>
-                  </div>
-                  <div className="bg-emerald-50 rounded-2xl p-2 border border-emerald-100">
-                    <div className="text-base font-black text-emerald-700">{stats.qualified}</div>
-                    <div className="text-[10px] font-bold text-emerald-600 uppercase">Calificados</div>
-                  </div>
-                  <div className="bg-amber-50 rounded-2xl p-2 border border-amber-100">
-                    <div className="text-base font-black text-amber-700">{stats.priority}</div>
-                    <div className="text-[10px] font-bold text-amber-600 uppercase">Prioritarios</div>
-                  </div>
-                </div>
+        {/* 2. Tarjetas Explicativas de Roles */}
+        <div className="p-3.5 sm:p-4 bg-slate-50/50 border-b border-slate-100 grid grid-cols-1 md:grid-cols-2 gap-3 shrink-0">
+          <div className="bg-white rounded-xl p-3 border border-slate-200/70 flex items-start gap-3 shadow-2xs">
+            <div className="w-8 h-8 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center font-bold shrink-0">
+              <Briefcase className="w-4 h-4" />
+            </div>
+            <div>
+              <div className="flex items-center gap-2 mb-0.5">
+                <span className="font-bold text-xs text-slate-900">Perfil: Ejecutivo de Cuentas</span>
+                <span className="text-[10px] font-bold px-2 py-0.2 rounded-md bg-blue-50 text-blue-700 border border-blue-200/50">
+                  {executiveCount} Activos
+                </span>
               </div>
+              <p className="text-[11px] text-slate-500 leading-relaxed font-normal">
+                ⚡ <strong>Menú simplificado</strong>: Diseñado para capturar prospectos a máxima velocidad con Escáner IA, QR, notas de voz y formulario rápido.
+              </p>
+            </div>
+          </div>
 
-              {/* Action Buttons */}
-              <div className="pt-2 flex items-center justify-between gap-2">
-                {isCurrent ? (
-                  <div className="w-full py-2 bg-blue-50 text-blue-700 font-bold text-xs rounded-xl text-center border border-blue-200 flex items-center justify-center gap-1.5">
-                    <UserCheck className="w-3.5 h-3.5" />
-                    <span>Sesión Actual ({isAdmin ? 'Admin' : 'Ejecutivo'})</span>
-                  </div>
-                ) : (
-                  <button
-                    onClick={() => onSelectUser(user)}
-                    className={`flex-1 py-2 text-white rounded-xl text-xs font-bold transition-colors flex items-center justify-center gap-1.5 shadow-2xs cursor-pointer ${
-                      isAdmin ? 'bg-slate-900 hover:bg-black' : 'bg-blue-600 hover:bg-blue-700'
+          <div className="bg-white rounded-xl p-3 border border-slate-200/70 flex items-start gap-3 shadow-2xs">
+            <div className="w-8 h-8 rounded-lg bg-amber-50 text-amber-600 flex items-center justify-center font-bold shrink-0">
+              <Shield className="w-4 h-4" />
+            </div>
+            <div>
+              <div className="flex items-center gap-2 mb-0.5">
+                <span className="font-bold text-xs text-slate-900">Perfil: Administrador</span>
+                <span className="text-[10px] font-bold px-2 py-0.2 rounded-md bg-amber-50 text-amber-700 border border-amber-200/50">
+                  {adminCount} Activos
+                </span>
+              </div>
+              <p className="text-[11px] text-slate-500 leading-relaxed font-normal">
+                🛡️ <strong>Acceso total</strong>: Gestión de cuentas, creación de ferias/eventos, panel analítico global, métricas pipeline y exportación.
+              </p>
+            </div>
+          </div>
+        </div>
+
+        {/* 3. Barra de Búsqueda y Filtros */}
+        <div className="p-3 bg-slate-50/30 border-b border-slate-100 flex flex-col sm:flex-row items-stretch sm:items-center gap-2.5 shrink-0">
+          <div className="relative flex-1">
+            <Search className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+            <input
+              type="text"
+              placeholder="Buscar por nombre, cargo, correo o equipo..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              className="w-full pl-9 pr-3 py-1.5 bg-white border border-slate-200/90 rounded-xl text-xs font-medium focus:outline-none focus:ring-2 focus:ring-blue-500 placeholder:text-slate-400"
+            />
+          </div>
+
+          <div className="flex items-center gap-2 overflow-x-auto">
+            <div className="flex items-center bg-white p-0.5 rounded-xl border border-slate-200/80">
+              <button
+                onClick={() => setRoleFilter('all')}
+                className={`px-2.5 py-1 rounded-lg text-[11px] font-semibold transition-all cursor-pointer ${
+                  roleFilter === 'all' ? 'bg-blue-600 text-white shadow-2xs' : 'text-slate-600 hover:text-slate-900'
+                }`}
+              >
+                Todos ({users.length})
+              </button>
+              <button
+                onClick={() => setRoleFilter('executive')}
+                className={`px-2.5 py-1 rounded-lg text-[11px] font-semibold transition-all cursor-pointer flex items-center gap-1 ${
+                  roleFilter === 'executive' ? 'bg-blue-600 text-white shadow-2xs' : 'text-slate-600 hover:text-slate-900'
+                }`}
+              >
+                <Briefcase className="w-3 h-3" />
+                <span>Ejecutivos ({executiveCount})</span>
+              </button>
+              <button
+                onClick={() => setRoleFilter('admin')}
+                className={`px-2.5 py-1 rounded-lg text-[11px] font-semibold transition-all cursor-pointer flex items-center gap-1 ${
+                  roleFilter === 'admin' ? 'bg-amber-500 text-white shadow-2xs' : 'text-slate-600 hover:text-slate-900'
+                }`}
+              >
+                <Shield className="w-3 h-3" />
+                <span>Admins ({adminCount})</span>
+              </button>
+            </div>
+
+            <select
+              value={teamFilter}
+              onChange={(e) => setTeamFilter(e.target.value)}
+              className="px-2.5 py-1.5 bg-white border border-slate-200/90 rounded-xl text-[11px] font-semibold text-slate-700 cursor-pointer focus:outline-none focus:ring-2 focus:ring-blue-500"
+            >
+              <option value="all">Sedes / Equipos ({teams.length})</option>
+              {teams.map((t) => (
+                <option key={t} value={t}>{t}</option>
+              ))}
+            </select>
+          </div>
+        </div>
+
+        {/* 4. Cuerpo Principal (Abarca todo el espacio vertical restante) */}
+        <div className="p-4 flex-1 flex flex-col justify-start">
+          {filteredUsers.length === 0 ? (
+            <div className="flex-1 flex flex-col items-center justify-center py-12 text-center">
+              <div className="w-12 h-12 rounded-2xl bg-slate-50 text-slate-400 flex items-center justify-center mb-3 border border-slate-100">
+                <Users className="w-6 h-6" />
+              </div>
+              <h3 className="text-xs font-bold text-slate-800">No se encontraron usuarios</h3>
+              <p className="text-[11px] text-slate-400 mt-0.5">Intenta cambiar los filtros o el término de búsqueda.</p>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3.5">
+              {filteredUsers.map((user) => {
+                const isCurrent = user.id === currentUser.id;
+                const isAdmin = user.accountType === 'admin' || user.role.toLowerCase().includes('admin');
+                const stats = getUserMetrics(user.name);
+
+                return (
+                  <div
+                    key={user.id}
+                    className={`bg-slate-50/50 hover:bg-slate-100/50 rounded-2xl border p-4 flex flex-col justify-between transition-all relative overflow-hidden shadow-2xs ${
+                      isCurrent 
+                        ? 'border-blue-500 ring-2 ring-blue-500/20 bg-blue-50/20' 
+                        : 'border-slate-200/80 hover:border-slate-300'
                     }`}
                   >
-                    <span>Iniciar Sesión como {isAdmin ? 'Admin' : 'Ejecutivo'}</span>
-                    <ArrowRight className="w-3.5 h-3.5" />
-                  </button>
-                )}
+                    {isCurrent && (
+                      <div className="absolute top-0 right-0 bg-blue-600 text-white text-[9px] font-extrabold px-2.5 py-0.5 rounded-bl-lg flex items-center gap-1">
+                        <UserCheck className="w-2.5 h-2.5" />
+                        <span>SESIÓN ACTIVA</span>
+                      </div>
+                    )}
 
-                {onDeleteUser && users.length > 1 && !isCurrent && (
-                  <button
-                    onClick={() => {
-                      if (confirm(`¿Estás seguro de eliminar la cuenta de ${user.name}?`)) {
-                        onDeleteUser(user.id);
-                      }
-                    }}
-                    className="p-2 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-xl transition-colors cursor-pointer"
-                    title="Eliminar usuario"
-                  >
-                    <Trash2 className="w-4 h-4" />
-                  </button>
-                )}
-              </div>
+                    <div>
+                      {/* Encabezado Tarjeta */}
+                      <div className="flex items-start gap-3 mb-3">
+                        <div className={`w-10 h-10 rounded-xl ${user.color || (isAdmin ? 'bg-amber-600' : 'bg-blue-600')} text-white font-bold text-sm flex items-center justify-center shrink-0 shadow-2xs`}>
+                          {user.avatar}
+                        </div>
+                        <div className="min-w-0 pr-10">
+                          <div className="flex items-center gap-1 mb-0.5">
+                            <span className={`text-[9px] font-bold px-1.5 py-0.2 rounded-md flex items-center gap-1 ${
+                              isAdmin 
+                                ? 'bg-amber-50 text-amber-700 border border-amber-200/60' 
+                                : 'bg-blue-50 text-blue-700 border border-blue-200/60'
+                            }`}>
+                              {isAdmin ? <Shield className="w-2.5 h-2.5 text-amber-600" /> : <Briefcase className="w-2.5 h-2.5 text-blue-600" />}
+                              <span>{isAdmin ? 'ADMINISTRADOR' : 'EJECUTIVO'}</span>
+                            </span>
+                          </div>
+                          <h3 className="font-bold text-sm text-slate-900 truncate leading-tight">
+                            {user.name}
+                          </h3>
+                          <p className="text-[11px] font-medium text-slate-500 truncate mt-0.5">{user.role}</p>
+                          <span className="inline-block mt-1 px-1.5 py-0.2 bg-white text-slate-600 rounded-md text-[9px] font-bold border border-slate-200/60">
+                            {user.team}
+                          </span>
+                        </div>
+                      </div>
 
+                      {/* Datos de Contacto */}
+                      <div className="space-y-1 py-2.5 border-y border-slate-200/60 text-[11px] text-slate-600">
+                        <div className="flex items-center gap-2 truncate">
+                          <Mail className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+                          <span className="truncate">{user.email}</span>
+                        </div>
+                        {user.phone && (
+                          <div className="flex items-center gap-2">
+                            <Phone className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+                            <span>{user.phone}</span>
+                          </div>
+                        )}
+                        <div className="flex items-center gap-2 text-slate-400 text-[10px]">
+                          <Clock className="w-3 h-3 shrink-0" />
+                          <span>Último acceso: {user.lastLogin || 'Hoy'}</span>
+                        </div>
+                      </div>
+
+                      {/* Resumen Métricas */}
+                      <div className="grid grid-cols-3 gap-1.5 my-3 text-center">
+                        <div className="bg-white rounded-xl p-1.5 border border-slate-200/60">
+                          <div className="text-sm font-bold text-slate-900">{stats.total}</div>
+                          <div className="text-[9px] font-bold text-slate-400 uppercase">Leads</div>
+                        </div>
+                        <div className="bg-emerald-50/80 rounded-xl p-1.5 border border-emerald-100">
+                          <div className="text-sm font-bold text-emerald-700">{stats.qualified}</div>
+                          <div className="text-[9px] font-bold text-emerald-600 uppercase">Calific.</div>
+                        </div>
+                        <div className="bg-amber-50/80 rounded-xl p-1.5 border border-amber-100">
+                          <div className="text-sm font-bold text-amber-700">{stats.priority}</div>
+                          <div className="text-[9px] font-bold text-amber-600 uppercase">Priorit.</div>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Acciones */}
+                    <div className="pt-1 flex items-center justify-between gap-1.5">
+                      {isCurrent ? (
+                        <div className="w-full py-1.5 bg-blue-50 text-blue-700 font-bold text-[11px] rounded-xl text-center border border-blue-200/60 flex items-center justify-center gap-1">
+                          <UserCheck className="w-3 h-3" />
+                          <span>Sesión Actual ({isAdmin ? 'Admin' : 'Ejecutivo'})</span>
+                        </div>
+                      ) : (
+                        <button
+                          onClick={() => onSelectUser(user)}
+                          className={`flex-1 py-1.5 text-white rounded-xl text-[11px] font-semibold transition-colors flex items-center justify-center gap-1 shadow-2xs cursor-pointer ${
+                            isAdmin ? 'bg-slate-800 hover:bg-slate-900' : 'bg-blue-600 hover:bg-blue-700'
+                          }`}
+                        >
+                          <span>Iniciar Sesión como {isAdmin ? 'Admin' : 'Ejecutivo'}</span>
+                          <ArrowRight className="w-3 h-3" />
+                        </button>
+                      )}
+
+                      {onDeleteUser && users.length > 1 && !isCurrent && (
+                        <button
+                          onClick={() => {
+                            if (confirm(`¿Estás seguro de eliminar la cuenta de ${user.name}?`)) {
+                              onDeleteUser(user.id);
+                            }
+                          }}
+                          className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-xl transition-colors cursor-pointer"
+                          title="Eliminar usuario"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
+                      )}
+                    </div>
+
+                  </div>
+                );
+              })}
             </div>
-          );
-        })}
-      </div>
+          )}
+        </div>
 
+      </div>
     </div>
   );
 };
