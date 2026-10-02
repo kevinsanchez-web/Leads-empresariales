@@ -23,7 +23,7 @@ import { ConfiguracionView } from './components/ConfiguracionView';
 import { getNotificationAlerts } from './utils/notifications';
 import { cleanContact } from './utils/contactInfo';
 import { isOnline, getOfflineLeads, syncOfflineLeads } from './utils/offlineStore';
-import { WifiOff, RefreshCw, CheckCircle2, X } from 'lucide-react';
+import { WifiOff, RefreshCw, CheckCircle2, X, AlertTriangle } from 'lucide-react';
 
 import { ActiveView, Lead, UserRep, EventOption, UserRoleType, AccentTheme } from './types';
 import { MOCK_USERS, MOCK_EVENTS, INITIAL_LEADS } from './data/mockData';
@@ -137,6 +137,7 @@ export default function App() {
   const [isDeviceOffline, setIsDeviceOffline] = useState<boolean>(() => !isOnline());
   const [offlineQueueCount, setOfflineQueueCount] = useState<number>(() => getOfflineLeads().length);
   const [syncToastMessage, setSyncToastMessage] = useState<string | null>(null);
+  const [leadSaveError, setLeadSaveError] = useState<string | null>(null);
 
   // Registro de Service Worker
   useEffect(() => {
@@ -310,10 +311,12 @@ export default function App() {
 
   const handleSaveNewLead = async (newLead: Lead) => {
     setSelectedLeadId(newLead.id);
+    setLeadSaveError(null);
     try {
       await createOrUpdateLead(newLead);
     } catch (err) {
       console.error('Error guardando lead en Firestore:', err);
+      setLeadSaveError('No se pudo guardar el lead. Revisa tu conexión e inténtalo de nuevo.');
     }
   };
 
@@ -419,12 +422,13 @@ export default function App() {
             companyName: "Divergency Software",
             companyCategory: "Tecnología & Lead Management",
             onNavigateToView: (view: string) => setActiveView(view as ActiveView),
-            onLogout: handleLogout
+            onLogout: handleLogout,
+            onOpenNewLeadModal: () => setIsNewLeadModalOpen(true)
           } as any)}
         />
 
         {/* Contenido Dinámico según la Vista Activa */}
-        <main className="flex-1 p-3 sm:p-4 md:p-6 pb-24 sm:pb-28 max-w-[1600px] w-full mx-auto space-y-3">
+        <main className="flex-1 flex flex-col p-3 sm:p-4 md:p-6 pb-[calc(var(--bottom-nav-reserve)+1.5rem)] max-w-[1600px] w-full mx-auto space-y-3">
 
           {/* Banner Modo Offline */}
           {isDeviceOffline && (
@@ -440,6 +444,22 @@ export default function App() {
                   {offlineQueueCount} guardados offline
                 </span>
               )}
+            </div>
+          )}
+
+          {leadSaveError && (
+            <div className="bg-red-600 text-white px-4 py-2.5 rounded-2xl shadow-lg flex items-center justify-between gap-3 animate-fade-in text-xs font-bold border border-red-500">
+              <div className="flex items-center gap-2 min-w-0">
+                <AlertTriangle className="w-4 h-4 shrink-0 text-red-200" />
+                <span className="truncate">{leadSaveError}</span>
+              </div>
+              <button
+                onClick={() => setLeadSaveError(null)}
+                className="p-1 rounded-lg hover:bg-red-700 text-white cursor-pointer transition-colors shrink-0"
+                aria-label="Cerrar aviso de error"
+              >
+                <X className="w-3.5 h-3.5" />
+              </button>
             </div>
           )}
 
@@ -568,8 +588,9 @@ export default function App() {
               onSaveLead={handleSaveNewLead}
               currentUser={currentUser}
               currentEvent={currentEvent}
+              events={events}
               allLeads={leads}
-              onOpenNewLeadModal={() => setIsNewLeadModalOpen(true)}
+              onOpenCreateEventModal={() => setIsCreateEventModalOpen(true)}
               onDone={() => setActiveView('personas')}
             />
           )}

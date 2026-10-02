@@ -328,8 +328,8 @@ export const HeaderNotificationsPopover: React.FC<HeaderNotificationsPopoverProp
             onClick={() => setIsOpen(false)}
           />
           
-          {/* Panel móvil: Anclado desde arriba (top-0) hasta la barra de navegación (bottom-16 / 64px) */}
-          <div className="fixed top-0 left-0 right-0 bottom-16 z-40 bg-white flex flex-col w-full max-w-full overflow-hidden sm:hidden shadow-2xl border-b border-slate-200 animate-in slide-in-from-right duration-200">
+          {/* Panel móvil: Anclado desde arriba (top-0) hasta la barra de navegación */}
+          <div className="fixed top-0 left-0 right-0 bottom-[var(--bottom-nav-reserve)] z-40 bg-white flex flex-col w-full max-w-full overflow-hidden sm:hidden shadow-2xl border-b border-slate-200 animate-in slide-in-from-right duration-200">
             {renderContent(true)}
           </div>
         </>,

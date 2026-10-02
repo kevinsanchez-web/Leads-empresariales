@@ -32,7 +32,7 @@ export const EmpresasView: React.FC<EmpresasViewProps> = ({ leads, onSelectLead,
       const name = cleanCompanyName(companyLeads[0].company);
       const totalPipeline = companyLeads.reduce((acc, curr) => acc + (curr.estimatedValue || 35000), 0);
       const hasPriority = companyLeads.some(l => l.priority);
-      const allInterests = Array.from(new Set(companyLeads.flatMap(l => l.interests)));
+      const allInterests = Array.from(new Set(companyLeads.flatMap(l => l.interests || [])));
       const existingInfo = companyLeads.find(l => l.companyInfo)?.companyInfo || localCompanyInfo[name];
 
       return {
@@ -50,7 +50,7 @@ export const EmpresasView: React.FC<EmpresasViewProps> = ({ leads, onSelectLead,
   // Filter companies based on dropdown selection and search input
   const companiesList = allCompanies.filter(c => {
     const matchesDropdown = selectedCompanyFilter === 'ALL' || c.name === selectedCompanyFilter;
-    const matchesSearch = 
+    const matchesSearch =
       c.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
       c.leads.some(l => l.name.toLowerCase().includes(searchTerm.toLowerCase()));
 
@@ -59,7 +59,12 @@ export const EmpresasView: React.FC<EmpresasViewProps> = ({ leads, onSelectLead,
 
   const handleResearchCompany = async (companyName: string, companyLeads: Lead[]) => {
     setResearchingCompanies(prev => ({ ...prev, [companyName]: true }));
-    setResearchErrors(prev => { const next = { ...prev }; delete next[companyName]; return next; });
+    setResearchErrors(prev => {
+      const next = { ...prev };
+      delete next[companyName];
+      return next;
+    });
+
     try {
       const firstLead = companyLeads[0];
       const data = await researchCompany({
@@ -73,7 +78,10 @@ export const EmpresasView: React.FC<EmpresasViewProps> = ({ leads, onSelectLead,
         return;
       }
       if (!data.companyInfo) {
-        setResearchErrors(prev => ({ ...prev, [companyName]: { message: 'La IA no devolvió información de la empresa.', simulated: data.simulated } }));
+        setResearchErrors(prev => ({
+          ...prev,
+          [companyName]: { message: 'La IA no devolvió información de la empresa.', simulated: data.simulated }
+        }));
         return;
       }
 
@@ -94,10 +102,19 @@ export const EmpresasView: React.FC<EmpresasViewProps> = ({ leads, onSelectLead,
       }
 
       if (data.usedSearch === false) {
-        setResearchErrors(prev => ({ ...prev, [companyName]: { message: 'La IA respondió sin buscar en la web: este perfil no está verificado.', simulated: true } }));
+        setResearchErrors(prev => ({
+          ...prev,
+          [companyName]: {
+            message: 'La IA respondió sin buscar en la web: este perfil no está verificado.',
+            simulated: true
+          }
+        }));
       }
     } catch {
-      setResearchErrors(prev => ({ ...prev, [companyName]: { message: 'No se pudo contactar el asistente de IA.', simulated: false } }));
+      setResearchErrors(prev => ({
+        ...prev,
+        [companyName]: { message: 'No se pudo contactar el asistente de IA.', simulated: false }
+      }));
     } finally {
       setResearchingCompanies(prev => ({ ...prev, [companyName]: false }));
     }
@@ -105,7 +122,6 @@ export const EmpresasView: React.FC<EmpresasViewProps> = ({ leads, onSelectLead,
 
   return (
     <div className="space-y-4 animate-fade-in">
-      
       {/* Header con Filtros Integrados */}
       <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3 bg-white p-4 rounded-2xl border border-slate-200/60 shadow-xs">
         <div className="flex items-center gap-3">
@@ -125,17 +141,16 @@ export const EmpresasView: React.FC<EmpresasViewProps> = ({ leads, onSelectLead,
 
         {/* Controles de Filtro: Desplegable + Buscador */}
         <div className="flex flex-col sm:flex-row items-center gap-2 w-full lg:w-auto">
-          
           {/* Desplegable para Filtrar Empresa */}
           <div className="relative w-full sm:w-56">
             <Filter className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
             <select
               value={selectedCompanyFilter}
-              onChange={(e) => setSelectedCompanyFilter(e.target.value)}
+              onChange={e => setSelectedCompanyFilter(e.target.value)}
               className="w-full pl-8 pr-8 py-1.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-500 appearance-none cursor-pointer truncate"
             >
               <option value="ALL">Todas las empresas ({allCompanies.length})</option>
-              {allCompanies.map((c) => (
+              {allCompanies.map(c => (
                 <option key={c.name} value={c.name}>
                   {c.name} ({c.leadCount} contacto{c.leadCount > 1 ? 's' : ''})
                 </option>
@@ -151,15 +166,14 @@ export const EmpresasView: React.FC<EmpresasViewProps> = ({ leads, onSelectLead,
               type="text"
               placeholder="Buscar por nombre o contacto..."
               value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
+              onChange={e => setSearchTerm(e.target.value)}
               className="w-full pl-8 pr-3 py-1.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium focus:outline-none focus:ring-2 focus:ring-blue-500"
             />
           </div>
-
         </div>
       </div>
 
-      {/* Grid of Company Cards */}
+      {/* Grid de Tarjetas de Empresas */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
         {companiesList.length === 0 ? (
           <div className="col-span-full bg-white rounded-2xl p-8 text-center border border-slate-200/60 text-slate-400 font-medium text-xs">
@@ -169,14 +183,16 @@ export const EmpresasView: React.FC<EmpresasViewProps> = ({ leads, onSelectLead,
           companiesList.map(comp => {
             const isLoading = researchingCompanies[comp.name];
             return (
-              <div 
-                key={comp.name} 
+              <div
+                key={comp.name}
                 className="bg-white p-4 rounded-2xl border border-slate-200/70 hover:border-slate-300 shadow-xs transition-all flex flex-col justify-between space-y-3"
               >
                 <div>
                   <div className="flex items-start justify-between gap-1 mb-1">
                     <div className="min-w-0 flex-1">
-                      <h3 className="font-extrabold text-sm sm:text-base text-slate-900 truncate" title={comp.name}>{comp.name}</h3>
+                      <h3 className="font-extrabold text-sm sm:text-base text-slate-900 truncate" title={comp.name}>
+                        {comp.name}
+                      </h3>
                       <div className="text-[11px] text-slate-500 flex items-center gap-1.5 truncate">
                         <span>{comp.leadCount} contacto{comp.leadCount > 1 ? 's' : ''}</span>
                         <span>•</span>
@@ -238,7 +254,9 @@ export const EmpresasView: React.FC<EmpresasViewProps> = ({ leads, onSelectLead,
                         {comp.companyInfo.industry && (
                           <div className="text-[10px]">
                             <strong className="text-slate-900">Sector: </strong>
-                            <span className="px-1.5 py-0.5 rounded bg-white border border-slate-200 text-slate-700 font-semibold">{comp.companyInfo.industry}</span>
+                            <span className="px-1.5 py-0.5 rounded bg-white border border-slate-200 text-slate-700 font-semibold">
+                              {comp.companyInfo.industry}
+                            </span>
                           </div>
                         )}
                         {comp.companyInfo.sources && comp.companyInfo.sources.length > 0 && (
@@ -267,9 +285,11 @@ export const EmpresasView: React.FC<EmpresasViewProps> = ({ leads, onSelectLead,
                     )}
                   </div>
 
-                  {/* Contact list */}
+                  {/* Lista de Contactos */}
                   <div className="space-y-1 sm:space-y-1.5">
-                    <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Contactos en la empresa:</span>
+                    <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">
+                      Contactos en la empresa:
+                    </span>
                     {comp.leads.slice(0, 3).map(lead => (
                       <button
                         key={lead.id}
@@ -291,7 +311,7 @@ export const EmpresasView: React.FC<EmpresasViewProps> = ({ leads, onSelectLead,
                   </div>
                 </div>
 
-                {/* Bottom Tags */}
+                {/* Etiquetas de Intereses */}
                 {comp.allInterests.length > 0 && (
                   <div className="pt-2 border-t border-slate-100 flex flex-wrap gap-1">
                     {comp.allInterests.map((interest, i) => (

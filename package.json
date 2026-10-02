@@ -9,6 +9,9 @@
     "preview": "vite preview",
     "seed": "tsx scripts/seed.ts",
     "migrate:dates": "tsx scripts/migrate-dates.ts",
+    "audit:dates": "tsx scripts/audit-capture-dates.ts",
+    "check:dates": "tsx scripts/check-dates.ts",
+    "backfill:dates": "tsx scripts/backfill-capture-dates.ts",
     "verify:ai": "tsx scripts/verify-ai-transport.ts && tsx scripts/verify-ai-worker.ts",
     "lint": "tsc --noEmit"
   },
@@ -29,6 +32,7 @@
     "@types/react": "^19.2.18",
     "@types/react-dom": "^19.2.5",
     "autoprefixer": "^10.4.21",
+    "firebase-admin": "^14.5.0",
     "tailwindcss": "^4.1.14",
     "tsx": "^4.21.0",
     "typescript": "~5.8.2",

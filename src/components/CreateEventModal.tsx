@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { X, Calendar, MapPin, Plus, CheckCircle2 } from 'lucide-react';
 import { EventOption } from '../types';
+import { isoDateToLocalMs } from '../utils/date';
 
 interface CreateEventModalProps {
   isOpen: boolean;
@@ -30,8 +31,10 @@ export const CreateEventModal: React.FC<CreateEventModalProps> = ({
     let formattedRange = dateRangeCustom.trim();
     if (!formattedRange) {
       if (startDate && endDate) {
-        const start = new Date(startDate);
-        const end = new Date(endDate);
+        // El value del input date es `YYYY-MM-DD`: parsearlo con `new Date()` lo
+        // interpreta como UTC y en offset negativo devuelve el día anterior.
+        const start = new Date(isoDateToLocalMs(startDate));
+        const end = new Date(isoDateToLocalMs(endDate));
         const startDay = start.getDate().toString().padStart(2, '0');
         const endDay = end.getDate().toString().padStart(2, '0');
         const monthNames = ["Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio", "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"];

@@ -12,6 +12,7 @@ import { TrendingUp, Calendar, Zap, Star } from 'lucide-react';
 import { Lead, EventOption } from '../types';
 import {
   todayISODate,
+  isoDateToLocalMs,
   parseLeadTimestamp,
   parseEventDateRange,
   enumerateDays,
@@ -55,13 +56,16 @@ export const LeadsTrendChart: React.FC<LeadsTrendChartProps> = ({
   }, [leads, currentEvent.name]);
 
   // Agrupar leads por día y calcular métricas acumuladas
-  const trendData = useMemo(() => {
+  const trend = useMemo(() => {
     type DayBucket = {
       date: string;
       displayDate: string;
       total: number;
       priority: number;
       normal: number;
+      // Nombres de los leads del día: sin esto la gráfica solo muestra un
+      // conteo y no se puede saber qué lead cayó en cada punto.
+      leads: string[];
     };
 
     const buckets = new Map<string, DayBucket>();
@@ -73,7 +77,8 @@ export const LeadsTrendChart: React.FC<LeadsTrendChartProps> = ({
           displayDate: formatShortDayLabel(dateKey),
           total: 0,
           priority: 0,
-          normal: 0
+          normal: 0,
+          leads: []
         };
         buckets.set(dateKey, bucket);
       }
@@ -93,6 +98,11 @@ export const LeadsTrendChart: React.FC<LeadsTrendChartProps> = ({
         ? leadDates.reduce((min, d) => (d < min ? d : min), todayStr)
         : todayStr;
 
+    const lastLeadDate =
+      leadDates.length > 0
+        ? leadDates.reduce((max, d) => (d > max ? d : max), firstLeadDate)
+        : todayStr;
+
     let startDate = range?.start || firstLeadDate;
     let endDate = range?.end || todayStr;
 
@@ -100,12 +110,21 @@ export const LeadsTrendChart: React.FC<LeadsTrendChartProps> = ({
       endDate = todayStr;
     }
 
-    const startMs = new Date(startDate).getTime();
-    const firstLeadMs = new Date(firstLeadDate).getTime();
+    // Solo hay rango de evento interpretable si `dateRange` se pudo entender.
+    // Sin rango válido el eje va del primer lead al último: antes el mismo recorte
+    // de días vacíos se aplicaba igual y dejaba todo amontonado en un punto.
+    const hasEventRange = Boolean(range);
+    if (!hasEventRange && lastLeadDate > endDate) {
+      endDate = lastLeadDate;
+    }
+
+    const startMs = isoDateToLocalMs(startDate);
+    const firstLeadMs = isoDateToLocalMs(firstLeadDate);
     const gapDays = Math.round((firstLeadMs - startMs) / (1000 * 3600 * 24));
 
-    // Si hay más de 2 días vacíos antes del primer lead, empezar 2 días antes
-    if (gapDays > 2) {
+    // Con rango de evento válido, si hay más de 2 días vacíos antes del primer
+    // lead, recortar el eje a 2 días antes para no dibujar semanas en cero.
+    if (hasEventRange && gapDays > 2) {
       const trimmedDate = new Date(firstLeadMs);
       trimmedDate.setDate(trimmedDate.getDate() - 2);
       const trimmedStr = todayISODate(trimmedDate);
@@ -119,6 +138,7 @@ export const LeadsTrendChart: React.FC<LeadsTrendChartProps> = ({
 
     rangeDays.forEach(ensure);
 
+    const countedKeys = new Set<string>();
     eventLeads.forEach(lead => {
       const time = parseLeadTimestamp(lead.capturedAt);
       if (time === null) return;
@@ -126,8 +146,10 @@ export const LeadsTrendChart: React.FC<LeadsTrendChartProps> = ({
       const dateKey = todayISODate(new Date(time));
       if (!rangeSet.has(dateKey)) return;
 
+      countedKeys.add(lead.id);
       const bucket = ensure(dateKey);
       bucket.total += 1;
+      bucket.leads.push(lead.name || 'Sin nombre');
       if (lead.priority) {
         bucket.priority += 1;
       } else {
@@ -144,7 +166,7 @@ export const LeadsTrendChart: React.FC<LeadsTrendChartProps> = ({
     let runningTotal = 0;
     let runningPriority = 0;
 
-    return sortedDays.map(item => {
+    const days = sortedDays.map(item => {
       runningTotal += item.total;
       runningPriority += item.priority;
       return {
@@ -153,6 +175,15 @@ export const LeadsTrendChart: React.FC<LeadsTrendChartProps> = ({
         acumuladoPrioritarios: runningPriority
       };
     });
+
+    // Leads con fecha válida que quedan fuera del eje: sin esto el total de la
+    // tarjeta no cuadra con la suma de la gráfica y no se explica por qué.
+    const outsideRange = eventLeads.filter(lead => {
+      if (countedKeys.has(lead.id)) return false;
+      return parseLeadTimestamp(lead.capturedAt) !== null;
+    }).length;
+
+    return { days, outsideRange };
   }, [eventLeads, currentEvent.dateRange]);
 
   const excludedLeads = useMemo(() => {
@@ -161,8 +192,10 @@ export const LeadsTrendChart: React.FC<LeadsTrendChartProps> = ({
       const time = parseLeadTimestamp(lead.capturedAt);
       if (time === null) undated += 1;
     });
-    return { outsideRange: 0, undated };
-  }, [eventLeads]);
+    return { outsideRange: trend.outsideRange, undated };
+  }, [eventLeads, trend.outsideRange]);
+
+  const trendData = trend.days;
 
   const totalEventLeads = eventLeads.length;
   const totalPriority = eventLeads.filter(l => l.priority).length;
@@ -284,6 +317,20 @@ export const LeadsTrendChart: React.FC<LeadsTrendChartProps> = ({
                           {viewMode === 'daily' ? data.priority : data.acumuladoPrioritarios}
                         </span>
                       </div>
+                      {data.leads?.length > 0 && (
+                        <div className="border-t border-slate-800 pt-1.5 space-y-0.5">
+                          {data.leads.slice(0, 6).map((leadName: string, i: number) => (
+                            <div key={`${data.date}-${i}`} className="text-[10px] text-slate-300 truncate">
+                              {leadName}
+                            </div>
+                          ))}
+                          {data.leads.length > 6 && (
+                            <div className="text-[10px] text-slate-500">
+                              +{data.leads.length - 6} más
+                            </div>
+                          )}
+                        </div>
+                      )}
                     </div>
                   );
                 }
@@ -352,10 +399,19 @@ export const LeadsTrendChart: React.FC<LeadsTrendChartProps> = ({
 
       </div>
 
-      {excludedLeads.undated > 0 && (
-        <p className="text-[10px] text-slate-400 mt-2 text-center font-medium">
-          {excludedLeads.undated} lead(s) sin fecha válida de registro
-        </p>
+      {(excludedLeads.undated > 0 || excludedLeads.outsideRange > 0) && (
+        <div className="mt-2 text-center space-y-0.5">
+          {excludedLeads.undated > 0 && (
+            <p className="text-[10px] text-slate-400 font-medium">
+              {excludedLeads.undated} lead(s) sin fecha válida de registro
+            </p>
+          )}
+          {excludedLeads.outsideRange > 0 && (
+            <p className="text-[10px] text-amber-600 font-medium">
+              {excludedLeads.outsideRange} lead(s) fuera del período del eje
+            </p>
+          )}
+        </div>
       )}
 
     </div>

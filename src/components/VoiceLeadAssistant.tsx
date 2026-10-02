@@ -23,7 +23,7 @@ import {
   Sparkles,
   ChevronRight
 } from 'lucide-react';
-import { parseStepResponse, parseVoiceLeadInput, ParsedVoiceLead } from '../utils/voiceLeadParser';
+import { parseStepResponse, ParsedVoiceLead } from '../utils/voiceLeadParser';
 
 export interface VoiceStepConfig {
   id: number;
@@ -129,11 +129,12 @@ export const GUIDED_VOICE_STEPS: VoiceStepConfig[] = [
   }
 ];
 
+const NO_SPEECH_MESSAGE = 'Navegador sin Web Speech API. Puedes usar el dictado manual o los botones de respuesta rápida.';
+
 interface VoiceLeadAssistantProps {
   onApplyVoiceData: (data: ParsedVoiceLead) => void;
   onExecuteCommand?: (command: 'save' | 'clear' | 'priority' | 'scan') => void;
   onActiveFieldChange?: (fieldKey: string) => void;
-  isCompact?: boolean;
 }
 
 // Global retainers to prevent V8 Garbage Collection of SpeechSynthesisUtterance
@@ -147,8 +148,7 @@ declare global {
 export const VoiceLeadAssistant: React.FC<VoiceLeadAssistantProps> = ({
   onApplyVoiceData,
   onExecuteCommand,
-  onActiveFieldChange,
-  isCompact = false
+  onActiveFieldChange
 }) => {
   const [isGuidedModeActive, setIsGuidedModeActive] = useState(false);
   const [isPaused, setIsPaused] = useState(false);
@@ -179,6 +179,8 @@ export const VoiceLeadAssistant: React.FC<VoiceLeadAssistantProps> = ({
   const advanceTimerRef = useRef<any>(null);
   const speechBufferRef = useRef<string>('');
   const speechDebounceTimerRef = useRef<any>(null);
+  const saveEmittedRef = useRef(false);
+  const speechSupportedRef = useRef<boolean | null>(null);
 
   const onApplyVoiceDataRef = useRef(onApplyVoiceData);
   const onExecuteCommandRef = useRef(onExecuteCommand);
@@ -195,6 +197,17 @@ export const VoiceLeadAssistant: React.FC<VoiceLeadAssistantProps> = ({
   useEffect(() => {
     onActiveFieldChangeRef.current = onActiveFieldChange;
   }, [onActiveFieldChange]);
+
+  // Latch de guardado: el flujo puede pedir el guardado desde tres sitios
+  // (auto-guardado tras el TTS final, confirmacion por voz y boton).
+  // Si speechSynthesis.cancel() dispara onend en algun motor, los tres
+  // collinean y se crearian dos leads. Solo gana el primero.
+  const emitSaveOnce = useCallback(() => {
+    if (saveEmittedRef.current) return false;
+    saveEmittedRef.current = true;
+    if (onExecuteCommandRef.current) onExecuteCommandRef.current('save');
+    return true;
+  }, []);
 
   useEffect(() => {
     currentStepRef.current = currentStepIndex;
@@ -486,10 +499,11 @@ export const VoiceLeadAssistant: React.FC<VoiceLeadAssistantProps> = ({
       // Voice prompt: "¿Guardamos los datos?" -> Then automatically triggers save
       speakPrompt(finalStep.speechPrompt, () => {
         playChime('success');
-        if (onExecuteCommandRef.current) {
-          onExecuteCommandRef.current('save');
-        }
+        emitSaveOnce();
         setTimeout(() => {
+          // Si el usuario ya detuvo o guardo mientras sonaba la locucion,
+          // ese teardown ya corrio: no se vuelve a tocar el flujo.
+          if (!isGuidedModeActiveRef.current) return;
           setIsGuidedModeActive(false);
           setIsListening(false);
           if (recognitionRef.current) {
@@ -511,7 +525,7 @@ export const VoiceLeadAssistant: React.FC<VoiceLeadAssistantProps> = ({
     if (shouldSpeak) {
       speakPrompt(stepConfig.speechPrompt);
     }
-  }, [playChime, speakPrompt]);
+  }, [emitSaveOnce, playChime, speakPrompt]);
 
   // Start guided voice assistant flow
   const startGuidedFlow = useCallback(() => {
@@ -533,7 +547,10 @@ export const VoiceLeadAssistant: React.FC<VoiceLeadAssistantProps> = ({
     setTranscript('');
     setInterimTranscript('');
     setLastCapturedValue(null);
-    setErrorMessage(null);
+    saveEmittedRef.current = false;
+    // Si el navegador no tiene Web Speech, arrancar el flujo no borra el aviso:
+    // es justo cuando el usuario necesita saber que la voz no va a funcionar.
+    setErrorMessage(speechSupportedRef.current === false ? NO_SPEECH_MESSAGE : null);
 
     playChime('start');
 
@@ -616,7 +633,7 @@ export const VoiceLeadAssistant: React.FC<VoiceLeadAssistantProps> = ({
       (currentStepRef.current >= GUIDED_VOICE_STEPS.length - 2 && (lowerSpoken === 'sí' || lowerSpoken === 'si' || lowerSpoken === 'guardar' || lowerSpoken === 'listo' || lowerSpoken === 'dale'))
     ) {
       playChime('success');
-      if (onExecuteCommandRef.current) onExecuteCommandRef.current('save');
+      emitSaveOnce();
       stopGuidedFlow();
       return;
     }
@@ -659,14 +676,15 @@ export const VoiceLeadAssistant: React.FC<VoiceLeadAssistantProps> = ({
     advanceTimerRef.current = setTimeout(() => {
       goToStep(nextIdx);
     }, 450);
-  }, [goToStep, playChime, speakPrompt, stopGuidedFlow]);
+  }, [emitSaveOnce, goToStep, playChime, speakPrompt, stopGuidedFlow]);
 
   // Speech Recognition continuous lifecycle initialization
   useEffect(() => {
     const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+    speechSupportedRef.current = !!SpeechRecognition;
 
     if (!SpeechRecognition) {
-      setErrorMessage('Navegador sin Web Speech API. Puedes usar el dictado manual o los botones de respuesta rápida.');
+      setErrorMessage(NO_SPEECH_MESSAGE);
       return;
     }
 
@@ -773,97 +791,57 @@ export const VoiceLeadAssistant: React.FC<VoiceLeadAssistantProps> = ({
 
   return (
     <>
-      {/* 1. Standby Inline Banner (Compact Mobile & Desktop) */}
+      {/* 1. Standby: boton de arranque (azul primario de la app) */}
       {!isGuidedModeActive && (
-        isCompact ? (
-          <button
-            type="button"
-            id="start-guided-voice-btn"
-            onClick={startGuidedFlow}
-            className="px-2.5 py-1.5 rounded-xl bg-gradient-to-r from-red-600 to-indigo-600 hover:from-red-500 hover:to-indigo-500 active:scale-95 text-white font-bold text-xs flex items-center justify-center gap-1.5 shadow-md shadow-red-600/30 transition-all cursor-pointer whitespace-nowrap shrink-0 border border-red-400/30"
-            title="Iniciar Asistente de Voz para dictar datos"
-          >
-            <Mic className="w-3.5 h-3.5 text-white animate-pulse" />
-            <span>Asistente Voz</span>
-            <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
-          </button>
-        ) : (
-          <div id="guided-voice-assistant-card" className="bg-gradient-to-r from-slate-900 via-indigo-950 to-slate-900 border border-indigo-500/40 rounded-2xl p-3 sm:p-3.5 text-white shadow-lg relative overflow-hidden transition-all">
-            <div className="flex items-center justify-between gap-2.5 relative z-10">
-              <div className="flex items-center gap-2.5 min-w-0">
-                <div className="relative shrink-0">
-                  <div className="w-10 h-10 rounded-xl bg-red-500/20 border border-red-500/50 flex items-center justify-center text-red-400 shadow-inner">
-                    <Mic className="w-5 h-5 animate-pulse" />
-                  </div>
-                  <span className="absolute -top-1 -right-1 w-3 h-3 rounded-full bg-emerald-500 border-2 border-slate-900" />
-                </div>
-                <div className="min-w-0">
-                  <div className="flex items-center gap-1.5 flex-wrap">
-                    <h4 className="font-bold text-xs sm:text-sm text-white tracking-tight truncate">
-                      Asistente de Voz
-                    </h4>
-                    <span className="px-1.5 py-0.2 rounded-full text-[9px] font-extrabold bg-indigo-500/30 text-indigo-200 border border-indigo-400/30">
-                      IA
-                    </span>
-                  </div>
-                  <p className="text-[11px] text-indigo-200/80 truncate hidden sm:block">
-                    Dicta los datos del lead por voz en secuencia automática
-                  </p>
-                </div>
-              </div>
-
-              <div className="flex items-center gap-2 shrink-0">
-                <button
-                  type="button"
-                  id="start-guided-voice-btn"
-                  onClick={startGuidedFlow}
-                  className="px-3.5 py-2 rounded-xl bg-red-600 hover:bg-red-500 active:scale-95 text-white font-bold text-xs flex items-center justify-center gap-1.5 shadow-md shadow-red-600/30 transition-all cursor-pointer whitespace-nowrap"
-                >
-                  <span className="w-2 h-2 rounded-full bg-white animate-ping" />
-                  <span>Iniciar Voz</span>
-                </button>
-              </div>
-            </div>
-          </div>
-        )
+        <button
+          type="button"
+          id="start-guided-voice-btn"
+          onClick={startGuidedFlow}
+          className="px-2.5 py-1.5 rounded-xl bg-[#0071E3] hover:bg-[#0077ED] text-white text-xs font-semibold flex items-center justify-center gap-1.5 shadow-xs transition-colors cursor-pointer whitespace-nowrap shrink-0"
+          title="Iniciar Asistente de Voz para dictar datos"
+        >
+          <Mic className="w-3.5 h-3.5 text-white" />
+          <span>Asistente Voz</span>
+        </button>
       )}
 
-      {/* 2. Sleek Floating Voice Control Bar (Active across forms) */}
+      {/* 2. Sleek Floating Voice Control Bar (Active across forms).
+            Se ancla encima de la barra de navegación: con bottom-5 quedaba oculto detrás de ella. */}
       {isGuidedModeActive && (
-        <div className="fixed bottom-5 left-1/2 -translate-x-1/2 z-50 w-[95%] max-w-lg animate-in slide-in-from-bottom duration-300">
-          <div className="bg-slate-950/95 backdrop-blur-xl border border-red-500/50 rounded-2xl shadow-2xl shadow-slate-950/80 p-3 text-white ring-1 ring-white/10">
+        <div className="fixed bottom-[calc(var(--bottom-nav-reserve)+0.75rem)] left-1/2 -translate-x-1/2 z-50 w-[95%] max-w-lg animate-in slide-in-from-bottom duration-300">
+          <div className="bg-white border border-black/[0.06] rounded-2xl shadow-sm p-3 text-[#1D1D1F]">
             
             {/* Top Bar: Active Step Indicator + Live Animated Equalizer */}
             <div className="flex items-center justify-between gap-2.5 px-1 mb-2">
               <div className="flex items-center gap-2.5 min-w-0">
-                <div className="w-8 h-8 rounded-xl bg-red-500/20 border border-red-500/40 flex items-center justify-center text-red-400 shrink-0 shadow-inner">
+                <div className="w-8 h-8 rounded-xl bg-[#0071E3]/10 border border-[#0071E3]/20 flex items-center justify-center text-[#0071E3] shrink-0">
                   <StepIcon className="w-4 h-4" />
                 </div>
                 <div className="min-w-0">
                   <div className="flex items-center gap-1.5">
-                    <p className="text-xs font-bold text-slate-100 truncate">
+                    <p className="text-xs font-bold text-[#1D1D1F] truncate">
                       {currentStep.title}
                     </p>
-                    <span className="text-[10px] font-bold text-indigo-400 bg-indigo-950/80 px-1.5 py-0.2 rounded border border-indigo-500/30">
+                    <span className="text-[10px] font-bold text-[#0071E3] bg-[#0071E3]/10 px-1.5 py-0.2 rounded border border-[#0071E3]/20">
                       {currentStepIndex + 1}/{GUIDED_VOICE_STEPS.length}
                     </span>
                   </div>
                   
                   {/* Live Status / Prompt preview */}
-                  <div className="flex items-center gap-1.5 text-[11px] text-slate-300 truncate">
+                  <div className="flex items-center gap-1.5 text-[11px] text-slate-500 truncate">
                     {isSpeakingPrompt ? (
-                      <span className="text-indigo-300 font-semibold flex items-center gap-1">
-                        <Volume2 className="w-3.5 h-3.5 text-indigo-400 animate-pulse" />
+                      <span className="text-slate-600 font-semibold flex items-center gap-1">
+                        <Volume2 className="w-3.5 h-3.5 text-[#0071E3]" />
                         Hablando en voz alta...
                       </span>
                     ) : isPaused ? (
-                      <span className="text-amber-400 font-medium flex items-center gap-1">
+                      <span className="text-amber-600 font-medium flex items-center gap-1">
                         <Pause className="w-3 h-3" />
                         Pausado
                       </span>
                     ) : (
-                      <span className="text-emerald-400 font-medium flex items-center gap-1 truncate">
-                        <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-ping" />
+                      <span className="text-emerald-600 font-medium flex items-center gap-1 truncate">
+                        <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
                         {interimTranscript || transcript || 'Escuchando tu voz...'}
                       </span>
                     )}
@@ -872,9 +850,9 @@ export const VoiceLeadAssistant: React.FC<VoiceLeadAssistantProps> = ({
               </div>
 
               {/* Visual Equalizer & Quick Voice Controls */}
-              <div className="flex items-center gap-2 shrink-0">
+              <div className="flex items-center gap-1.5 shrink-0">
                 {/* 5-Bar Animated Equalizer */}
-                <div className="flex items-center gap-0.5 h-5 px-1.5 py-1 bg-slate-900/90 rounded-lg border border-slate-800">
+                <div className="flex items-center gap-0.5 h-5 px-1.5 py-1 bg-[#F5F5F7] rounded-lg border border-black/[0.05]">
                   {[0.4, 0.8, 1, 0.6, 0.3].map((heightMul, i) => {
                     const active = (isSpeakingPrompt || isListening) && !isPaused;
                     const dynamicHeight = active 
@@ -885,10 +863,10 @@ export const VoiceLeadAssistant: React.FC<VoiceLeadAssistantProps> = ({
                         key={i}
                         className={`w-1 rounded-full transition-all duration-100 ${
                           isSpeakingPrompt 
-                            ? 'bg-indigo-400 shadow-sm shadow-indigo-400' 
+                            ? 'bg-[#0071E3]' 
                             : isListening 
-                            ? 'bg-emerald-400 shadow-sm shadow-emerald-400' 
-                            : 'bg-slate-700'
+                            ? 'bg-emerald-500' 
+                            : 'bg-slate-300'
                         }`}
                         style={{ height: `${dynamicHeight}%` }}
                       />
@@ -901,7 +879,7 @@ export const VoiceLeadAssistant: React.FC<VoiceLeadAssistantProps> = ({
                   type="button"
                   onClick={() => speakPrompt(currentStep.speechPrompt)}
                   title="Escuchar locución de nuevo"
-                  className="p-1.5 rounded-xl bg-indigo-950/80 hover:bg-indigo-900 text-indigo-300 border border-indigo-500/40 text-xs transition-colors cursor-pointer"
+                  className="p-1.5 rounded-xl bg-[#F5F5F7] hover:bg-[#EBEBEF] text-slate-600 border border-black/[0.05] text-xs transition-colors cursor-pointer"
                 >
                   <Volume2 className="w-4 h-4" />
                 </button>
@@ -911,8 +889,8 @@ export const VoiceLeadAssistant: React.FC<VoiceLeadAssistantProps> = ({
                   type="button"
                   onClick={() => setSpeechSynthesisMuted(!speechSynthesisMuted)}
                   title={speechSynthesisMuted ? 'Activar locución' : 'Silenciar locución'}
-                  className={`p-1.5 rounded-xl text-xs transition-colors cursor-pointer ${
-                    speechSynthesisMuted ? 'bg-rose-950 text-rose-300 border border-rose-500/40' : 'bg-slate-800 text-slate-300 hover:text-white'
+                  className={`p-1.5 rounded-xl text-xs transition-colors cursor-pointer border ${
+                    speechSynthesisMuted ? 'bg-rose-50 text-rose-600 border-rose-200' : 'bg-[#F5F5F7] hover:bg-[#EBEBEF] text-slate-600 border-black/[0.05]'
                   }`}
                 >
                   {speechSynthesisMuted ? <VolumeX className="w-4 h-4" /> : <Volume2 className="w-4 h-4" />}
@@ -922,7 +900,11 @@ export const VoiceLeadAssistant: React.FC<VoiceLeadAssistantProps> = ({
                 <button
                   type="button"
                   onClick={() => setShowDetails(!showDetails)}
-                  className="p-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs transition-colors cursor-pointer"
+                  className={`p-1.5 rounded-xl text-xs transition-colors cursor-pointer border ${
+                    showDetails
+                      ? 'bg-[#0071E3]/10 text-[#0071E3] border-[#0071E3]/20'
+                      : 'bg-[#F5F5F7] hover:bg-[#EBEBEF] text-slate-600 border-black/[0.05]'
+                  }`}
                   title="Configuración de voz y respuestas rápidas"
                 >
                   <Settings2 className="w-4 h-4" />
@@ -930,54 +912,33 @@ export const VoiceLeadAssistant: React.FC<VoiceLeadAssistantProps> = ({
               </div>
             </div>
 
-            {/* Prompt Subtitle & Quick Answer Pills */}
-            <div className="mb-2 p-2 rounded-xl bg-slate-900/90 border border-slate-800 text-xs space-y-1.5">
+            {/* Body: prompt, captured value, manual input, collapsed extras */}
+            <div className="space-y-2">
               <div className="flex items-start justify-between gap-2">
-                <p className="text-[11px] text-indigo-200 font-medium leading-relaxed">
+                <p className="text-[11px] text-slate-600 font-medium leading-relaxed">
                   «{currentStep.speechPrompt}»
                 </p>
                 <button
                   type="button"
                   onClick={() => speakPrompt(currentStep.speechPrompt)}
-                  className="shrink-0 text-[10px] text-indigo-400 hover:text-indigo-200 underline font-semibold cursor-pointer"
+                  className="shrink-0 text-[10px] text-[#0071E3] hover:opacity-70 font-semibold cursor-pointer"
                 >
                   Repetir audio
                 </button>
               </div>
 
-              {/* Quick Answer / Tap-To-Fill Pills */}
-              <div className="pt-1.5 border-t border-slate-800/80 flex items-center gap-1.5 overflow-x-auto pb-0.5 no-scrollbar">
-                <span className="text-[10px] text-slate-400 shrink-0 flex items-center gap-0.5">
-                  <Sparkles className="w-3 h-3 text-amber-400" />
-                  Sugerencias:
-                </span>
-                {[currentStep.sampleAnswer, ...(currentStep.alternativeSamples || [])].slice(0, 3).map((sample, idx) => (
-                  <button
-                    key={idx}
-                    type="button"
-                    onClick={() => handleSelectSampleAnswer(sample)}
-                    className="px-2 py-0.5 rounded-lg bg-indigo-950/80 hover:bg-indigo-900 text-emerald-300 text-[10px] font-medium border border-indigo-800 shrink-0 transition-all active:scale-95 cursor-pointer flex items-center gap-1"
-                  >
-                    <span>"{sample}"</span>
-                    <ChevronRight className="w-2.5 h-2.5 opacity-60" />
-                  </button>
-                ))}
-              </div>
-
               {/* Last Captured Value Badge */}
               {lastCapturedValue && (
-                <div className="pt-1.5 border-t border-slate-800/80 flex items-center justify-between text-[11px]">
-                  <span className="text-slate-400 font-medium text-[10px]">Dato capturado:</span>
-                  <span className="text-emerald-300 font-bold bg-emerald-950/90 px-2 py-0.5 rounded-lg border border-emerald-500/40 truncate max-w-[240px]">
+                <div className="flex items-center justify-between gap-2 text-[11px]">
+                  <span className="text-slate-500 font-medium text-[10px] shrink-0">Dato capturado:</span>
+                  <span className="text-emerald-700 font-semibold bg-emerald-50 px-2 py-0.5 rounded-lg border border-emerald-200 truncate">
                     ✓ {lastCapturedValue}
                   </span>
                 </div>
               )}
 
               {/* Manual Input Fallback / Direct Editor (Using div to prevent nested form error) */}
-              <div
-                className="pt-1.5 border-t border-slate-800/80 flex items-center gap-1.5"
-              >
+              <div className="flex items-center gap-1.5">
                 <input
                   type="text"
                   value={manualInputText}
@@ -991,7 +952,7 @@ export const VoiceLeadAssistant: React.FC<VoiceLeadAssistantProps> = ({
                     }
                   }}
                   placeholder={`Escribir o corregir (${currentStep.title})...`}
-                  className="flex-1 bg-slate-950/90 border border-slate-700/80 focus:border-indigo-400 text-xs text-white placeholder-slate-500 rounded-lg px-2.5 py-1 outline-none transition-colors"
+                  className="flex-1 bg-[#F5F5F7] border border-black/[0.05] focus:bg-white focus:border-[#0071E3] focus:ring-2 focus:ring-[#0071E3]/20 text-xs text-[#1D1D1F] placeholder-slate-400 rounded-lg px-2.5 py-1 outline-none transition-colors"
                 />
                 <button
                   type="button"
@@ -1001,51 +962,71 @@ export const VoiceLeadAssistant: React.FC<VoiceLeadAssistantProps> = ({
                     setManualInputText('');
                   }}
                   disabled={!manualInputText.trim()}
-                  className="px-2.5 py-1 rounded-lg bg-indigo-600 hover:bg-indigo-500 disabled:opacity-40 text-white text-[11px] font-bold shrink-0 transition-all cursor-pointer shadow-sm"
+                  className="px-2.5 py-1 rounded-lg bg-[#0071E3] hover:bg-[#0077ED] disabled:opacity-40 text-white text-[11px] font-semibold shrink-0 transition-colors cursor-pointer"
                 >
                   Aplicar
                 </button>
               </div>
 
-              {/* Expandable Settings */}
+              {/* Expandable Settings: quick answers + voice config */}
               {showDetails && (
-                <div className="pt-2 border-t border-slate-800/80 flex items-center justify-between gap-2">
-                  <div className="flex items-center gap-1.5">
-                    <span className="text-[10px] text-slate-400">Voz:</span>
-                    <span className="text-[10px] text-indigo-300 font-mono truncate max-w-[120px]">
-                      {activeVoiceName || 'Español Predeterminado'}
+                <div className="pt-2 border-t border-black/[0.06] space-y-2">
+                  <div className="flex items-center gap-1.5 overflow-x-auto pb-0.5 no-scrollbar">
+                    <span className="text-[10px] text-slate-500 shrink-0 flex items-center gap-0.5">
+                      <Sparkles className="w-3 h-3 text-slate-400" />
+                      Sugerencias:
                     </span>
+                    {[currentStep.sampleAnswer, ...(currentStep.alternativeSamples || [])].slice(0, 3).map((sample, idx) => (
+                      <button
+                        key={idx}
+                        type="button"
+                        onClick={() => handleSelectSampleAnswer(sample)}
+                        className="px-2 py-0.5 rounded-lg bg-[#F5F5F7] hover:bg-[#EBEBEF] text-slate-700 text-[10px] font-medium border border-black/[0.05] shrink-0 transition-colors cursor-pointer flex items-center gap-1"
+                      >
+                        <span>"{sample}"</span>
+                        <ChevronRight className="w-2.5 h-2.5 opacity-50" />
+                      </button>
+                    ))}
                   </div>
-                  
-                  <div className="flex items-center gap-2">
-                    <span className="text-[10px] text-slate-400">Velocidad:</span>
-                    <button
-                      type="button"
-                      onClick={() => setSpeechRate(prev => prev === 1.0 ? 1.15 : prev === 1.15 ? 0.9 : 1.0)}
-                      className="px-2 py-0.5 rounded bg-slate-800 text-indigo-300 text-[10px] font-bold"
-                    >
-                      {speechRate}x
-                    </button>
+
+                  <div className="flex items-center justify-between gap-2">
+                    <div className="flex items-center gap-1.5 min-w-0">
+                      <span className="text-[10px] text-slate-500 shrink-0">Voz:</span>
+                      <span className="text-[10px] text-slate-700 font-medium truncate">
+                        {activeVoiceName || 'Español Predeterminado'}
+                      </span>
+                    </div>
+                    
+                    <div className="flex items-center gap-2 shrink-0">
+                      <span className="text-[10px] text-slate-500">Velocidad:</span>
+                      <button
+                        type="button"
+                        onClick={() => setSpeechRate(prev => prev === 1.0 ? 1.15 : prev === 1.15 ? 0.9 : 1.0)}
+                        className="px-2 py-0.5 rounded bg-[#F5F5F7] text-slate-700 text-[10px] font-semibold border border-black/[0.05]"
+                      >
+                        {speechRate}x
+                      </button>
+                    </div>
                   </div>
                 </div>
               )}
             </div>
 
             {/* Bottom Controls Bar: Red Recording Circle, Pause, Stop, Repeat, Skip */}
-            <div className="flex items-center justify-between gap-2 pt-1 border-t border-slate-800/80">
+            <div className="flex items-center justify-between gap-2 pt-2 mt-2 border-t border-black/[0.06]">
               
               {/* Left: Repeat current field prompt */}
               <button
                 type="button"
                 onClick={() => speakPrompt(currentStep.speechPrompt)}
-                className="p-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white transition-colors cursor-pointer"
+                className="p-2 rounded-xl bg-[#F5F5F7] hover:bg-[#EBEBEF] text-slate-600 transition-colors cursor-pointer"
                 title="Repetir pregunta en voz alta"
               >
                 <RotateCcw className="w-4 h-4" />
               </button>
 
               {/* Center Controls: Red Record Circle, Pause, Stop (Square) */}
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-1.5">
                 
                 {/* 1. Red Recording Circle Button */}
                 <button
@@ -1057,14 +1038,14 @@ export const VoiceLeadAssistant: React.FC<VoiceLeadAssistantProps> = ({
                       speakPrompt(currentStep.speechPrompt);
                     }
                   }}
-                  className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-full font-bold text-xs transition-all shadow-md cursor-pointer ${
+                  className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-full font-semibold text-xs transition-colors cursor-pointer border ${
                     !isPaused && isListening 
-                      ? 'bg-red-600 text-white shadow-red-600/60 ring-2 ring-red-400/60 animate-pulse' 
-                      : 'bg-red-950/80 text-red-300 border border-red-500/50 hover:bg-red-900'
+                      ? 'bg-rose-600 text-white border-rose-600' 
+                      : 'bg-[#F5F5F7] text-slate-600 border-black/[0.05] hover:bg-[#EBEBEF]'
                   }`}
                   title="Grabando voz activamente"
                 >
-                  <span className={`w-3 h-3 rounded-full bg-red-500 ${!isPaused && isListening ? 'animate-ping' : ''}`} />
+                  <span className={`w-2 h-2 rounded-full ${!isPaused && isListening ? 'bg-white animate-pulse' : 'bg-rose-500'}`} />
                   <span>{!isPaused ? (isListening ? 'Grabando' : 'Escuchando') : 'Reanudar'}</span>
                 </button>
 
@@ -1072,10 +1053,10 @@ export const VoiceLeadAssistant: React.FC<VoiceLeadAssistantProps> = ({
                 <button
                   type="button"
                   onClick={togglePause}
-                  className={`p-2 rounded-xl transition-all cursor-pointer ${
+                  className={`p-2 rounded-xl transition-colors cursor-pointer border ${
                     isPaused 
-                      ? 'bg-amber-500 text-slate-950 font-bold shadow-lg shadow-amber-500/40' 
-                      : 'bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-amber-400'
+                      ? 'bg-[#0071E3] text-white border-[#0071E3]' 
+                      : 'bg-[#F5F5F7] hover:bg-[#EBEBEF] text-slate-600 border-black/[0.05]'
                   }`}
                   title={isPaused ? 'Reanudar Asistente' : 'Pausar Asistente'}
                 >
@@ -1086,7 +1067,7 @@ export const VoiceLeadAssistant: React.FC<VoiceLeadAssistantProps> = ({
                 <button
                   type="button"
                   onClick={stopGuidedFlow}
-                  className="p-2 rounded-xl bg-slate-800 hover:bg-rose-950 text-slate-400 hover:text-rose-400 border border-transparent hover:border-rose-500/40 transition-all cursor-pointer"
+                  className="p-2 rounded-xl bg-[#F5F5F7] hover:bg-rose-50 hover:text-rose-600 text-slate-500 border border-black/[0.05] hover:border-rose-200 transition-colors cursor-pointer"
                   title="Detener Asistente de Voz"
                 >
                   <Square className="w-4 h-4 fill-current" />
@@ -1098,7 +1079,7 @@ export const VoiceLeadAssistant: React.FC<VoiceLeadAssistantProps> = ({
                 <button
                   type="button"
                   onClick={() => goToStep(currentStepIndex + 1)}
-                  className="px-3 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold flex items-center gap-1 transition-colors shadow-md shadow-indigo-600/30 cursor-pointer"
+                  className="px-3 py-2 rounded-xl bg-[#0071E3] hover:bg-[#0077ED] text-white text-xs font-semibold flex items-center gap-1 transition-colors cursor-pointer"
                   title="Pasar al siguiente campo"
                 >
                   <span>Pasar</span>
@@ -1108,10 +1089,10 @@ export const VoiceLeadAssistant: React.FC<VoiceLeadAssistantProps> = ({
                 <button
                   type="button"
                   onClick={() => {
-                    if (onExecuteCommandRef.current) onExecuteCommandRef.current('save');
+                    emitSaveOnce();
                     stopGuidedFlow();
                   }}
-                  className="px-3 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold flex items-center gap-1 shadow-lg shadow-emerald-600/40 transition-colors animate-bounce cursor-pointer"
+                  className="px-3 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-semibold flex items-center gap-1 transition-colors cursor-pointer"
                   title="Guardar Lead"
                 >
                   <Save className="w-3.5 h-3.5" />
@@ -1126,8 +1107,8 @@ export const VoiceLeadAssistant: React.FC<VoiceLeadAssistantProps> = ({
 
       {/* Error alert toast */}
       {errorMessage && (
-        <div className="mt-2 p-2 bg-amber-950/70 border border-amber-500/50 rounded-xl text-xs text-amber-200 flex items-center gap-2">
-          <AlertCircle className="w-4 h-4 text-amber-400 shrink-0" />
+        <div className="mt-2 p-2 bg-amber-50 border border-amber-200 rounded-xl text-xs text-amber-800 flex items-center gap-2">
+          <AlertCircle className="w-4 h-4 text-amber-600 shrink-0" />
           <span>{errorMessage}</span>
         </div>
       )}

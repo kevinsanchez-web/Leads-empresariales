@@ -8,6 +8,13 @@
   --primary-accent-border: rgba(0, 113, 227, 0.2);
   --primary-gradient-from: #0071E3;
   --primary-gradient-to: #5856D6;
+
+  /* Barra de navegación inferior. Es `fixed`, o sea no ocupa espacio en el flujo, así que
+     cualquier vista que quiera llenar la pantalla tiene que descontarla a mano. Estos tokens
+     son la única medida de referencia: si cambia el alto de la barra, se ajusta aquí. */
+  --bottom-nav-h: 3.75rem;
+  --bottom-nav-safe-area: env(safe-area-inset-bottom, 0px);
+  --bottom-nav-reserve: calc(var(--bottom-nav-h) + var(--bottom-nav-safe-area));
 }
 
 [data-theme="verde"] {

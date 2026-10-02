@@ -54,9 +54,9 @@ export const BottomNavBar: React.FC<BottomNavBarProps> = ({
   ];
 
   return (
-    <nav 
+    <nav
       data-bottom-nav
-      className="fixed bottom-0 left-0 right-0 z-50 bg-white/95 backdrop-blur-md border-t border-black/[0.08] shadow-[0_-2px_10px_rgba(0,0,0,0.03)] px-0.5 sm:px-4 py-1 sm:py-1.5 transition-all"
+      className="fixed bottom-0 left-0 right-0 z-50 bg-white/95 backdrop-blur-md border-t border-black/[0.08] shadow-[0_-2px_10px_rgba(0,0,0,0.03)] px-0.5 sm:px-4 pt-1 sm:pt-1.5 pb-[calc(0.25rem+env(safe-area-inset-bottom,0px))] sm:pb-[calc(0.375rem+env(safe-area-inset-bottom,0px))] transition-all"
       aria-label="Navegación inferior"
     >
       <div className="max-w-md md:max-w-2xl mx-auto flex items-center justify-between sm:justify-around">

@@ -1,19 +1,11 @@
-import { initializeApp } from "firebase/app";
-import { getFirestore, collection, getDocs, doc, writeBatch } from "firebase/firestore";
+import { initializeApp, getApps } from "firebase-admin/app";
+import { getFirestore } from "firebase-admin/firestore";
 import {
   parseLeadTimestamp,
   todayISODate,
   leadTime
 } from "../src/utils/date";
-
-const firebaseConfig = {
-  apiKey: "AIzaSyBhX-iyMSfPptJcnTTua5RLFRpxz6_r5kg",
-  authDomain: "leads-divergency.firebaseapp.com",
-  projectId: "leads-divergency",
-  storageBucket: "leads-divergency.firebasestorage.app",
-  messagingSenderId: "153858062764",
-  appId: "1:153858062764:web:4dd46c4ee8ea961ac32209",
-};
+import { loadServiceAccount, serviceAccountCredential } from "./serviceAccount";
 
 const APPLY = process.argv.includes("--apply");
 
@@ -86,22 +78,19 @@ function normalizeForWrite(lead: LeadLike) {
 }
 
 async function main() {
-  initializeApp(firebaseConfig);
-  const db = getFirestore();
-  const snapshot = await getDocs(collection(db, "leads"));
-
-  // Sin conexión, el SDK devuelve el cache local (vacío) sin lanzar error.
-  // Migrar así reportaría "0 leads" y daría una falsa sensación de éxito.
-  if (snapshot.metadata.fromCache) {
-    throw new Error(
-      "No se pudo conectar a Firestore (respuesta desde cache offline). " +
-        "Revisa la conexión/proxy TLS antes de migrar."
-    );
+  const serviceAccount = loadServiceAccount();
+  if (getApps().length === 0) {
+    initializeApp({
+      credential: serviceAccountCredential(),
+      projectId: serviceAccount.project_id
+    });
   }
+const db = getFirestore();
+  const snapshot = await db.collection("leads").get();
 
   console.log(`\n${APPLY ? "APLICANDO" : "DRY-RUN"} · ${snapshot.size} leads en Firestore\n`);
 
-  const batch = writeBatch(db);
+  const batch = db.batch();
   let updates = 0;
   let unchanged = 0;
   let withoutHistory = 0;
@@ -130,7 +119,7 @@ async function main() {
     }
 
     if (APPLY) {
-      batch.update(doc(db, "leads", lead.id), {
+      batch.update(snap.ref, {
         capturedAt: result.capturedAt,
         lastContact: result.lastContact,
         history: result.history

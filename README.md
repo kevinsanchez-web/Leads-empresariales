@@ -12,7 +12,7 @@ la cámara o el teclado, y la app los sincroniza entre dispositivos.
 | Estilos | Tailwind CSS 4 |
 | Base de datos | Cloud Firestore (`leads-divergency`) |
 | Autenticación | Firebase Auth (Google) |
-| IA | Cloudflare Worker + Gemini 2.5 Flash |
+| IA | Cloudflare Worker + Gemini (`gemini-3.8-flash`, fallback `gemini-3.7-flash`) |
 | Deploy | Firebase Hosting |
 
 ## Funciones de IA
@@ -25,6 +25,11 @@ Todas pasan por el Worker, que guarda la API key como secret. El navegador nunca
 | `analyze-lead` | Analiza y prioriza un lead | No |
 | `draft-email` | Redacta un correo de seguimiento | No |
 | `research-company` | Investiga una empresa y devuelve fuentes | Sí |
+| `enrich-lead` | Completa LinkedIn, correo y teléfono de un lead con fuentes citadas | Sí |
+
+`research-company` y `enrich-lead` usan grounding con Google Search y no tienen un tercer
+intento sin búsqueda: un modelo sin grounding inventa datos con el formato esperado y devuelve
+`success:true`, así que sin búsqueda la respuesta correcta es un error visible.
 
 ## Instalación
 
@@ -82,6 +87,10 @@ npm run build
 firebase deploy --only hosting
 ```
 
+> ⚠️ Si la app reporta `HTTP 404` en una operación de IA, el Worker publicado está desactualizado
+> con respecto al código de la app: se desplegó el frontend pero no el Worker. Vuelve a correr
+> `wrangler deploy`. El caso típico es `enrich-lead`, cuya ruta se agregó en el commit `75d4a5c`.
+
 ## Estructura
 
 ```
@@ -91,7 +100,7 @@ src/
   utils/          notificaciones, cola offline, validación
   data/           datos de la semilla
 worker/src/
-  index.ts        4 rutas de IA, validación JWT, prompts
+  index.ts        5 rutas de IA, validación JWT, prompts
 scripts/seed.ts   carga inicial a Firestore
 ```
 

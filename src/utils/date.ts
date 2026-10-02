@@ -29,6 +29,36 @@ export function leadTime(base: Date = new Date()): string {
   return `${pad(base.getHours())}:${pad(base.getMinutes())}`;
 }
 
+/**
+ * Compone un `Lead.capturedAt` (`YYYY-MM-DD HH:mm`) a partir de la fecha y la
+ * hora elegidas en el formulario. No pasa por `Date`: parsear `"YYYY-MM-DD"`
+ * como fecha pura lo convertiría a UTC y correría el día en offset negativo.
+ */
+export function leadTimestampFrom(dateISO: string, timeHHmm: string): string {
+  const datePart = dateISO.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  if (!datePart) return `${todayISODate()} ${leadTime()}`;
+
+  const hour = Number(timeHHmm.match(/^(\d{1,2}):(\d{2})$/)?.[1] ?? 0);
+  const minute = Number(timeHHmm.match(/^(\d{1,2}):(\d{2})$/)?.[2] ?? 0);
+  return `${datePart[1]}-${datePart[2]}-${datePart[3]} ${pad(hour)}:${pad(minute)}`;
+}
+
+/**
+ * Milisegundos de un `YYYY-MM-DD` a medianoche **hora local**.
+ *
+ * `new Date("2026-09-06")` lo interpreta como UTC según el spec, lo que corre
+ * un día la fecha en zonas con offset negativo y descuadra los cálculos de
+ * diferencia de días contra `parseLeadTimestamp`, que sí es local.
+ */
+export function isoDateToLocalMs(isoDate: string): number {
+  const parts = isoDate.match(/^(\d{4})-(\d{2})-(\d{2})/);
+  if (!parts) {
+    const fallback = new Date(`${isoDate}T00:00:00`);
+    return fallback.getTime();
+  }
+  return new Date(+parts[1], +parts[2] - 1, +parts[3], 0, 0, 0, 0).getTime();
+}
+
 /** Normaliza un nombre de mes en español (con o sin acentos) a su índice 0-11. */
 function monthIndexFromName(name: string): number {
   const normalized = name
@@ -168,9 +198,9 @@ export function parseEventDateRange(value?: string): EventDateRange | null {
 }
 
 /** Lista de días `YYYY-MM-DD` entre dos fechas inclusives, en orden ascendente. */
-export function enumerateDays(startISO: string, endISO: string, maxDays = 120): string[] {
-  const start = new Date(`${startISO}T00:00:00`);
-  const end = new Date(`${endISO}T00:00:00`);
+export function enumerateDays(startISO: string, endISO: string, maxDays = 400): string[] {
+  const start = new Date(isoDateToLocalMs(startISO));
+  const end = new Date(isoDateToLocalMs(endISO));
   if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime()) || start > end) return [];
 
   const days: string[] = [];

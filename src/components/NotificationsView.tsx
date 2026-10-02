@@ -119,7 +119,7 @@ export const NotificationsView: React.FC<NotificationsViewProps> = ({
   ];
 
   return (
-    <div className="max-w-7xl mx-auto animate-fade-in flex flex-col min-h-[calc(100vh-8.5rem)] pb-3">
+    <div className="max-w-7xl mx-auto animate-fade-in flex flex-col flex-1">
       {/* Contenedor Único Integrado de Alto Completo */}
       <div className="bg-white rounded-2xl border border-slate-200/80 shadow-2xs overflow-hidden flex-1 flex flex-col">
         
