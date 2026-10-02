@@ -8,8 +8,7 @@ import {
   X,
   ChevronDown,
   Check,
-  Calendar,
-  UserPlus
+  Calendar
 } from 'lucide-react';
 import { UserRep, EventOption, Lead, ActiveView, AccentTheme } from '../types';
 import { HeaderNotificationsPopover } from './HeaderNotificationsPopover';
@@ -43,7 +42,6 @@ interface HeaderProps {
   companyCategory?: string;
   onNavigateToView?: (view: ActiveView) => void;
   onLogout?: () => void;
-  onOpenNewLeadModal?: () => void;
 }
 
 export const Header: React.FC<HeaderProps> = ({
@@ -72,8 +70,7 @@ export const Header: React.FC<HeaderProps> = ({
   companyName,
   companyCategory,
   onNavigateToView,
-  onLogout,
-  onOpenNewLeadModal
+  onLogout
 }) => {
   const [showUserDropdown, setShowUserDropdown] = useState(false);
   const [showEventDropdown, setShowEventDropdown] = useState(false);
@@ -199,18 +196,6 @@ export const Header: React.FC<HeaderProps> = ({
 
         {/* Bloque Derecho: Notificaciones + Avatar & Configuración */}
         <div className="flex items-center gap-1 sm:gap-2 shrink-0 ml-auto">
-          
-          {/* Acceso directo al formulario de captura */}
-          {onOpenNewLeadModal && (
-            <button
-              onClick={onOpenNewLeadModal}
-              className="px-2.5 sm:px-3 py-1.5 bg-[#0071E3] hover:bg-[#0077ED] text-white rounded-xl text-xs font-bold flex items-center gap-1.5 shadow-2xs transition-colors cursor-pointer"
-              title="Registrar un nuevo lead"
-            >
-              <UserPlus className="w-3.5 h-3.5" />
-              <span className="hidden sm:inline">Nuevo Lead</span>
-            </button>
-          )}
 
           {/* Popover de Notificaciones */}
           {onSelectLead && onNavigateToNotifications && onUpdateLead && (

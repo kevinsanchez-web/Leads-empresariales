@@ -7,6 +7,7 @@ import {
   ChevronUp,
   Shield,
   Briefcase,
+  UserPlus,
   X
 } from 'lucide-react';
 import { ActiveView, EventOption, UserRep } from '../types';
@@ -19,6 +20,7 @@ interface SidebarProps {
   events: EventOption[];
   onSelectEvent: (event: EventOption) => void;
   onOpenCreateEventModal?: () => void;
+  onOpenNewLeadModal?: () => void;
   currentUser?: UserRep;
   users?: UserRep[];
   isMobileOpen?: boolean;
@@ -33,6 +35,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
   events,
   onSelectEvent,
   onOpenCreateEventModal,
+  onOpenNewLeadModal,
   currentUser,
   users = [],
   isMobileOpen,
@@ -111,6 +114,26 @@ export const Sidebar: React.FC<SidebarProps> = ({
               </span>
             </div>
           </div>
+
+          {/* Acción de captura: fuera de la lista de navegación porque no cambia de vista */}
+          {onOpenNewLeadModal && (
+            <div className="px-3 pt-3">
+              <button
+                onClick={() => {
+                  onOpenNewLeadModal();
+                  // El modal se monta fuera del drawer: sin cerrarlo, abriría detrás.
+                  setIsMobileOpen?.(false);
+                }}
+                className="w-full py-2.5 px-3 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-bold flex items-center gap-2 transition-colors cursor-pointer shadow-sm shadow-blue-500/20"
+              >
+                <UserPlus className="w-4 h-4 shrink-0" />
+                <span className="flex-1 text-left">Nuevo Lead</span>
+                <kbd className="hidden sm:inline text-[10px] font-bold bg-white/20 rounded px-1.5 py-0.5">
+                  N
+                </kbd>
+              </button>
+            </div>
+          )}
 
           {/* Navigation Items */}
           <nav className="p-3 space-y-1 mt-1">

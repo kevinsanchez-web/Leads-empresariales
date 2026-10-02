@@ -381,6 +381,7 @@ export default function App() {
           setCurrentPage(1);
         }}
         onOpenCreateEventModal={() => setIsCreateEventModalOpen(true)}
+        onOpenNewLeadModal={() => setIsNewLeadModalOpen(true)}
         currentUser={currentUser}
         users={users}
         isMobileOpen={isMobileMenuOpen}
@@ -422,8 +423,7 @@ export default function App() {
             companyName: "Divergency Software",
             companyCategory: "Tecnología & Lead Management",
             onNavigateToView: (view: string) => setActiveView(view as ActiveView),
-            onLogout: handleLogout,
-            onOpenNewLeadModal: () => setIsNewLeadModalOpen(true)
+            onLogout: handleLogout
           } as any)}
         />
 
