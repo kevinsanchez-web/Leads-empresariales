@@ -60,13 +60,23 @@ export const LeadDrawerHost: React.FC<LeadDrawerHostProps> = ({
         onClick={onClose}
       />
 
-      {/* Móvil (< md): bottom sheet sobre la barra. Escritorio (md+): panel lateral derecho. */}
+      {/* Móvil (< md): bottom sheet sobre la barra. Escritorio (md+): panel lateral derecho.
+
+          En móvil el alto es FIJO (`h-[85dvh]`), no un tope: con `max-h` la altura la
+          decidía el contenido y el panel saltaba de tamaño al cambiar entre Datos,
+          Notas e IA Assistant. Los hijos que no deben ceder espacio llevan `shrink-0` y
+          el área de pestañas hace el scroll interno.
+
+          `md:h-auto` no sobra: en escritorio el alto lo fijan `md:inset-y-0` +
+          `md:bottom-0`, y un elemento posicionado con `top`, `bottom` y `height` deja
+          el `height` ganar e ignora `bottom`. Sin ese reset el panel no ocuparía toda
+          la ventana. */}
       <aside
         role="dialog"
         aria-modal="true"
         aria-label={`Detalle de ${lead.name}`}
         style={{ '--bottom-nav-h': `${bottomNavHeight}px` } as React.CSSProperties}
-        className="fixed inset-x-0 bottom-[var(--bottom-nav-h,0px)] z-50 flex max-h-[85dvh] flex-col overflow-hidden rounded-t-3xl bg-white shadow-2xl animate-slide-in-up md:inset-x-auto md:inset-y-0 md:bottom-0 md:right-0 md:max-h-none md:w-[420px] md:max-w-lg md:animate-slide-in-right md:rounded-none md:rounded-l-3xl"
+        className="fixed inset-x-0 bottom-[var(--bottom-nav-h,0px)] z-50 flex h-[85dvh] flex-col overflow-hidden rounded-t-3xl bg-white shadow-2xl animate-slide-in-up md:inset-x-auto md:inset-y-0 md:bottom-0 md:right-0 md:h-auto md:w-[420px] md:max-w-lg md:animate-slide-in-right md:rounded-none md:rounded-l-3xl"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Handle visual del bottom sheet (solo móvil) */}

@@ -87,7 +87,7 @@ export const NewLeadModal: React.FC<NewLeadModalProps> = ({
           </div>
         </div>
 
-        <form onSubmit={handleSubmit} className="overflow-y-auto px-5 sm:px-6 py-4 space-y-4 flex-1">
+        <form onSubmit={handleSubmit} className="overflow-y-auto px-5 sm:px-6 py-3 space-y-3 flex-1">
           <VoiceLeadAssistant
             onApplyVoiceData={form.handleApplyVoiceData}
             onExecuteCommand={form.handleExecuteVoiceCommand}

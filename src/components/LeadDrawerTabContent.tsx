@@ -16,6 +16,7 @@ import {
 } from 'lucide-react';
 import { Lead, CompanyResearchInfo, InteractionItem } from '../types';
 import { hasContact, displayContact } from '../utils/contactInfo';
+import { classifyEmail, emailKindLabel, EmailClassification } from '../utils/emailKind';
 import { formatLeadTimestamp, formatRelativeDayLabel } from '../utils/date';
 import { AiNotice } from './AiNotice';
 import { DrawerTab, LeadDrawerState } from './useLeadDrawer';
@@ -180,6 +181,31 @@ const DetailRow: React.FC<{ label: string; children: React.ReactNode; valueClass
 const contactValueClass = (value?: string) =>
   `font-semibold text-right truncate ${hasContact(value) ? 'text-slate-800' : 'text-slate-400 font-medium'}`;
 
+/**
+ * Marca el tipo de casilla. Sin juicio implícito: un gmail no es un dato malo,
+ * solo es menos probable que llegue al buzón de la empresa, y eso conviene verlo
+ * antes de elegir el canal de contacto.
+ */
+const EmailKindBadge: React.FC<{ classification: EmailClassification }> = ({ classification }) => {
+  if (classification.kind === 'sin-email') return null;
+
+  const isPersonal = classification.kind === 'personal';
+  return (
+    <span
+      title={`${emailKindLabel(classification.kind)} (${classification.domain}). ${
+        isPersonal
+          ? 'Suele responder más rápido por WhatsApp o llamada.'
+          : 'Es el canal más probable para tratar temas de la empresa.'
+      }`}
+      className={`shrink-0 text-[10px] font-bold uppercase tracking-wide px-1.5 py-0.5 rounded-md ${
+        isPersonal ? 'bg-amber-100 text-amber-700' : 'bg-slate-100 text-slate-500'
+      }`}
+    >
+      {isPersonal ? 'Personal' : 'Corporativo'}
+    </span>
+  );
+};
+
 const SummaryTab: React.FC<{ lead: Lead; research: LeadDrawerState['companyResearch'] }> = ({ lead, research }) => (
   <div className="space-y-3 pt-1">
     <CompanyProfileCard lead={lead} research={research} />
@@ -189,7 +215,10 @@ const SummaryTab: React.FC<{ lead: Lead; research: LeadDrawerState['companyResea
         {displayContact(lead.phone)}
       </DetailRow>
       <DetailRow label="Email" valueClassName={contactValueClass(lead.email)}>
-        {displayContact(lead.email)}
+        <span className="inline-flex items-center justify-end gap-1.5 min-w-0">
+          <span className="truncate">{displayContact(lead.email)}</span>
+          <EmailKindBadge classification={classifyEmail(lead.email)} />
+        </span>
       </DetailRow>
       <DetailRow label="Evento" valueClassName="font-semibold text-[#1D1D1F]">{lead.event}</DetailRow>
       <DetailRow label="Pipeline Estimado" valueClassName="font-bold text-[#28A745]">

@@ -70,6 +70,7 @@ export interface Lead {
   status: LeadStatus;
   estimatedValue?: number;
   notes?: string;
+  // Fecha en que se cierra el seguimiento del lead, no la de captura. Alimenta `getNotificationAlerts`.
   nextContactDate?: string;
   history: InteractionItem[];
   suggestedAction?: SuggestedAction;

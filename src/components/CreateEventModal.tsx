@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
 import { X, Calendar, MapPin, Plus, CheckCircle2 } from 'lucide-react';
 import { EventOption } from '../types';
-import { isoDateToLocalMs } from '../utils/date';
+import { formatEventDateRange } from '../utils/date';
+import { DatePicker } from './DatePicker';
 
 interface CreateEventModalProps {
   isOpen: boolean;
@@ -18,7 +19,6 @@ export const CreateEventModal: React.FC<CreateEventModalProps> = ({
   const [location, setLocation] = useState('');
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
-  const [dateRangeCustom, setDateRangeCustom] = useState('');
   const [setAsActive, setSetAsActive] = useState(true);
 
   if (!isOpen) return null;
@@ -27,32 +27,11 @@ export const CreateEventModal: React.FC<CreateEventModalProps> = ({
     e.preventDefault();
     if (!name.trim()) return;
 
-    // Format dateRange nicely
-    let formattedRange = dateRangeCustom.trim();
-    if (!formattedRange) {
-      if (startDate && endDate) {
-        // El value del input date es `YYYY-MM-DD`: parsearlo con `new Date()` lo
-        // interpreta como UTC y en offset negativo devuelve el día anterior.
-        const start = new Date(isoDateToLocalMs(startDate));
-        const end = new Date(isoDateToLocalMs(endDate));
-        const startDay = start.getDate().toString().padStart(2, '0');
-        const endDay = end.getDate().toString().padStart(2, '0');
-        const monthNames = ["Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio", "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"];
-        const endMonth = monthNames[end.getMonth()];
-        const endYear = end.getFullYear();
-        formattedRange = `${startDay} - ${endDay} ${endMonth} ${endYear}`;
-      } else if (startDate) {
-        formattedRange = startDate;
-      } else {
-        formattedRange = "Fecha por definir";
-      }
-    }
-
     const newEvent: EventOption = {
       id: `evt-${Date.now()}`,
       name: name.trim(),
       location: location.trim() || 'Centro de Eventos',
-      dateRange: formattedRange,
+      dateRange: startDate ? formatEventDateRange(startDate, endDate || undefined) : 'Fecha por definir',
       isCurrent: setAsActive
     };
 
@@ -62,7 +41,6 @@ export const CreateEventModal: React.FC<CreateEventModalProps> = ({
     setLocation('');
     setStartDate('');
     setEndDate('');
-    setDateRangeCustom('');
   };
 
   return (
@@ -72,7 +50,7 @@ export const CreateEventModal: React.FC<CreateEventModalProps> = ({
         {/* Header */}
         <div className="flex items-center justify-between pb-3.5 border-b border-black/[0.05] shrink-0">
           <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-2xl bg-[#0071E3] text-white flex items-center justify-center font-bold shadow-[0_2px_8px_rgba(0,113,227,0.25)]">
+            <div className="w-9 h-9 rounded-2xl bg-accent text-white flex items-center justify-center font-bold shadow-accent">
               <Calendar className="w-4 h-4" />
             </div>
             <div>
@@ -84,8 +62,10 @@ export const CreateEventModal: React.FC<CreateEventModalProps> = ({
               </p>
             </div>
           </div>
-          <button 
-            onClick={onClose} 
+          <button
+            type="button"
+            onClick={onClose}
+            aria-label="Cerrar"
             className="w-8 h-8 rounded-xl bg-[#F5F5F7] hover:bg-[#EBEBEF] text-slate-500 hover:text-[#1D1D1F] flex items-center justify-center transition-colors cursor-pointer"
           >
             <X className="w-4 h-4" />
@@ -106,7 +86,7 @@ export const CreateEventModal: React.FC<CreateEventModalProps> = ({
               placeholder="Ej: Andicom 2026, Smart City Expo"
               value={name}
               onChange={(e) => setName(e.target.value)}
-              className="w-full px-3.5 py-2 bg-[#F5F5F7] border border-black/[0.05] rounded-xl text-xs font-medium focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#0071E3] transition-all placeholder:text-slate-400 text-[#1D1D1F]"
+              className="w-full px-3.5 py-2 bg-[#F5F5F7] border border-black/[0.05] rounded-xl text-xs font-medium focus:bg-white focus:outline-none focus:ring-2 focus:ring-accent transition-all placeholder:text-slate-400 text-[#1D1D1F]"
             />
           </div>
 
@@ -122,7 +102,7 @@ export const CreateEventModal: React.FC<CreateEventModalProps> = ({
                 placeholder="Ej: Cartagena de Indias, Corferias Bogotá"
                 value={location}
                 onChange={(e) => setLocation(e.target.value)}
-                className="w-full pl-9 pr-3.5 py-2 bg-[#F5F5F7] border border-black/[0.05] rounded-xl text-xs font-medium focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#0071E3] transition-all placeholder:text-slate-400 text-[#1D1D1F]"
+                className="w-full pl-9 pr-3.5 py-2 bg-[#F5F5F7] border border-black/[0.05] rounded-xl text-xs font-medium focus:bg-white focus:outline-none focus:ring-2 focus:ring-accent transition-all placeholder:text-slate-400 text-[#1D1D1F]"
               />
             </div>
           </div>
@@ -133,25 +113,35 @@ export const CreateEventModal: React.FC<CreateEventModalProps> = ({
               <label className="block text-xs font-semibold text-slate-700 mb-1">
                 Fecha Inicio
               </label>
-              <input
-                type="date"
+              <DatePicker
                 value={startDate}
-                onChange={(e) => setStartDate(e.target.value)}
-                className="w-full px-3 py-2 bg-[#F5F5F7] border border-black/[0.05] rounded-xl text-xs font-medium focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#0071E3] text-[#1D1D1F]"
+                onChange={setStartDate}
+                min={endDate || undefined}
+                placeholder="Fecha de inicio"
+                center
+                ariaLabel="Fecha de inicio del evento"
               />
             </div>
             <div>
               <label className="block text-xs font-semibold text-slate-700 mb-1">
                 Fecha Fin
               </label>
-              <input
-                type="date"
+              <DatePicker
                 value={endDate}
-                onChange={(e) => setEndDate(e.target.value)}
-                className="w-full px-3 py-2 bg-[#F5F5F7] border border-black/[0.05] rounded-xl text-xs font-medium focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#0071E3] text-[#1D1D1F]"
+                onChange={setEndDate}
+                min={startDate || undefined}
+                placeholder="Fecha de fin"
+                center
+                ariaLabel="Fecha de fin del evento"
               />
             </div>
           </div>
+
+          {startDate && (
+            <p className="text-[11px] text-slate-500 -mt-2">
+              Se guardará como <span className="font-semibold text-slate-700">{formatEventDateRange(startDate, endDate || undefined)}</span>.
+            </p>
+          )}
 
           {/* Set as Active Event Switch */}
           <div className="flex items-center justify-between p-3 rounded-2xl bg-[#FAFBFD] border border-black/[0.04]">
@@ -190,7 +180,7 @@ export const CreateEventModal: React.FC<CreateEventModalProps> = ({
             </button>
             <button
               type="submit"
-              className="px-4.5 py-2 bg-[#0071E3] hover:bg-[#0077ED] text-white rounded-xl text-xs font-semibold shadow-sm transition-all flex items-center gap-1.5 cursor-pointer"
+              className="px-4.5 py-2 bg-accent hover:bg-accent-hover text-white rounded-xl text-xs font-semibold shadow-sm transition-all flex items-center gap-1.5 cursor-pointer"
             >
               <Plus className="w-3.5 h-3.5" />
               <span>Guardar y Activar</span>

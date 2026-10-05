@@ -65,6 +65,24 @@
   border-color: var(--primary-accent-border) !important;
 }
 
+/* El hover no puede ser una variante de las clases de arriba porque Tailwind no genera
+   modificadores para clases escritas a mano. */
+.bg-accent-hover:hover {
+  background-color: var(--primary-accent-hover) !important;
+}
+
+/* Igual que `bg-accent`, pero al 30% para los anillos de foco de las tarjetas. Se usa
+   `color-mix` en vez de una opacidad fija para que siga al color del tema activo. */
+.ring-accent {
+  --tw-ring-color: color-mix(in srgb, var(--primary-accent) 30%, transparent);
+}
+
+/* Halo del icono de cabecera. Va como clase y no como utilidad arbitraria de Tailwind
+   porque el `color-mix` con espacios no sobrevive bien al parser de valores arbitrarios. */
+.shadow-accent {
+  box-shadow: 0 2px 8px color-mix(in srgb, var(--primary-accent) 25%, transparent);
+}
+
 /* Apple macOS style subtle scrollbars */
 ::-webkit-scrollbar {
   width: 6px;
@@ -130,6 +148,10 @@
 /* Registradas en @theme (no como clases planas) para que Tailwind genere las utilidades
    con soporte de variantes responsive, p. ej. md:animate-slide-in-right. */
 @theme {
+  /* Escalón intermedio de 400px, entre el móvil y `sm` (640px). Va de primero para que las
+     media queries salgan en orden ascendente. Sin él, las utilidades `xs:*` no se generan
+     y clases como `hidden xs:inline` se quedan siempre ocultas. */
+  --breakpoint-xs: 25rem;
   --animate-fade-in: fade-in 150ms ease-out forwards;
   --animate-slide-in-right: slide-in-right 200ms ease-out forwards;
   --animate-slide-in-up: slide-in-up 200ms ease-out forwards;

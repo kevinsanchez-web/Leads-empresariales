@@ -11,6 +11,7 @@
     "migrate:dates": "tsx scripts/migrate-dates.ts",
     "audit:dates": "tsx scripts/audit-capture-dates.ts",
     "check:dates": "tsx scripts/check-dates.ts",
+    "check:contacts": "tsx scripts/check-contacts.ts",
     "backfill:dates": "tsx scripts/backfill-capture-dates.ts",
     "verify:ai": "tsx scripts/verify-ai-transport.ts && tsx scripts/verify-ai-worker.ts",
     "lint": "tsc --noEmit"

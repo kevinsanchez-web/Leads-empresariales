@@ -1,9 +1,16 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { CompanyResearchInfo, EventOption, Lead, UserRep } from '../types';
 import { cleanCompanyName } from '../utils/company';
 import { cleanContact } from '../utils/contactInfo';
 import { isOnline, saveLeadOffline } from '../utils/offlineStore';
-import { leadHistoryDate, leadTime, leadTimestampFrom, leadTimestampNow, todayISODate } from '../utils/date';
+import {
+  isCaptureTimestampInFuture,
+  leadHistoryDate,
+  leadTime,
+  leadTimestampFrom,
+  leadTimestampNow,
+  todayISODate
+} from '../utils/date';
 import { sendPriorityLeadPushNotification } from '../utils/pushNotifications';
 import { researchCompany, isAiFailure, AI_SIMULATED_WARNING } from '../services/aiService';
 import { ParsedVoiceLead } from '../utils/voiceLeadParser';
@@ -58,7 +65,7 @@ export interface UseLeadFormResult {
   notes: string;
   priority: boolean;
   selectedEvent: string;
-  nextContactDate: string;
+  followUpDate: string;
   captureDate: string;
   captureTime: string;
   selectedInterests: string[];
@@ -80,7 +87,7 @@ export interface UseLeadFormResult {
   setLinkedin: (v: string) => void;
   setNotes: (v: string) => void;
   setPriority: (v: boolean) => void;
-  setNextContactDate: (v: string) => void;
+  setFollowUpDate: (v: string) => void;
   setCaptureDate: (v: string) => void;
   setCaptureTime: (v: string) => void;
   setSelectedEvent: (v: string) => void;
@@ -142,7 +149,8 @@ export function useLeadForm({
   const [priority, setPriority] = useState(false);
   const [notes, setNotes] = useState('');
   const [selectedEvent, setSelectedEvent] = useState(currentEvent.name);
-  const [nextContactDate, setNextContactDate] = useState(todayISODate());
+  // Fecha en que se cierra el seguimiento; alimenta las alertas de la campana.
+  const [followUpDate, setFollowUpDate] = useState(todayISODate());
   // Fecha y hora reales de captura: por defecto el momento de abrir el formulario.
   const [captureDate, setCaptureDate] = useState(() => todayISODate());
   const [captureTime, setCaptureTime] = useState(() => leadTime());
@@ -159,6 +167,9 @@ export function useLeadForm({
   const [isScannerOpen, setIsScannerOpen] = useState(false);
   const [activeVoiceField, setActiveVoiceField] = useState<string | null>(null);
   const [validationError, setValidationError] = useState<string | null>(null);
+  // Contador de peticiones de investigación: una respuesta tardía de una empresa anterior
+  // debe descartarse en vez de pintar información de otra compañía en el formulario.
+  const researchRequestId = useRef(0);
 
   useEffect(() => {
     setSelectedEvent(currentEvent.name);
@@ -174,6 +185,9 @@ export function useLeadForm({
     setCompanyRaw(v);
     setCompanyInfo(null);
     setValidationError(null);
+    // Invalida cualquier investigación en vuelo: su respuesta sería de otra empresa.
+    researchRequestId.current += 1;
+    setIsResearchingCompany(false);
   }, []);
 
   const toggleInterest = useCallback((interest: string) => {
@@ -205,7 +219,7 @@ export function useLeadForm({
     setLinkedin('');
     setNotes('');
     setPriority(false);
-    setNextContactDate(todayISODate());
+    setFollowUpDate(todayISODate());
     // Cada lead nuevo arranca con la fecha/hora de captura en el momento actual.
     setCaptureDate(todayISODate());
     setCaptureTime(leadTime());
@@ -217,6 +231,9 @@ export function useLeadForm({
     setResearchError(null);
     setResearchSimulated(false);
     setValidationError(null);
+    setActiveVoiceField(null);
+    researchRequestId.current += 1;
+    setIsResearchingCompany(false);
   }, [currentEvent.name, defaults]);
 
   const handleResearchCompany = useCallback(
@@ -224,11 +241,15 @@ export function useLeadForm({
       const targetCompany = (overrideCompany || company).trim();
       if (!targetCompany) return;
 
+      const requestId = researchRequestId.current + 1;
+      researchRequestId.current = requestId;
+
       setIsResearchingCompany(true);
       setResearchError(null);
       setResearchSimulated(false);
       try {
         const data = await researchCompany({ companyName: targetCompany, leadName: name, role });
+        if (researchRequestId.current !== requestId) return;
         if (isAiFailure(data)) {
           setResearchError(data.error);
           return;
@@ -243,9 +264,12 @@ export function useLeadForm({
           setResearchSimulated(true);
         }
       } catch {
+        if (researchRequestId.current !== requestId) return;
         setResearchError('No se pudo contactar el asistente de IA.');
       } finally {
-        setIsResearchingCompany(false);
+        if (researchRequestId.current === requestId) {
+          setIsResearchingCompany(false);
+        }
       }
     },
     [company, name, role]
@@ -254,7 +278,7 @@ export function useLeadForm({
   const handleScanSuccess = useCallback((data: ScannedCardPayload) => {
     if (data.name) setNameRaw(data.name);
     if (data.role) setRole(data.role);
-    if (data.company) setCompanyRaw(data.company);
+    if (data.company) setCompany(data.company);
     if (data.email) setEmail(data.email);
     if (data.phone) setPhone(data.phone);
     if (data.notes) setNotes(data.notes);
@@ -263,11 +287,11 @@ export function useLeadForm({
     }
     setSelectedSources(prev => Array.from(new Set([...prev, 'Escanear Tarjeta'])));
     setPriority(true);
-  }, []);
+  }, [setCompany]);
 
   const handleApplyVoiceData = useCallback((data: ParsedVoiceLead) => {
     if (data.name) setNameRaw(data.name);
-    if (data.company) setCompanyRaw(data.company);
+    if (data.company) setCompany(data.company);
     if (data.role) setRole(data.role);
     if (data.phone) setPhone(data.phone);
     if (data.email) setEmail(data.email);
@@ -281,10 +305,18 @@ export function useLeadForm({
     if (data.notes) {
       setNotes(prev => (prev ? `${prev}. ${data.notes}` : data.notes!));
     }
-  }, []);
+  }, [setCompany]);
 
   const handleSimulateScan = useCallback(() => {
-    const samples: (ScannedCardPayload & { sources: string[]; experiences: string[] })[] = [
+    // Tipo propio y required: los samples de prueba traen todos los campos, así que
+    // `pick.name` no puede ser `string | undefined` como sí lo es en ScannedCardPayload.
+    const samples: (Required<
+      Pick<ScannedCardPayload, 'name' | 'company' | 'role' | 'email' | 'phone' | 'notes'>
+    > & {
+      interests: string[];
+      sources: string[];
+      experiences: string[];
+    })[] = [
       {
         name: 'Diego Fernando Santos',
         role: 'Head of AI & Data',
@@ -314,7 +346,7 @@ export function useLeadForm({
     const pick = samples[Math.floor(Math.random() * samples.length)];
     setNameRaw(pick.name);
     setRole(pick.role);
-    setCompanyRaw(pick.company);
+    setCompany(pick.company);
     setEmail(pick.email);
     setPhone(pick.phone);
     setSelectedInterests(pick.interests);
@@ -322,7 +354,7 @@ export function useLeadForm({
     setSelectedExperiences(pick.experiences);
     setNotes(pick.notes);
     setPriority(true);
-  }, []);
+  }, [setCompany]);
 
   const submit = useCallback((): boolean => {
     if (!name.trim() || !company.trim()) {
@@ -338,11 +370,21 @@ export function useLeadForm({
       setValidationError('La fecha de captura no puede ser futura.');
       return false;
     }
+    if (followUpDate && followUpDate < todayISODate()) {
+      setValidationError('La fecha de contacto agendado no puede ser pasada.');
+      return false;
+    }
 
     const trimmedNotes = notes.trim();
     const linkedinValue = cleanLinkedIn(linkedin);
     // `capturedAt` refleja cuándo se capturó el lead, no cuándo se escribió en Firestore.
     const capturedAt = leadTimestampFrom(captureDate, captureTime);
+    // Con la fecha de hoy basta con que la hora no supere la actual; si es un día anterior, es válida.
+    if (isCaptureTimestampInFuture(captureDate, captureTime)) {
+      setValidationError('La hora de captura no puede ser futura.');
+      return false;
+    }
+    const interestSummary = selectedInterests.length > 0 ? selectedInterests.join(', ') : 'IA';
     const newLead: Lead = {
       id: `${defaults.idPrefix}${Date.now()}`,
       name: name.trim(),
@@ -362,7 +404,8 @@ export function useLeadForm({
       status: 'Nuevo',
       estimatedValue: defaults.estimatedValue,
       notes: trimmedNotes,
-      nextContactDate: nextContactDate || todayISODate(),
+      // `nextContactDate` es el campo persistido; en el form el estado es `followUpDate`.
+      nextContactDate: followUpDate || todayISODate(),
       history: [
         {
           id: `hist-${Date.now()}`,
@@ -376,7 +419,7 @@ export function useLeadForm({
       ],
       suggestedAction: {
         title: 'Agendar reunión de presentación',
-        description: `Proponer fecha para reunión ejecutiva sobre ${selectedInterests.join(', ')}.`,
+        description: `Proponer fecha para reunión ejecutiva sobre ${interestSummary}.`,
         type: 'meeting'
       },
       ...(companyInfo ? { companyInfo } : {})
@@ -397,7 +440,7 @@ export function useLeadForm({
   }, [
     name, company, role, email, phone, linkedin, notes, selectedEvent,
     selectedInterests, selectedExperiences, selectedSources, currentUser.name,
-    priority, nextContactDate, captureDate, captureTime, companyInfo, defaults,
+    priority, followUpDate, captureDate, captureTime, companyInfo, defaults,
     onSaveLead, onSaved
   ]);
 
@@ -418,13 +461,13 @@ export function useLeadForm({
 
   return {
     name, company, role, phone, email, linkedin, notes, priority,
-    selectedEvent, nextContactDate, captureDate, captureTime,
+    selectedEvent, followUpDate, captureDate, captureTime,
     selectedInterests, selectedSources, selectedExperiences,
     companyInfo, isResearchingCompany, researchError, researchSimulated,
     isScannerOpen, activeVoiceField, validationError,
     canSubmit: Boolean(name.trim() && company.trim()),
     setName, setCompany, setRole, setPhone, setEmail, setLinkedin, setNotes, setPriority,
-    setNextContactDate, setCaptureDate, setCaptureTime, setSelectedEvent,
+    setFollowUpDate, setCaptureDate, setCaptureTime, setSelectedEvent,
     setIsScannerOpen, setActiveVoiceField,
     toggleInterest, toggleSource, toggleExperience, openScanner,
     handleResearchCompany, handleApplyVoiceData, handleExecuteVoiceCommand,

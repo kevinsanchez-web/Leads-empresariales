@@ -2,6 +2,7 @@ import React from 'react';
 import {
   Building2,
   Calendar,
+  ChevronDown,
   Clock,
   ExternalLink,
   Globe,
@@ -23,12 +24,13 @@ import { EventOption } from '../types';
 import { INTEREST_OPTIONS, SOURCE_OPTIONS, EXPERIENCE_OPTIONS } from '../data/mockData';
 import { AiNotice } from './AiNotice';
 import { UseLeadFormResult } from './useLeadForm';
+import { DatePicker } from './DatePicker';
+import { TimePicker } from './TimePicker';
 import { todayISODate } from '../utils/date';
 
 const INPUT_BASE =
-  'w-full px-3.5 py-2 bg-[#F5F5F7] border border-black/[0.05] rounded-xl text-xs font-medium focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#0071E3] transition-all placeholder:text-slate-400 text-[#1D1D1F]';
-const INPUT_ICON_BASE = `pl-9 pr-3.5 ${INPUT_BASE}`;
-const LABEL_BASE = 'block text-xs font-semibold text-slate-700 mb-1';
+  'w-full px-3 py-1.5 bg-[#F5F5F7] border border-black/[0.05] rounded-lg text-xs font-medium focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#0071E3] transition-all placeholder:text-slate-400 text-[#1D1D1F]';
+const LABEL_BASE = 'block text-xs font-semibold text-slate-700 mb-0.5';
 
 interface LeadFormFieldsProps {
   form: UseLeadFormResult;
@@ -52,18 +54,18 @@ const ChipGroup: React.FC<ChipGroupProps> = ({ label, counter, options, selected
 
   return (
     <div>
-      <div className="flex items-center justify-between mb-1.5">
-        <span className={LABEL_BASE}>{label}</span>
+      <div className="flex items-center justify-between mb-0.5">
+        <span className={LABEL_BASE + ' mb-0'}>{label}</span>
         {counter && <span className="text-[10px] text-slate-400 font-medium">{counter}</span>}
       </div>
-      <div className="flex flex-wrap gap-1.5">
+      <div className="flex flex-wrap gap-1">
         {notInOptions.map((value) => (
           <button
             type="button"
             key={value}
             onClick={() => onToggle(value)}
             title="Quitar"
-            className="px-3 py-1 rounded-xl text-xs font-semibold bg-[#0071E3]/10 text-[#0071E3] hover:bg-[#0071E3]/20 transition-all cursor-pointer flex items-center gap-1"
+            className="px-2.5 py-0.5 rounded-lg text-xs font-semibold bg-[#0071E3]/10 text-[#0071E3] hover:bg-[#0071E3]/20 transition-all cursor-pointer flex items-center gap-1"
           >
             {value}
             <X className="w-3 h-3" />
@@ -77,7 +79,7 @@ const ChipGroup: React.FC<ChipGroupProps> = ({ label, counter, options, selected
               type="button"
               key={option}
               onClick={() => onToggle(option)}
-              className={`px-3 py-1 rounded-xl text-xs font-semibold transition-all cursor-pointer ${
+              className={`px-2.5 py-0.5 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
                 active ? 'bg-[#0071E3] text-white shadow-2xs' : 'bg-[#F5F5F7] hover:bg-[#EBEBEF] text-slate-700'
               }`}
             >
@@ -97,17 +99,17 @@ export const LeadFormFields: React.FC<LeadFormFieldsProps> = ({
 }) => {
   const {
     name, company, role, phone, email, linkedin, notes, priority,
-    selectedEvent, nextContactDate, captureDate, captureTime,
+    selectedEvent, followUpDate, captureDate, captureTime,
     selectedInterests, selectedSources, selectedExperiences,
     companyInfo, isResearchingCompany, researchError, researchSimulated,
     activeVoiceField, validationError, canSubmit,
     setName, setCompany, setRole, setPhone, setEmail, setLinkedin, setNotes, setPriority,
-    setNextContactDate, setCaptureDate, setCaptureTime, setSelectedEvent,
+    setFollowUpDate, setCaptureDate, setCaptureTime, setSelectedEvent,
     toggleInterest, toggleSource, toggleExperience, handleResearchCompany
   } = form;
 
   return (
-    <div className="space-y-4 pb-16 sm:pb-10">
+    <div className="space-y-3 pb-6 sm:pb-2">
       {/* Identidad */}
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
         <div>
@@ -176,17 +178,14 @@ export const LeadFormFields: React.FC<LeadFormFieldsProps> = ({
               </button>
             )}
           </div>
-          <div className="relative">
-            <Building2 className="w-3.5 h-3.5 absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
-            <input
-              type="text"
-              required
-              placeholder="Ej. Energía Andina"
-              value={company}
-              onChange={(e) => setCompany(e.target.value)}
-              className={`${INPUT_ICON_BASE} font-medium`}
-            />
-          </div>
+          <input
+            type="text"
+            required
+            placeholder="Ej. Energía Andina"
+            value={company}
+            onChange={(e) => setCompany(e.target.value)}
+            className={INPUT_BASE}
+          />
         </div>
 
         <div>
@@ -207,26 +206,20 @@ export const LeadFormFields: React.FC<LeadFormFieldsProps> = ({
               </button>
             )}
           </div>
-          <select
-            value={selectedEvent}
-            onChange={(e) => {
-              if (e.target.value === '__create_new__' && onOpenCreateEventModal) {
-                onOpenCreateEventModal();
-              } else {
-                setSelectedEvent(e.target.value);
-              }
-            }}
-            className={`${INPUT_BASE} appearance-none cursor-pointer`}
-          >
-            {events.map(evt => (
-              <option key={evt.id} value={evt.name}>
-                {evt.name}
-              </option>
-            ))}
-            {onOpenCreateEventModal && (
-              <option value="__create_new__">+ Crear nuevo evento...</option>
-            )}
-          </select>
+          <div className="relative">
+            <select
+              value={selectedEvent}
+              onChange={(e) => setSelectedEvent(e.target.value)}
+              className={`${INPUT_BASE} appearance-none cursor-pointer pr-8`}
+            >
+              {events.map(evt => (
+                <option key={evt.id} value={evt.name}>
+                  {evt.name}
+                </option>
+              ))}
+            </select>
+            <ChevronDown className="w-3.5 h-3.5 absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
+          </div>
         </div>
       </div>
 
@@ -320,16 +313,13 @@ export const LeadFormFields: React.FC<LeadFormFieldsProps> = ({
             <Mail className="w-3.5 h-3.5 text-slate-400" />
             Correo Electrónico
           </label>
-          <div className="relative">
-            <Mail className="w-3.5 h-3.5 absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
-            <input
-              type="email"
-              placeholder="ejemplo@empresa.com"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              className={INPUT_ICON_BASE}
-            />
-          </div>
+          <input
+            type="email"
+            placeholder="ejemplo@empresa.com"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            className={INPUT_BASE}
+          />
         </div>
 
         <div>
@@ -337,16 +327,13 @@ export const LeadFormFields: React.FC<LeadFormFieldsProps> = ({
             <Phone className="w-3.5 h-3.5 text-slate-400" />
             Teléfono Móvil
           </label>
-          <div className="relative">
-            <Phone className="w-3.5 h-3.5 absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
-            <input
-              type="text"
-              placeholder="+57 300 123 4567"
-              value={phone}
-              onChange={(e) => setPhone(e.target.value)}
-              className={INPUT_ICON_BASE}
-            />
-          </div>
+          <input
+            type="text"
+            placeholder="+57 300 123 4567"
+            value={phone}
+            onChange={(e) => setPhone(e.target.value)}
+            className={INPUT_BASE}
+          />
         </div>
       </div>
 
@@ -359,16 +346,13 @@ export const LeadFormFields: React.FC<LeadFormFieldsProps> = ({
           </label>
           <span className="text-[10px] text-slate-400 font-normal">Opcional</span>
         </div>
-        <div className="relative">
-          <Linkedin className="w-3.5 h-3.5 absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
-          <input
-            type="text"
-            placeholder="linkedin.com/in/usuario o URL del perfil"
-            value={linkedin}
-            onChange={(e) => setLinkedin(e.target.value)}
-            className={INPUT_ICON_BASE}
-          />
-        </div>
+        <input
+          type="text"
+          placeholder="linkedin.com/in/usuario o URL del perfil"
+          value={linkedin}
+          onChange={(e) => setLinkedin(e.target.value)}
+          className={INPUT_BASE}
+        />
       </div>
 
       {/* Intereses / Fuentes / Experiencias */}
@@ -397,21 +381,18 @@ export const LeadFormFields: React.FC<LeadFormFieldsProps> = ({
       />
 
       {/* Seguimiento prioritario */}
-      <div className="flex items-center justify-between p-3 rounded-2xl bg-[#FAFBFD] border border-black/[0.04]">
-        <div className="flex items-center gap-2.5">
+      <div className="flex items-center justify-between gap-3 p-2.5 rounded-xl bg-[#FAFBFD] border border-black/[0.04]">
+        <div className="flex items-center gap-2 min-w-0">
           <div
-            className={`w-8 h-8 rounded-xl flex items-center justify-center shrink-0 ${
+            className={`w-7 h-7 rounded-lg flex items-center justify-center shrink-0 ${
               priority ? 'bg-[#FF9500]/10 text-[#FF9500]' : 'bg-[#F5F5F7] text-slate-400'
             }`}
           >
-            <Star className={`w-4 h-4 ${priority ? 'fill-[#FF9500] text-[#FF9500]' : ''}`} />
+            <Star className={`w-3.5 h-3.5 ${priority ? 'fill-[#FF9500] text-[#FF9500]' : ''}`} />
           </div>
-          <div>
-            <div className="text-xs font-bold text-[#1D1D1F] leading-none">Seguimiento Prioritario</div>
-            <div className="text-[11px] text-slate-500 mt-0.5">
-              Destacar en el radar comercial para contacto rápido
-            </div>
-          </div>
+          <span className="text-xs font-bold text-[#1D1D1F] truncate">
+            Seguimiento Prioritario
+          </span>
         </div>
 
         <button
@@ -419,12 +400,12 @@ export const LeadFormFields: React.FC<LeadFormFieldsProps> = ({
           onClick={() => setPriority(!priority)}
           aria-pressed={priority}
           aria-label="Seguimiento prioritario"
-          className={`w-11 h-6 rounded-full transition-colors relative cursor-pointer shrink-0 ${
+          className={`w-10 h-5 rounded-full transition-colors relative cursor-pointer shrink-0 ${
             priority ? 'bg-[#34C759]' : 'bg-slate-300'
           }`}
         >
           <div
-            className={`w-5 h-5 rounded-full bg-white shadow-sm absolute top-0.5 transition-transform ${
+            className={`w-4 h-4 rounded-full bg-white shadow-sm absolute top-0.5 transition-transform ${
               priority ? 'right-0.5' : 'left-0.5'
             }`}
           />
@@ -438,13 +419,11 @@ export const LeadFormFields: React.FC<LeadFormFieldsProps> = ({
             <Clock className="w-3.5 h-3.5 text-slate-400" />
             Fecha de captura *
           </label>
-          <input
-            type="date"
-            required
-            max={todayISODate()}
+          <DatePicker
             value={captureDate}
-            onChange={(e) => setCaptureDate(e.target.value)}
-            className={INPUT_BASE}
+            onChange={setCaptureDate}
+            max={todayISODate()}
+            ariaLabel="Fecha de captura"
           />
         </div>
         <div>
@@ -452,30 +431,28 @@ export const LeadFormFields: React.FC<LeadFormFieldsProps> = ({
             <Clock className="w-3.5 h-3.5 text-slate-400" />
             Hora de captura
           </label>
-          <input
-            type="time"
-            value={captureTime}
-            onChange={(e) => setCaptureTime(e.target.value)}
-            className={INPUT_BASE}
-          />
+          <TimePicker value={captureTime} onChange={setCaptureTime} ariaLabel="Hora de captura" />
         </div>
         <p className="sm:col-span-2 text-[11px] text-slate-500 -mt-1">
-          Por defecto es el momento actual. Ajústalo solo si registras el lead después de haberlo capturado.
+          Por defecto es el momento actual.
         </p>
       </div>
 
-      {/* Próximo contacto */}
+      {/* Agendar contacto */}
       <div>
         <label className={`${LABEL_BASE} flex items-center gap-1.5`}>
           <Calendar className="w-3.5 h-3.5 text-slate-400" />
-          Fecha del próximo contacto
+          Agendar contacto para el
         </label>
-        <input
-          type="date"
-          value={nextContactDate}
-          onChange={(e) => setNextContactDate(e.target.value)}
-          className={INPUT_BASE}
+        <DatePicker
+          value={followUpDate}
+          onChange={setFollowUpDate}
+          min={todayISODate()}
+          ariaLabel="Agendar contacto para el"
         />
+        <p className="text-[11px] text-slate-500 mt-1">
+          Genera las alertas de la campana. No puede ser pasada.
+        </p>
       </div>
 
       {/* Notas */}

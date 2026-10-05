@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { createPortal } from 'react-dom';
 import {
   X,
@@ -6,11 +6,13 @@ import {
   Calendar,
   Sparkles,
   Mail,
+  Menu,
   Phone,
   Clock,
   QrCode,
   Trash2,
   AlertTriangle,
+  Linkedin,
   MessageCircle,
   FileText,
   LucideIcon,
@@ -18,7 +20,11 @@ import {
 } from 'lucide-react';
 import { QRCodeCanvas } from 'qrcode.react';
 import { Lead, LeadStatus } from '../types';
+import { localDateTimeInputNow } from '../utils/date';
+import { cleanContact, linkedinSearchUrl } from '../utils/contactInfo';
+import { classifyEmail } from '../utils/emailKind';
 import { LeadDrawerTabContent } from './LeadDrawerTabContent';
+import { useAnchoredPopover } from './useAnchoredPopover';
 import {
   useLeadDrawer,
   getInitials,
@@ -84,9 +90,11 @@ const LeadDrawerHeader: React.FC<HeaderProps> = ({ lead, onTogglePriority, onOpe
         </button>
       )}
 
+      <ContactChannelsMenu lead={lead} />
+
       <button
         onClick={onOpenQr}
-        className="flex h-7 w-7 items-center justify-center rounded-lg bg-[#F5F5F7] text-slate-600 transition-colors hover:bg-[#EBEBEF]"
+        className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-[#F5F5F7] text-slate-600 transition-colors hover:bg-[#EBEBEF]"
         title="Código QR vCard"
       >
         <QrCode className="h-3.5 w-3.5" />
@@ -125,6 +133,8 @@ interface ContactActionProps {
   Icon: LucideIcon;
   activeClassName: string;
   activeIconClassName: string;
+  /** Punto de aviso junto al icono, para señales que no cambian el canal. */
+  marker?: React.ReactNode;
 }
 
 const ContactAction: React.FC<ContactActionProps> = ({
@@ -135,7 +145,8 @@ const ContactAction: React.FC<ContactActionProps> = ({
   disabledLabel,
   Icon,
   activeClassName,
-  activeIconClassName
+  activeIconClassName,
+  marker
 }) => {
   if (!href) {
     return (
@@ -154,6 +165,7 @@ const ContactAction: React.FC<ContactActionProps> = ({
       title={title}
     >
       <Icon className={`w-3.5 h-3.5 shrink-0 ${activeIconClassName}`} />
+      {marker}
       <span className="truncate">{label}</span>
     </a>
   );
@@ -164,6 +176,188 @@ interface QuickActionsProps {
   onStatusChange: (status: LeadStatus) => void;
   onSchedule: () => void;
 }
+
+interface ContactChannel {
+  key: string;
+  href: string;
+  external?: boolean;
+  label: string;
+  note: string;
+  Icon: LucideIcon;
+  noteClassName?: string;
+}
+
+const whatsappHref = (phone?: string) =>
+  phone ? `https://wa.me/${phone.replace(/[^0-9]/g, '')}` : undefined;
+
+/**
+ * Estado del botón de email según el tipo de casilla. Con una casilla personal se
+ * marca en ámbar, no porque el dato sea malo, sino porque conviene verlo antes de
+ * elegir por dónde escribir. Sin correo, el botón queda gris como los demás.
+ */
+function emailActionProps(lead: Lead): ContactActionProps {
+  const email = cleanContact(lead.email);
+  const { kind, domain } = classifyEmail(email);
+  const isPersonal = kind === 'personal';
+
+  return {
+    href: kind === 'sin-email' ? undefined : `mailto:${email}`,
+    title: isPersonal
+      ? `Correo personal (${domain}). Suele responder más rápido por WhatsApp o llamada.`
+      : `Enviar email a ${email}`,
+    label: 'Email',
+    disabledLabel: 'Sin Email',
+    Icon: Mail,
+    activeClassName: isPersonal
+      ? 'bg-amber-50 hover:bg-amber-100 text-amber-700 border-amber-200'
+      : 'bg-[#0071E3]/10 hover:bg-[#0071E3]/20 text-[#0071E3] border-[#0071E3]/20',
+    activeIconClassName: isPersonal ? 'text-amber-600' : 'text-[#0071E3]',
+    marker: isPersonal ? <span className="w-1.5 h-1.5 shrink-0 rounded-full bg-amber-500" /> : undefined
+  };
+}
+
+/**
+ * Estado del botón de LinkedIn. Con perfil guardado abre el perfil; sin él, una
+ * búsqueda por nombre y empresa. Queda disponible siempre: es el único canal que no
+ * depende de un dato que el lead haya traído capturado.
+ */
+function linkedinActionProps(lead: Lead): ContactActionProps {
+  const profile = cleanContact(lead.linkedinUrl);
+  const search = linkedinSearchUrl(lead.name, lead.company);
+
+  return {
+    href: profile || search || undefined,
+    external: true,
+    title: profile ? `Ver el perfil de ${lead.name} en LinkedIn` : `Buscar a ${lead.name} en LinkedIn`,
+    label: 'LinkedIn',
+    disabledLabel: 'Sin LinkedIn',
+    Icon: Linkedin,
+    activeClassName: 'bg-[#0071E3]/10 hover:bg-[#0071E3]/20 text-[#0A66C2] border-[#0071E3]/20',
+    activeIconClassName: 'text-[#0A66C2]'
+  };
+}
+
+/**
+ * Canales con dato del lead, en el mismo orden que la fila de acciones rápidas.
+ * Los que no tienen dato no se listan: un botón que no abre nada no es una opción.
+ */
+function buildContactChannels(lead: Lead): ContactChannel[] {
+  const email = cleanContact(lead.email);
+  const { kind, domain } = classifyEmail(email);
+  const waHref = whatsappHref(lead.phone);
+
+  const channels: ContactChannel[] = [];
+  if (lead.phone) {
+    channels.push({ key: 'llamada', href: `tel:${lead.phone}`, label: 'Llamar', note: lead.phone, Icon: Phone });
+  }
+  if (waHref) {
+    channels.push({
+      key: 'whatsapp',
+      href: waHref,
+      external: true,
+      label: 'WhatsApp',
+      note: lead.phone ?? '',
+      Icon: MessageCircle
+    });
+  }
+  if (kind !== 'sin-email') {
+    channels.push({
+      key: 'email',
+      href: `mailto:${email}`,
+      label: 'Email',
+      note: `${kind === 'personal' ? 'Personal' : 'Corporativo'} · ${domain}`,
+      Icon: Mail,
+      noteClassName: kind === 'personal' ? 'text-amber-600' : undefined
+    });
+  }
+  if (lead.linkedinUrl) {
+    channels.push({
+      key: 'linkedin',
+      href: lead.linkedinUrl,
+      external: true,
+      label: 'LinkedIn',
+      note: 'Perfil del lead',
+      Icon: Linkedin
+    });
+  } else {
+    const search = linkedinSearchUrl(lead.name, lead.company);
+    if (search) {
+      channels.push({
+        key: 'linkedin-busqueda',
+        href: search,
+        external: true,
+        label: 'Buscar en LinkedIn',
+        note: 'Sin perfil guardado',
+        Icon: Linkedin
+      });
+    }
+  }
+  return channels;
+}
+
+/**
+ * Menú "Contactos" del header: los canales con dato del lead. Existe para lo que
+ * la fila de acciones rápidas no cabe (LinkedIn) y para ver el tipo de casilla al
+ * elegir por dónde escribir, sin volver a repetir los tres botones de la fila.
+ */
+const ContactChannelsMenu: React.FC<{ lead: Lead }> = ({ lead }) => {
+  const [open, setOpen] = useState(false);
+  const close = useCallback(() => setOpen(false), []);
+  const channels = buildContactChannels(lead);
+  const { anchorRef, popupRef, popupStyle } = useAnchoredPopover(open, close, {
+    // Cada fila son 42px (dos líneas de texto con py-1.5) más el py-1 del popup.
+    height: channels.length ? channels.length * 42 + 8 : 40,
+    width: 240,
+    align: 'right'
+  });
+
+  return (
+    <>
+      <button
+        ref={anchorRef}
+        type="button"
+        onClick={() => setOpen((current) => !current)}
+        aria-label="Contactos"
+        aria-expanded={open}
+        title="Contactos"
+        className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-[#F5F5F7] text-slate-600 transition-colors hover:bg-[#EBEBEF]"
+      >
+        <Menu className="h-3.5 w-3.5" />
+      </button>
+      {open &&
+        createPortal(
+          <div
+            ref={popupRef}
+            style={popupStyle}
+            className="z-[70] overflow-hidden rounded-xl border border-black/[0.08] bg-white py-1 shadow-xl"
+          >
+            {channels.length === 0 ? (
+              <p className="px-2.5 py-1.5 text-xs font-medium text-slate-400">Sin datos de contacto</p>
+            ) : (
+              channels.map((channel) => (
+                <a
+                  key={channel.key}
+                  href={channel.href}
+                  {...(channel.external ? { target: '_blank', rel: 'noreferrer' } : {})}
+                  onClick={close}
+                  className="flex items-center gap-2 px-2.5 py-1.5 transition-colors hover:bg-[#F5F5F7]"
+                >
+                  <channel.Icon className="h-3.5 w-3.5 shrink-0 text-slate-400" />
+                  <span className="min-w-0 flex-1">
+                    <span className="block truncate text-xs font-bold text-slate-800">{channel.label}</span>
+                    <span className={`block truncate text-[10px] ${channel.noteClassName ?? 'text-slate-500'}`}>
+                      {channel.note}
+                    </span>
+                  </span>
+                </a>
+              ))
+            )}
+          </div>,
+          document.body
+        )}
+    </>
+  );
+};
 
 const LeadQuickActions: React.FC<QuickActionsProps> = ({ lead, onStatusChange, onSchedule }) => (
   <div className="py-2.5 space-y-2 border-b border-black/[0.04] shrink-0 text-xs">
@@ -192,7 +386,7 @@ const LeadQuickActions: React.FC<QuickActionsProps> = ({ lead, onStatusChange, o
       </button>
     </div>
 
-    <div className="grid grid-cols-3 gap-1.5">
+    <div className="grid grid-cols-4 gap-1.5">
       <ContactAction
         href={lead.phone ? `tel:${lead.phone}` : undefined}
         title={`Llamar a ${lead.phone}`}
@@ -203,24 +397,17 @@ const LeadQuickActions: React.FC<QuickActionsProps> = ({ lead, onStatusChange, o
         activeIconClassName="text-[#28A745]"
       />
       <ContactAction
-        href={lead.phone ? `https://wa.me/${lead.phone.replace(/[^0-9]/g, '')}` : undefined}
+        href={whatsappHref(lead.phone)}
         external
         title="Abrir chat en WhatsApp"
         label="WhatsApp"
-        disabledLabel="WhatsApp"
+        disabledLabel="Sin WhatsApp"
         Icon={MessageCircle}
         activeClassName="bg-[#25D366]/10 hover:bg-[#25D366]/20 text-[#1EBE5D] border-[#25D366]/20"
         activeIconClassName="text-[#25D366]"
       />
-      <ContactAction
-        href={lead.email ? `mailto:${lead.email}` : undefined}
-        title={`Enviar email a ${lead.email}`}
-        label="Email"
-        disabledLabel="Sin Email"
-        Icon={Mail}
-        activeClassName="bg-[#0071E3]/10 hover:bg-[#0071E3]/20 text-[#0071E3] border-[#0071E3]/20"
-        activeIconClassName="text-[#0071E3]"
-      />
+      <ContactAction {...emailActionProps(lead)} />
+      <ContactAction {...linkedinActionProps(lead)} />
     </div>
   </div>
 );
@@ -310,6 +497,7 @@ const ScheduleMeetingModal: React.FC<{
             <input
               type="datetime-local"
               required
+              min={localDateTimeInputNow()}
               value={meetingDate}
               onChange={(e) => setMeetingDate(e.target.value)}
               className="w-full rounded-xl border border-black/[0.06] bg-[#F5F5F7] px-3 py-1.5 text-xs font-semibold focus:outline-none focus:ring-1 focus:ring-[#0071E3]"

@@ -124,7 +124,7 @@ export const MobileQuickCapture: React.FC<MobileQuickCaptureProps> = ({
                 </p>
               </div>
             ) : (
-              <form onSubmit={handleSubmit} className="p-4 sm:p-6 space-y-4">
+              <form onSubmit={handleSubmit} className="p-4 sm:p-6 space-y-3">
                 <VoiceLeadAssistant
                   onApplyVoiceData={form.handleApplyVoiceData}
                   onExecuteCommand={form.handleExecuteVoiceCommand}
