@@ -428,7 +428,7 @@ export default function App() {
         />
 
         {/* Contenido Dinámico según la Vista Activa */}
-        <main className="flex-1 flex flex-col p-3 sm:p-4 md:p-6 pb-[calc(var(--bottom-nav-reserve)+1.5rem)] max-w-[1600px] w-full mx-auto space-y-3">
+        <main className="flex-1 min-w-0 flex flex-col p-3 sm:p-4 md:p-6 pb-[calc(var(--bottom-nav-reserve)+1.5rem)] max-w-[1600px] w-full mx-auto space-y-3">
 
           {/* Banner Modo Offline */}
           {isDeviceOffline && (

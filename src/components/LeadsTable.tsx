@@ -583,8 +583,7 @@ export const LeadsTable: React.FC<LeadsTableProps> = ({
           <button
             onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
             disabled={currentPage === 1}
-            className="w-7 h-7 sm:w-8 sm:h-8 rounded-xl border border-black/[0.08] flex items-center justify-center hover:bg-black/[0.04] disabled:opacity-30 disabled:cursor-not-allowed cursor-pointer transition-colors"
-          >
+className="w-7 h-7 sm:w-8 sm:h-8 shrink-0 rounded-xl border border-black/10 flex items-center justify-center hover:bg-black/5 active:scale-95 disabled:opacity-30 disabled:pointer-events-none cursor-pointer transition-all"          >
             <ChevronLeft className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-slate-700" />
           </button>
 

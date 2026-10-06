@@ -71,9 +71,9 @@ export const UsuariosView: React.FC<UsuariosViewProps> = ({
   };
 
   return (
-    <div className="max-w-7xl mx-auto flex flex-col flex-1">
+    <div className="w-full min-w-0 max-w-7xl mx-auto flex flex-col flex-1">
       {/* Contenedor Único Integrado de Alto Completo */}
-      <div className="bg-white rounded-2xl border border-slate-200/80 shadow-2xs overflow-hidden flex-1 flex flex-col">
+      <div className="bg-white rounded-2xl border border-slate-200/80 shadow-2xs overflow-hidden flex-1 flex flex-col min-w-0">
         
         {/* 1. Encabezado y Acciones */}
         <div className="p-4 sm:p-5 border-b border-slate-100 flex flex-col md:flex-row md:items-center justify-between gap-4 shrink-0">
@@ -146,14 +146,14 @@ export const UsuariosView: React.FC<UsuariosViewProps> = ({
 
         {/* 3. Barra de Búsqueda y Filtros */}
         <div className="p-3 bg-slate-50/30 border-b border-slate-100 flex flex-col sm:flex-row items-stretch sm:items-center gap-2.5 shrink-0">
-          <div className="relative flex-1">
+          <div className="relative flex-1 min-w-0">
             <Search className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
             <input
               type="text"
               placeholder="Buscar por nombre, cargo, correo o equipo..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              className="w-full pl-9 pr-3 py-1.5 bg-white border border-slate-200/90 rounded-xl text-xs font-medium focus:outline-none focus:ring-2 focus:ring-blue-500 placeholder:text-slate-400"
+              className="w-full pl-9 pr-3 py-1.5 bg-white border border-slate-200/90 rounded-xl text-base sm:text-xs font-medium focus:outline-none focus:ring-2 focus:ring-blue-500 placeholder:text-slate-400"
             />
           </div>
 
@@ -190,7 +190,7 @@ export const UsuariosView: React.FC<UsuariosViewProps> = ({
             <select
               value={teamFilter}
               onChange={(e) => setTeamFilter(e.target.value)}
-              className="px-2.5 py-1.5 bg-white border border-slate-200/90 rounded-xl text-[11px] font-semibold text-slate-700 cursor-pointer focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="px-2.5 py-1.5 bg-white border border-slate-200/90 rounded-xl text-base sm:text-[11px] font-semibold text-slate-700 cursor-pointer focus:outline-none focus:ring-2 focus:ring-blue-500 min-w-0"
             >
               <option value="all">Sedes / Equipos ({teams.length})</option>
               {teams.map((t) => (
@@ -201,7 +201,7 @@ export const UsuariosView: React.FC<UsuariosViewProps> = ({
         </div>
 
         {/* 4. Cuerpo Principal (Abarca todo el espacio vertical restante) */}
-        <div className="p-4 flex-1 flex flex-col justify-start">
+        <div className="p-4 flex-1 flex flex-col justify-start min-w-0">
           {filteredUsers.length === 0 ? (
             <div className="flex-1 flex flex-col items-center justify-center py-12 text-center">
               <div className="w-12 h-12 rounded-2xl bg-slate-50 text-slate-400 flex items-center justify-center mb-3 border border-slate-100">
