@@ -110,7 +110,7 @@ export const Header: React.FC<HeaderProps> = ({
           {/* Botón de Menú */}
           <button 
             onClick={onToggleMobileMenu}
-            className="w-8 h-8 rounded-xl text-slate-700 hover:bg-[#F5F5F7] hover:text-[#0071E3] active:bg-slate-200 flex items-center justify-center cursor-pointer shrink-0 transition-colors"
+            className="w-8 h-8 rounded-xl text-slate-700 hover:bg-[#F5F5F7] hover:text-primary active:bg-slate-200 flex items-center justify-center cursor-pointer shrink-0 transition-colors"
             title="Abrir menú de navegación"
             aria-label="Abrir menú de navegación"
           >
@@ -134,10 +134,10 @@ export const Header: React.FC<HeaderProps> = ({
           <div className="relative min-w-0 flex-1" ref={eventDropdownRef}>
             <button
               onClick={() => setShowEventDropdown(!showEventDropdown)}
-              className="flex w-full items-center gap-1 px-1.5 sm:px-2 py-1 text-slate-700 hover:text-[#0071E3] hover:bg-[#F5F5F7] rounded-lg text-xs font-semibold transition-colors cursor-pointer"
+              className="flex w-full items-center gap-1 px-1.5 sm:px-2 py-1 text-slate-700 hover:text-primary hover:bg-[#F5F5F7] rounded-lg text-xs font-semibold transition-colors cursor-pointer"
               title="Cambiar o crear evento"
             >
-              <Calendar className="w-3.5 h-3.5 text-[#0071E3] shrink-0" />
+              <Calendar className="w-3.5 h-3.5 text-primary shrink-0" />
               <span className="min-w-0 truncate font-bold text-xs">
                 {currentEvent.name}
               </span>
@@ -162,7 +162,7 @@ export const Header: React.FC<HeaderProps> = ({
                       }}
                       className={`w-full text-left p-2 rounded-xl text-xs transition-colors cursor-pointer flex items-center justify-between ${
                         evt.id === currentEvent.id 
-                          ? 'bg-[#0071E3]/10 text-[#0071E3] font-bold' 
+                          ? 'bg-primary/10 text-primary font-bold' 
                           : 'hover:bg-[#F5F5F7] active:bg-slate-100 text-[#1D1D1F]'
                       }`}
                     >
@@ -170,7 +170,7 @@ export const Header: React.FC<HeaderProps> = ({
                         <div className="truncate font-semibold">{evt.name}</div>
                         <div className="text-[11px] text-slate-500 truncate">{evt.location} • {evt.dateRange}</div>
                       </div>
-                      {evt.id === currentEvent.id && <Check className="w-4 h-4 text-[#0071E3] shrink-0" />}
+                      {evt.id === currentEvent.id && <Check className="w-4 h-4 text-primary shrink-0" />}
                     </button>
                   ))}
                 </div>
@@ -182,7 +182,7 @@ export const Header: React.FC<HeaderProps> = ({
                         setShowEventDropdown(false);
                         onOpenCreateEventModal();
                       }}
-                      className="w-full py-2 px-3 bg-[#0071E3] hover:bg-[#0077ED] text-white rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 shadow-xs transition-colors cursor-pointer"
+                      className="w-full py-2 px-3 bg-primary hover:bg-primary-hover text-white rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 shadow-xs transition-colors cursor-pointer"
                     >
                       <Plus className="w-3.5 h-3.5" />
                       <span>+ Crear Nuevo Evento</span>
@@ -219,7 +219,7 @@ export const Header: React.FC<HeaderProps> = ({
               title={`Usuario activo: ${currentUser.name}`}
               aria-expanded={showUserDropdown}
             >
-              <div className={`w-7 h-7 sm:w-7 sm:h-7 rounded-full ${currentUser.avatar ? 'bg-[#0071E3]' : (isAdmin ? 'bg-slate-900' : 'bg-[#0071E3]')} text-white font-bold text-[11px] flex items-center justify-center shadow-2xs shrink-0 ring-2 ring-white`}>
+              <div className={`w-7 h-7 sm:w-7 sm:h-7 rounded-full ${currentUser.avatar ? 'bg-primary' : (isAdmin ? 'bg-slate-900' : 'bg-primary')} text-white font-bold text-[11px] flex items-center justify-center shadow-2xs shrink-0 ring-2 ring-white`}>
                 {currentUser.avatar || 'AD'}
               </div>
               <div className="hidden md:flex flex-col items-start leading-none text-left">
@@ -227,7 +227,7 @@ export const Header: React.FC<HeaderProps> = ({
                   {currentUser.name.split(' ')[0]}
                 </span>
                 <span className={`text-[9px] font-black uppercase tracking-tight ${
-                  isAdmin ? 'text-amber-600' : 'text-[#0071E3]'
+                  isAdmin ? 'text-amber-600' : 'text-primary'
                 }`}>
                   {isAdmin ? 'Admin' : 'Ejecutivo'}
                 </span>
@@ -267,10 +267,10 @@ export const Header: React.FC<HeaderProps> = ({
               <Search className="w-3.5 h-3.5 absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
               <input
                 type="text"
-                placeholder="Buscar por nombre o empresa..."
+                placeholder="Buscar por empresa, contacto, sector o palabra clave..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full pl-8 pr-7 py-1.5 bg-white border border-black/[0.06] rounded-xl text-xs text-[#1D1D1F] focus:outline-none focus:ring-2 focus:ring-[#0071E3] shadow-2xs placeholder:text-slate-400 transition-all truncate"
+                className="w-full pl-8 pr-7 py-1.5 bg-white border border-black/[0.06] rounded-xl text-xs text-[#1D1D1F] focus:outline-none focus:ring-2 focus:ring-primary shadow-2xs placeholder:text-slate-400 transition-all truncate"
               />
               {searchQuery && (
                 <button
@@ -287,7 +287,7 @@ export const Header: React.FC<HeaderProps> = ({
               onClick={onToggleFilters}
               className={`h-8 px-2 sm:px-3 rounded-xl border text-xs font-semibold flex items-center justify-center gap-1 transition-all cursor-pointer shrink-0 active:scale-95 ${
                 activeFilterCount > 0 
-                  ? 'bg-[#0071E3] border-[#0071E3] text-white shadow-xs' 
+                  ? 'bg-primary border-primary text-white shadow-xs' 
                   : 'bg-white border-black/[0.06] text-slate-700 hover:bg-slate-50'
               }`}
               title="Filtrar leads"
@@ -295,7 +295,7 @@ export const Header: React.FC<HeaderProps> = ({
               <Filter className="w-3.5 h-3.5" />
               <span className="hidden sm:inline">Filtros</span>
               {activeFilterCount > 0 && (
-                <span className="w-4 h-4 rounded-full text-[10px] font-bold flex items-center justify-center bg-white text-[#0071E3]">
+                <span className="w-4 h-4 rounded-full text-[10px] font-bold flex items-center justify-center bg-white text-primary">
                   {activeFilterCount}
                 </span>
               )}
@@ -305,12 +305,12 @@ export const Header: React.FC<HeaderProps> = ({
               onClick={() => setShowOnlyMyLeads(!showOnlyMyLeads)}
               className={`h-8 px-2 sm:px-3 rounded-xl text-xs font-semibold flex items-center justify-center gap-1 transition-all border cursor-pointer shrink-0 active:scale-95 ${
                 showOnlyMyLeads 
-                  ? 'bg-[#0071E3]/10 border-[#0071E3]/30 text-[#0071E3]' 
+                  ? 'bg-primary/10 border-primary/30 text-primary' 
                   : 'bg-white border-black/[0.06] text-slate-600 hover:bg-slate-50'
               }`}
               title={`Filtrar por ${currentUser.name}`}
             >
-              <UserCheck className="w-3.5 h-3.5 text-[#0071E3]" />
+              <UserCheck className="w-3.5 h-3.5 text-primary" />
               <span className="whitespace-nowrap text-[11px] sm:text-xs">
                 {showOnlyMyLeads ? "Mis Leads" : "Todos"}
               </span>

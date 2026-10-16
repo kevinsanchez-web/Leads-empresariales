@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { 
   Users, 
   UserPlus, 
@@ -8,11 +8,15 @@ import {
   Clock, 
   Search, 
   ArrowRight, 
-  Trash2, 
+  Check,
+  ChevronDown,
+  Trash2,
   UserCheck,
-  Briefcase
+  Briefcase,
+  X
 } from 'lucide-react';
 import { UserRep, Lead, UserRoleType } from '../types';
+import { RoundedSelect } from './RoundedSelect';
 
 interface UsuariosViewProps {
   users: UserRep[];
@@ -36,6 +40,19 @@ export const UsuariosView: React.FC<UsuariosViewProps> = ({
   const [search, setSearch] = useState('');
   const [roleFilter, setRoleFilter] = useState<'all' | 'executive' | 'admin'>('all');
   const [teamFilter, setTeamFilter] = useState('all');
+  const [showCreateMenu, setShowCreateMenu] = useState(false);
+  const createMenuRef = useRef<HTMLDivElement>(null);
+
+  // Cerrar el menú de "Crear Usuario" al hacer clic fuera
+  useEffect(() => {
+    const handleOutside = (e: MouseEvent) => {
+      if (createMenuRef.current && !createMenuRef.current.contains(e.target as Node)) {
+        setShowCreateMenu(false);
+      }
+    };
+    document.addEventListener('mousedown', handleOutside);
+    return () => document.removeEventListener('mousedown', handleOutside);
+  }, []);
 
   const filteredUsers = users.filter((u) => {
     const isAdmin = u.accountType === 'admin' || u.role.toLowerCase().includes('admin');
@@ -76,72 +93,101 @@ export const UsuariosView: React.FC<UsuariosViewProps> = ({
       <div className="bg-white rounded-2xl border border-slate-200/80 shadow-2xs overflow-hidden flex-1 flex flex-col min-w-0">
         
         {/* 1. Encabezado y Acciones */}
-        <div className="p-4 sm:p-5 border-b border-slate-100 flex flex-col md:flex-row md:items-center justify-between gap-4 shrink-0">
-          <div>
-            <div className="flex items-center gap-2 text-xs font-bold text-slate-700 tracking-wide mb-1">
-              <Shield className="w-4 h-4 text-slate-600" />
-              <span>Gestión de Cuentas & Roles</span>
-            </div>
+        <div className="p-4 sm:p-5 border-b border-slate-100 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shrink-0">
+          <div className="min-w-0">
             <h2 className="text-xl font-bold text-slate-900 tracking-tight">Equipo Comercial & Administradores</h2>
-            <p className="text-xs text-slate-500 font-medium mt-0.5 max-w-2xl">
-              Crea cuentas para los <strong>Ejecutivos de Cuentas</strong> (captura ágil de leads) y administra los perfiles con acceso total de <strong>Administrador</strong>.
-            </p>
+            <p className="text-xs text-slate-500 font-medium mt-0.5">Accesos y roles del equipo.</p>
           </div>
 
-          <div className="flex flex-wrap items-center gap-2">
+          <div className="relative shrink-0 self-start sm:self-auto" ref={createMenuRef}>
             <button
-              onClick={() => onOpenAddUserModal('executive')}
-              className="px-3.5 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-semibold shadow-2xs flex items-center justify-center gap-1.5 cursor-pointer transition-all active:scale-98 shrink-0"
+              type="button"
+              onClick={() => setShowCreateMenu(prev => !prev)}
+              className="px-3.5 py-2 bg-primary hover:bg-primary-hover text-white rounded-xl text-xs font-semibold shadow-2xs flex items-center justify-center gap-1.5 cursor-pointer transition-all active:scale-98 shrink-0"
             >
               <UserPlus className="w-3.5 h-3.5" />
-              <span>+ Crear Cuenta de Ejecutivo</span>
+              <span>Crear Usuario</span>
+              <ChevronDown className={`w-3.5 h-3.5 transition-transform ${showCreateMenu ? 'rotate-180' : ''}`} />
             </button>
 
-            <button
-              onClick={() => onOpenAddUserModal('admin')}
-              className="px-3.5 py-2 bg-amber-50 hover:bg-amber-100/80 text-amber-900 border border-amber-200/80 rounded-xl text-xs font-semibold shadow-2xs flex items-center justify-center gap-1.5 cursor-pointer transition-all active:scale-98 shrink-0"
-            >
-              <Shield className="w-3.5 h-3.5 text-amber-600" />
-              <span>+ Crear Administrador</span>
-            </button>
+            {showCreateMenu && (
+              <div className="absolute right-0 mt-2 min-w-[210px] bg-white rounded-xl border border-slate-200 shadow-xl p-1 z-20">
+                <button
+                  type="button"
+                  onClick={() => { setShowCreateMenu(false); onOpenAddUserModal('executive'); }}
+                  className="w-full flex items-center gap-2 px-2.5 py-2 rounded-lg text-xs font-semibold text-slate-700 hover:bg-slate-50 hover:text-slate-900 transition-colors cursor-pointer text-left"
+                >
+                  <Briefcase className="w-3.5 h-3.5 text-primary shrink-0" />
+                  <span>Ejecutivo de Cuentas</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => { setShowCreateMenu(false); onOpenAddUserModal('admin'); }}
+                  className="w-full flex items-center gap-2 px-2.5 py-2 rounded-lg text-xs font-semibold text-slate-700 hover:bg-slate-50 hover:text-slate-900 transition-colors cursor-pointer text-left"
+                >
+                  <Shield className="w-3.5 h-3.5 text-amber-600 shrink-0" />
+                  <span>Administrador</span>
+                </button>
+              </div>
+            )}
           </div>
         </div>
 
-        {/* 2. Tarjetas Explicativas de Roles */}
-        <div className="p-3.5 sm:p-4 bg-slate-50/50 border-b border-slate-100 grid grid-cols-1 md:grid-cols-2 gap-3 shrink-0">
-          <div className="bg-white rounded-xl p-3 border border-slate-200/70 flex items-start gap-3 shadow-2xs">
-            <div className="w-8 h-8 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center font-bold shrink-0">
+        {/* 2. Tarjetas de Rol: funcionan como filtro interactivo */}
+        <div className="p-3.5 sm:p-4 bg-slate-50/50 border-b border-slate-100 grid grid-cols-1 sm:grid-cols-2 gap-3 shrink-0">
+          <button
+            type="button"
+            onClick={() => setRoleFilter(prev => prev === 'executive' ? 'all' : 'executive')}
+            aria-pressed={roleFilter === 'executive'}
+            className={`text-left w-full bg-white rounded-xl p-3 border flex items-start gap-3 shadow-2xs cursor-pointer transition-all ${
+              roleFilter === 'executive'
+                ? 'border-primary ring-2 ring-primary/20'
+                : 'border-slate-200/70 hover:border-slate-300'
+            }`}
+          >
+            <div className="w-8 h-8 rounded-lg bg-primary/10 text-primary flex items-center justify-center font-bold shrink-0">
               <Briefcase className="w-4 h-4" />
             </div>
-            <div>
-              <div className="flex items-center gap-2 mb-0.5">
-                <span className="font-bold text-xs text-slate-900">Perfil: Ejecutivo de Cuentas</span>
-                <span className="text-[10px] font-bold px-2 py-0.2 rounded-md bg-blue-50 text-blue-700 border border-blue-200/50">
+            <div className="min-w-0 flex-1">
+              <div className="flex items-center gap-2 mb-0.5 flex-wrap">
+                <span className="font-bold text-xs text-slate-900">Ejecutivos de Cuentas</span>
+                <span className="text-[10px] font-bold px-2 py-0.2 rounded-md bg-primary/10 text-primary border border-primary/15">
                   {executiveCount} Activos
                 </span>
+                {roleFilter === 'executive' && <Check className="w-3.5 h-3.5 text-primary shrink-0" />}
               </div>
               <p className="text-[11px] text-slate-500 leading-relaxed font-normal">
-                ⚡ <strong>Menú simplificado</strong>: Diseñado para capturar prospectos a máxima velocidad con Escáner IA, QR, notas de voz y formulario rápido.
+                Captura ágil de leads.
               </p>
             </div>
-          </div>
+          </button>
 
-          <div className="bg-white rounded-xl p-3 border border-slate-200/70 flex items-start gap-3 shadow-2xs">
+          <button
+            type="button"
+            onClick={() => setRoleFilter(prev => prev === 'admin' ? 'all' : 'admin')}
+            aria-pressed={roleFilter === 'admin'}
+            className={`text-left w-full bg-white rounded-xl p-3 border flex items-start gap-3 shadow-2xs cursor-pointer transition-all ${
+              roleFilter === 'admin'
+                ? 'border-primary ring-2 ring-primary/20'
+                : 'border-slate-200/70 hover:border-slate-300'
+            }`}
+          >
             <div className="w-8 h-8 rounded-lg bg-amber-50 text-amber-600 flex items-center justify-center font-bold shrink-0">
               <Shield className="w-4 h-4" />
             </div>
-            <div>
-              <div className="flex items-center gap-2 mb-0.5">
-                <span className="font-bold text-xs text-slate-900">Perfil: Administrador</span>
+            <div className="min-w-0 flex-1">
+              <div className="flex items-center gap-2 mb-0.5 flex-wrap">
+                <span className="font-bold text-xs text-slate-900">Administradores</span>
                 <span className="text-[10px] font-bold px-2 py-0.2 rounded-md bg-amber-50 text-amber-700 border border-amber-200/50">
                   {adminCount} Activos
                 </span>
+                {roleFilter === 'admin' && <Check className="w-3.5 h-3.5 text-primary shrink-0" />}
               </div>
               <p className="text-[11px] text-slate-500 leading-relaxed font-normal">
-                🛡️ <strong>Acceso total</strong>: Gestión de cuentas, creación de ferias/eventos, panel analítico global, métricas pipeline y exportación.
+                Acceso total al panel.
               </p>
             </div>
-          </div>
+          </button>
         </div>
 
         {/* 3. Barra de Búsqueda y Filtros */}
@@ -153,50 +199,34 @@ export const UsuariosView: React.FC<UsuariosViewProps> = ({
               placeholder="Buscar por nombre, cargo, correo o equipo..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              className="w-full pl-9 pr-3 py-1.5 bg-white border border-slate-200/90 rounded-xl text-base sm:text-xs font-medium focus:outline-none focus:ring-2 focus:ring-blue-500 placeholder:text-slate-400"
+              className="w-full pl-9 pr-3 py-1.5 bg-white border border-slate-200/90 rounded-xl text-base sm:text-xs font-medium focus:outline-none focus:ring-2 focus:ring-primary placeholder:text-slate-400"
             />
           </div>
 
           <div className="flex items-center gap-2 overflow-x-auto">
-            <div className="flex items-center bg-white p-0.5 rounded-xl border border-slate-200/80">
+            {(roleFilter !== 'all' || teamFilter !== 'all') && (
               <button
-                onClick={() => setRoleFilter('all')}
-                className={`px-2.5 py-1 rounded-lg text-[11px] font-semibold transition-all cursor-pointer ${
-                  roleFilter === 'all' ? 'bg-blue-600 text-white shadow-2xs' : 'text-slate-600 hover:text-slate-900'
-                }`}
+                type="button"
+                onClick={() => { setRoleFilter('all'); setTeamFilter('all'); }}
+                className="px-2.5 py-1.5 bg-white border border-slate-200/80 rounded-xl text-[11px] font-semibold text-slate-500 hover:text-slate-800 hover:border-slate-300 flex items-center gap-1 transition-colors cursor-pointer whitespace-nowrap shrink-0"
               >
-                Todos ({users.length})
+                <X className="w-3 h-3" />
+                <span>Limpiar</span>
               </button>
-              <button
-                onClick={() => setRoleFilter('executive')}
-                className={`px-2.5 py-1 rounded-lg text-[11px] font-semibold transition-all cursor-pointer flex items-center gap-1 ${
-                  roleFilter === 'executive' ? 'bg-blue-600 text-white shadow-2xs' : 'text-slate-600 hover:text-slate-900'
-                }`}
-              >
-                <Briefcase className="w-3 h-3" />
-                <span>Ejecutivos ({executiveCount})</span>
-              </button>
-              <button
-                onClick={() => setRoleFilter('admin')}
-                className={`px-2.5 py-1 rounded-lg text-[11px] font-semibold transition-all cursor-pointer flex items-center gap-1 ${
-                  roleFilter === 'admin' ? 'bg-amber-500 text-white shadow-2xs' : 'text-slate-600 hover:text-slate-900'
-                }`}
-              >
-                <Shield className="w-3 h-3" />
-                <span>Admins ({adminCount})</span>
-              </button>
-            </div>
+            )}
 
-            <select
+            <RoundedSelect
+              variant="bare"
               value={teamFilter}
-              onChange={(e) => setTeamFilter(e.target.value)}
-              className="px-2.5 py-1.5 bg-white border border-slate-200/90 rounded-xl text-base sm:text-[11px] font-semibold text-slate-700 cursor-pointer focus:outline-none focus:ring-2 focus:ring-blue-500 min-w-0"
-            >
-              <option value="all">Sedes / Equipos ({teams.length})</option>
-              {teams.map((t) => (
-                <option key={t} value={t}>{t}</option>
-              ))}
-            </select>
+              onChange={setTeamFilter}
+              ariaLabel="Filtrar por sede o equipo"
+              className="min-w-0"
+              buttonClassName="px-2.5 py-1.5 bg-white border border-slate-200/90 rounded-xl text-base sm:text-[11px] font-semibold text-slate-700 cursor-pointer focus:outline-none focus:ring-2 focus:ring-primary pr-7"
+              options={[
+                { value: 'all', label: `Sedes / Equipos (${teams.length})` },
+                ...teams.map(t => ({ value: t, label: t }))
+              ]}
+            />
           </div>
         </div>
 
@@ -209,6 +239,14 @@ export const UsuariosView: React.FC<UsuariosViewProps> = ({
               </div>
               <h3 className="text-xs font-bold text-slate-800">No se encontraron usuarios</h3>
               <p className="text-[11px] text-slate-400 mt-0.5">Intenta cambiar los filtros o el término de búsqueda.</p>
+              <button
+                type="button"
+                onClick={() => onOpenAddUserModal('executive')}
+                className="mt-4 px-4 py-2 bg-primary hover:bg-primary-hover text-white rounded-xl text-xs font-semibold flex items-center justify-center gap-1.5 shadow-2xs cursor-pointer transition-all active:scale-98"
+              >
+                <UserPlus className="w-3.5 h-3.5" />
+                <span>{users.length === 0 ? 'Crear primer usuario' : 'Crear usuario'}</span>
+              </button>
             </div>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3.5">
@@ -222,12 +260,12 @@ export const UsuariosView: React.FC<UsuariosViewProps> = ({
                     key={user.id}
                     className={`bg-slate-50/50 hover:bg-slate-100/50 rounded-2xl border p-4 flex flex-col justify-between transition-all relative overflow-hidden shadow-2xs ${
                       isCurrent 
-                        ? 'border-blue-500 ring-2 ring-blue-500/20 bg-blue-50/20' 
+                        ? 'border-primary ring-2 ring-primary/20 bg-primary/5' 
                         : 'border-slate-200/80 hover:border-slate-300'
                     }`}
                   >
                     {isCurrent && (
-                      <div className="absolute top-0 right-0 bg-blue-600 text-white text-[9px] font-extrabold px-2.5 py-0.5 rounded-bl-lg flex items-center gap-1">
+                      <div className="absolute top-0 right-0 bg-primary text-white text-[9px] font-extrabold px-2.5 py-0.5 rounded-bl-lg flex items-center gap-1">
                         <UserCheck className="w-2.5 h-2.5" />
                         <span>SESIÓN ACTIVA</span>
                       </div>
@@ -236,7 +274,7 @@ export const UsuariosView: React.FC<UsuariosViewProps> = ({
                     <div>
                       {/* Encabezado Tarjeta */}
                       <div className="flex items-start gap-3 mb-3">
-                        <div className={`w-10 h-10 rounded-xl ${user.color || (isAdmin ? 'bg-amber-600' : 'bg-blue-600')} text-white font-bold text-sm flex items-center justify-center shrink-0 shadow-2xs`}>
+                        <div className={`w-10 h-10 rounded-xl ${user.color || (isAdmin ? 'bg-amber-600' : 'bg-primary')} text-white font-bold text-sm flex items-center justify-center shrink-0 shadow-2xs`}>
                           {user.avatar}
                         </div>
                         <div className="min-w-0 pr-10">
@@ -244,9 +282,9 @@ export const UsuariosView: React.FC<UsuariosViewProps> = ({
                             <span className={`text-[9px] font-bold px-1.5 py-0.2 rounded-md flex items-center gap-1 ${
                               isAdmin 
                                 ? 'bg-amber-50 text-amber-700 border border-amber-200/60' 
-                                : 'bg-blue-50 text-blue-700 border border-blue-200/60'
+                                : 'bg-primary/10 text-primary border border-primary/20'
                             }`}>
-                              {isAdmin ? <Shield className="w-2.5 h-2.5 text-amber-600" /> : <Briefcase className="w-2.5 h-2.5 text-blue-600" />}
+                              {isAdmin ? <Shield className="w-2.5 h-2.5 text-amber-600" /> : <Briefcase className="w-2.5 h-2.5 text-primary" />}
                               <span>{isAdmin ? 'ADMINISTRADOR' : 'EJECUTIVO'}</span>
                             </span>
                           </div>
@@ -298,7 +336,7 @@ export const UsuariosView: React.FC<UsuariosViewProps> = ({
                     {/* Acciones */}
                     <div className="pt-1 flex items-center justify-between gap-1.5">
                       {isCurrent ? (
-                        <div className="w-full py-1.5 bg-blue-50 text-blue-700 font-bold text-[11px] rounded-xl text-center border border-blue-200/60 flex items-center justify-center gap-1">
+                        <div className="w-full py-1.5 bg-primary/10 text-primary font-bold text-[11px] rounded-xl text-center border border-primary/20 flex items-center justify-center gap-1">
                           <UserCheck className="w-3 h-3" />
                           <span>Sesión Actual ({isAdmin ? 'Admin' : 'Ejecutivo'})</span>
                         </div>
@@ -306,7 +344,7 @@ export const UsuariosView: React.FC<UsuariosViewProps> = ({
                         <button
                           onClick={() => onSelectUser(user)}
                           className={`flex-1 py-1.5 text-white rounded-xl text-[11px] font-semibold transition-colors flex items-center justify-center gap-1 shadow-2xs cursor-pointer ${
-                            isAdmin ? 'bg-slate-800 hover:bg-slate-900' : 'bg-blue-600 hover:bg-blue-700'
+                            isAdmin ? 'bg-slate-800 hover:bg-slate-900' : 'bg-primary hover:bg-primary-hover'
                           }`}
                         >
                           <span>Iniciar Sesión como {isAdmin ? 'Admin' : 'Ejecutivo'}</span>

@@ -9,6 +9,14 @@
   --primary-gradient-from: #0071E3;
   --primary-gradient-to: #5856D6;
 
+  /* Tokens del color de acento (Tailwind v4). Se declaran aquí (sin capa) y se
+     sobreescriben en cada bloque [data-theme] de abajo, de modo que la fuente de
+     verdad es única: cambiar el tema en Configuración repinta toda la app. */
+  --color-primary: #0071E3;
+  --color-primary-hover: #0077ED;
+  --color-primary-light: rgba(0, 113, 227, 0.1);
+  --color-primary-border: rgba(0, 113, 227, 0.25);
+
   /* Barra de navegación inferior. Es `fixed`, o sea no ocupa espacio en el flujo, así que
      cualquier vista que quiera llenar la pantalla tiene que descontarla a mano. Estos tokens
      son la única medida de referencia: si cambia el alto de la barra, se ajusta aquí. */
@@ -24,6 +32,10 @@
   --primary-accent-border: rgba(16, 185, 129, 0.25);
   --primary-gradient-from: #10B981;
   --primary-gradient-to: #059669;
+  --color-primary: #10B981;
+  --color-primary-hover: #059669;
+  --color-primary-light: rgba(16, 185, 129, 0.1);
+  --color-primary-border: rgba(16, 185, 129, 0.25);
 }
 
 [data-theme="naranja"] {
@@ -33,6 +45,10 @@
   --primary-accent-border: rgba(249, 115, 22, 0.25);
   --primary-gradient-from: #F97316;
   --primary-gradient-to: #E11D48;
+  --color-primary: #F97316;
+  --color-primary-hover: #EA580C;
+  --color-primary-light: rgba(249, 115, 22, 0.1);
+  --color-primary-border: rgba(249, 115, 22, 0.25);
 }
 
 [data-theme="purpura"] {
@@ -42,6 +58,10 @@
   --primary-accent-border: rgba(139, 92, 246, 0.25);
   --primary-gradient-from: #8B5CF6;
   --primary-gradient-to: #6366F1;
+  --color-primary: #8B5CF6;
+  --color-primary-hover: #7C3AED;
+  --color-primary-light: rgba(139, 92, 246, 0.1);
+  --color-primary-border: rgba(139, 92, 246, 0.25);
 }
 
 /* Dynamic theme helper classes */
@@ -148,6 +168,15 @@
 /* Registradas en @theme (no como clases planas) para que Tailwind genere las utilidades
    con soporte de variantes responsive, p. ej. md:animate-slide-in-right. */
 @theme {
+  /* Color de acento del tema activo. Al declararse aquí, Tailwind genera las
+     utilidades reales (bg-primary, text-primary, hover:bg-primary, ring-primary/40,
+     focus:ring-primary...) con soporte de variantes y opacidad, y cada una resuelve
+     var(--color-primary), que es lo que cambia al seleccionar un tema. */
+  --color-primary: #0071E3;
+  --color-primary-hover: #0077ED;
+  --color-primary-light: rgba(0, 113, 227, 0.1);
+  --color-primary-border: rgba(0, 113, 227, 0.25);
+
   /* Escalón intermedio de 400px, entre el móvil y `sm` (640px). Va de primero para que las
      media queries salgan en orden ascendente. Sin él, las utilidades `xs:*` no se generan
      y clases como `hidden xs:inline` se quedan siempre ocultas. */

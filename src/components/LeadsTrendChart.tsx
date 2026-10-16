@@ -8,7 +8,7 @@ import {
   Tooltip,
   ResponsiveContainer
 } from 'recharts';
-import { TrendingUp, Calendar, Zap, Star } from 'lucide-react';
+import { TrendingUp } from 'lucide-react';
 import { Lead, EventOption } from '../types';
 import {
   todayISODate,
@@ -25,11 +25,10 @@ interface LeadsTrendChartProps {
   compact?: boolean;
 }
 
-// Punto personalizado: no dibuja nada cuando el valor es 0
-// (evita el montón de puntos superpuestos en los días vacíos)
+// Punto personalizado con comprobación segura de coordenadas
 const renderDot = (color: string, r: number, strokeWidth: number) => (props: any) => {
   const { cx, cy, value, index } = props;
-  if (!value) return <g key={`dot-${index}`} />;
+  if (!value || typeof cx !== 'number' || typeof cy !== 'number') return <React.Fragment key={`dot-${index}`} />;
   return (
     <circle
       key={`dot-${index}`}
@@ -63,8 +62,6 @@ export const LeadsTrendChart: React.FC<LeadsTrendChartProps> = ({
       total: number;
       priority: number;
       normal: number;
-      // Nombres de los leads del día: sin esto la gráfica solo muestra un
-      // conteo y no se puede saber qué lead cayó en cada punto.
       leads: string[];
     };
 
@@ -110,9 +107,6 @@ export const LeadsTrendChart: React.FC<LeadsTrendChartProps> = ({
       endDate = todayStr;
     }
 
-    // Solo hay rango de evento interpretable si `dateRange` se pudo entender.
-    // Sin rango válido el eje va del primer lead al último: antes el mismo recorte
-    // de días vacíos se aplicaba igual y dejaba todo amontonado en un punto.
     const hasEventRange = Boolean(range);
     if (!hasEventRange && lastLeadDate > endDate) {
       endDate = lastLeadDate;
@@ -122,8 +116,6 @@ export const LeadsTrendChart: React.FC<LeadsTrendChartProps> = ({
     const firstLeadMs = isoDateToLocalMs(firstLeadDate);
     const gapDays = Math.round((firstLeadMs - startMs) / (1000 * 3600 * 24));
 
-    // Con rango de evento válido, si hay más de 2 días vacíos antes del primer
-    // lead, recortar el eje a 2 días antes para no dibujar semanas en cero.
     if (hasEventRange && gapDays > 2) {
       const trimmedDate = new Date(firstLeadMs);
       trimmedDate.setDate(trimmedDate.getDate() - 2);
@@ -176,8 +168,6 @@ export const LeadsTrendChart: React.FC<LeadsTrendChartProps> = ({
       };
     });
 
-    // Leads con fecha válida que quedan fuera del eje: sin esto el total de la
-    // tarjeta no cuadra con la suma de la gráfica y no se explica por qué.
     const outsideRange = eventLeads.filter(lead => {
       if (countedKeys.has(lead.id)) return false;
       return parseLeadTimestamp(lead.capturedAt) !== null;
@@ -196,23 +186,15 @@ export const LeadsTrendChart: React.FC<LeadsTrendChartProps> = ({
   }, [eventLeads, trend.outsideRange]);
 
   const trendData = trend.days;
-
   const totalEventLeads = eventLeads.length;
-  const totalPriority = eventLeads.filter(l => l.priority).length;
-
-  // Encontrar el día pico de registro
-  const bestDay = useMemo(() => {
-    if (trendData.length === 0) return null;
-    return [...trendData].sort((a, b) => b.total - a.total)[0];
-  }, [trendData]);
 
   return (
-    <div className="bg-white rounded-2xl border border-slate-200/80 p-4 shadow-2xs flex flex-col justify-between">
+    <div className="bg-white rounded-2xl border border-slate-200/80 p-4 shadow-2xs flex flex-col justify-between h-full">
       
       {/* Encabezado del Gráfico */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 pb-3 border-b border-slate-100">
         <div className="flex items-center gap-2.5 min-w-0">
-          <div className="w-8 h-8 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center font-bold shrink-0">
+          <div className="w-8 h-8 rounded-xl bg-primary/10 text-primary flex items-center justify-center font-bold shrink-0">
             <TrendingUp className="w-4 h-4" />
           </div>
           <div className="min-w-0">
@@ -220,7 +202,7 @@ export const LeadsTrendChart: React.FC<LeadsTrendChartProps> = ({
               <h3 className="font-bold text-xs sm:text-sm text-slate-900 truncate">
                 Tendencia de Captura
               </h3>
-              <span className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-blue-50 text-blue-700 border border-blue-200/50 truncate max-w-[160px]">
+              <span className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-primary/10 text-primary border border-primary/15 truncate max-w-[160px]">
                 {currentEvent.name || 'Todos los Eventos'}
               </span>
             </div>
@@ -236,7 +218,7 @@ export const LeadsTrendChart: React.FC<LeadsTrendChartProps> = ({
             onClick={() => setViewMode('daily')}
             className={`px-2.5 py-1 rounded-lg text-[11px] font-semibold transition-all cursor-pointer ${
               viewMode === 'daily'
-                ? 'bg-white text-blue-600 shadow-2xs font-bold'
+                ? 'bg-white text-primary shadow-2xs font-bold'
                 : 'text-slate-600 hover:text-slate-900'
             }`}
           >
@@ -246,7 +228,7 @@ export const LeadsTrendChart: React.FC<LeadsTrendChartProps> = ({
             onClick={() => setViewMode('cumulative')}
             className={`px-2.5 py-1 rounded-lg text-[11px] font-semibold transition-all cursor-pointer ${
               viewMode === 'cumulative'
-                ? 'bg-white text-blue-600 shadow-2xs font-bold'
+                ? 'bg-white text-primary shadow-2xs font-bold'
                 : 'text-slate-600 hover:text-slate-900'
             }`}
           >
@@ -255,8 +237,8 @@ export const LeadsTrendChart: React.FC<LeadsTrendChartProps> = ({
         </div>
       </div>
 
-      {/* Área del Gráfico Recharts */}
-      <div className={`w-full pt-3 ${compact ? 'h-40 sm:h-48' : 'h-48 sm:h-56'}`}>
+      {/* Área del Gráfico con altura CSS explícita para ResponsiveContainer */}
+      <div className={`w-full pt-3 ${compact ? 'h-52 sm:h-60' : 'h-64 sm:h-72'}`}>
         <ResponsiveContainer width="100%" height="100%">
           <AreaChart
             data={trendData}
@@ -287,7 +269,13 @@ export const LeadsTrendChart: React.FC<LeadsTrendChartProps> = ({
               axisLine={false}
               tickLine={false}
               allowDecimals={false}
-              domain={[0, (max: number) => Math.max(4, Math.ceil(max * 1.2))]}
+              domain={[
+                0,
+                (dataMax: number) =>
+                  Number.isFinite(dataMax) && dataMax > 0
+                    ? Math.max(4, Math.ceil(dataMax * 1.2))
+                    : 4
+              ]}
             />
 
             <Tooltip
@@ -301,7 +289,7 @@ export const LeadsTrendChart: React.FC<LeadsTrendChartProps> = ({
                       </div>
                       <div className="flex items-center justify-between gap-3 text-[11px]">
                         <span className="text-slate-400 flex items-center gap-1">
-                          <span className="w-2 h-2 rounded-full bg-blue-500 inline-block"></span>
+                          <span className="w-2 h-2 rounded-full bg-primary/100 inline-block"></span>
                           Total Leads:
                         </span>
                         <span className="font-bold text-blue-400 text-xs">
@@ -367,36 +355,16 @@ export const LeadsTrendChart: React.FC<LeadsTrendChartProps> = ({
         </ResponsiveContainer>
       </div>
 
-      {/* Tarjetas de Métricas Rápidas */}
-      <div className="grid grid-cols-3 gap-2.5 mt-3 pt-3 border-t border-slate-100 text-center">
-        
-        <div className="bg-slate-50/80 p-2 sm:p-2.5 rounded-xl border border-slate-100 flex flex-col items-center justify-center">
-          <span className="text-[9px] font-bold text-slate-400 uppercase tracking-wider block mb-0.5 flex items-center gap-1">
-            <Calendar className="w-3 h-3 text-slate-400 hidden sm:inline" /> Total Evento
-          </span>
-          <span className="text-xs sm:text-sm font-extrabold text-blue-600">
-            {totalEventLeads}
-          </span>
-        </div>
-
-        <div className="bg-slate-50/80 p-2 sm:p-2.5 rounded-xl border border-slate-100 flex flex-col items-center justify-center">
-          <span className="text-[9px] font-bold text-slate-400 uppercase tracking-wider block mb-0.5 flex items-center gap-1">
-            <Zap className="w-3 h-3 text-slate-400 hidden sm:inline" /> Pico Diario
-          </span>
-          <span className="text-xs sm:text-sm font-extrabold text-slate-900">
-            {bestDay && bestDay.total > 0 ? `${bestDay.total} (${bestDay.displayDate})` : '0'}
-          </span>
-        </div>
-
-        <div className="bg-amber-50/50 p-2 sm:p-2.5 rounded-xl border border-amber-100/80 flex flex-col items-center justify-center">
-          <span className="text-[9px] font-bold text-amber-700/70 uppercase tracking-wider block mb-0.5 flex items-center gap-1">
-            <Star className="w-3 h-3 text-amber-500 hidden sm:inline fill-amber-500" /> Leads VIP
-          </span>
-          <span className="text-xs sm:text-sm font-extrabold text-amber-600">
-            {totalPriority}
-          </span>
-        </div>
-
+      {/* Leyenda */}
+      <div className="flex flex-wrap items-center justify-center gap-x-4 gap-y-1 pt-2.5 text-[10px] font-semibold">
+        <span className="flex items-center gap-1.5 text-slate-600">
+          <span className="w-4 h-0.5 rounded-full bg-[#2563eb] inline-block" />
+          Línea azul: total de leads del período
+        </span>
+        <span className="flex items-center gap-1.5 text-slate-600">
+          <span className="w-4 h-0 border-t-2 border-dashed border-[#f59e0b] inline-block" />
+          Línea naranja discontinua: leads VIP / prioritarios
+        </span>
       </div>
 
       {(excludedLeads.undated > 0 || excludedLeads.outsideRange > 0) && (

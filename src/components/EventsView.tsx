@@ -4,10 +4,11 @@ import {
   MapPin,
   Plus,
   Users,
-  ArrowRight
+  ArrowRight,
+  Star
 } from 'lucide-react';
 import { EventOption, Lead } from '../types';
-import { eventDateRangeForDisplay } from '../utils/date';
+import { formatEventDateRangeText } from '../utils/date';
 import { EventMiniCalendar } from './EventMiniCalendar';
 
 interface EventsViewProps {
@@ -28,16 +29,16 @@ export const EventsView: React.FC<EventsViewProps> = ({
   onViewLeadsOfEvent
 }) => {
   return (
-    <div className="space-y-4 animate-fade-in max-w-7xl mx-auto">
+    <div className="space-y-4 animate-fade-in w-full min-w-0">
 
-      {/* Compact Header Banner */}
-      <div className="bg-white rounded-2xl sm:rounded-3xl p-3.5 sm:p-5 border border-black/[0.06] shadow-xs flex items-center justify-between gap-3">
-        <div className="min-w-0">
+      {/* Encabezado: botón fuera del cuadro de título, alineado a la derecha */}
+      <div className="flex items-center justify-between gap-2 sm:gap-3">
+        <div className="min-w-0 flex-1 bg-white rounded-2xl sm:rounded-3xl p-3 sm:p-4 border border-black/[0.06] shadow-xs">
           <div className="inline-flex items-center gap-1.5 px-2 py-0.5 bg-accent-light text-accent rounded-md text-[10px] sm:text-xs font-bold mb-1">
             <Calendar className="w-3 h-3 shrink-0" />
             <span>Eventos y Sedes</span>
           </div>
-          <h2 className="text-base sm:text-2xl font-bold text-[#1D1D1F] tracking-tight truncate">
+          <h2 className="text-base sm:text-xl font-bold text-[#1D1D1F] tracking-tight truncate">
             Eventos Comerciales
           </h2>
           <p className="text-[11px] sm:text-xs text-slate-500 line-clamp-1 sm:line-clamp-none">
@@ -68,38 +69,35 @@ export const EventsView: React.FC<EventsViewProps> = ({
           </p>
         </div>
       ) : (
-        /* Events 2-Column Mobile Grid */
-        <div className="grid grid-cols-2 lg:grid-cols-3 gap-2 sm:gap-3.5 md:gap-4">
+        /* Retícula compacta: 2 columnas en móvil, 3-4 en escritorio */
+        <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-4 gap-2 sm:gap-3">
           {events.map((evt) => {
             const isCurrent = evt.id === currentEvent.id;
             const eventLeads = leads.filter(l => l.event === evt.name);
             const totalLeads = eventLeads.length;
             const priorityLeads = eventLeads.filter(l => l.priority).length;
-            // El mini calendario solo se dibuja si el rango es interpretable; si no, la
-            // tarjeta se queda con la fecha en texto. El criterio es el mismo que usa
-            // `EventMiniCalendar`, para que ambos caigan siempre igual.
-            const hasMiniCalendar = Boolean(eventDateRangeForDisplay(evt.dateRange));
+            const dateText = formatEventDateRangeText(evt.dateRange);
 
             return (
               <div
                 key={evt.id}
                 className={`
-                  bg-white rounded-2xl sm:rounded-3xl p-3 sm:p-4 md:p-5 border transition-all duration-200 flex flex-col justify-between
+                  bg-white rounded-2xl p-2.5 sm:p-3.5 border transition-all duration-200 flex flex-col justify-between
                   ${isCurrent
                     ? 'border-accent ring-1 ring-accent shadow-xs'
                     : 'border-black/[0.06] shadow-2xs hover:border-black/[0.12] hover:shadow-xs'
                   }
                 `}
               >
-                <div className="space-y-2 sm:space-y-3">
+                <div className="space-y-1.5 sm:space-y-2">
                   {/* Header Row: Icon & Status Badge */}
                   <div className="flex items-center justify-between gap-1">
-                    <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-xl bg-accent-light text-accent flex items-center justify-center font-bold shrink-0">
-                      <Calendar className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+                    <div className="w-7 h-7 rounded-xl bg-accent-light text-accent flex items-center justify-center font-bold shrink-0">
+                      <Calendar className="w-3.5 h-3.5" />
                     </div>
 
                     {isCurrent ? (
-                      <span className="inline-flex items-center gap-1 px-1.5 sm:px-2 py-0.5 bg-emerald-50 text-emerald-600 border border-emerald-200/60 rounded-full text-[9px] sm:text-[10px] font-black shrink-0">
+                      <span className="inline-flex items-center gap-1 px-1.5 sm:px-2 py-0.5 bg-emerald-50 text-emerald-600 border border-emerald-200/60 rounded-full text-[9px] font-black shrink-0">
                         <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
                         <span className="hidden xs:inline">Activo</span>
                       </span>
@@ -108,7 +106,7 @@ export const EventsView: React.FC<EventsViewProps> = ({
                         type="button"
                         onClick={() => onSelectEvent(evt)}
                         aria-label={`Activar ${evt.name}`}
-                        className="text-[10px] sm:text-xs font-bold text-slate-500 hover:text-accent px-2 py-0.5 rounded-lg bg-[#F5F5F7] hover:bg-[#EBEBEF] transition-colors cursor-pointer shrink-0"
+                        className="text-[10px] font-bold text-slate-500 hover:text-primary px-2 py-0.5 rounded-lg bg-[#F5F5F7] hover:bg-[#EBEBEF] transition-colors cursor-pointer shrink-0"
                       >
                         Activar
                       </button>
@@ -117,47 +115,45 @@ export const EventsView: React.FC<EventsViewProps> = ({
 
                   {/* Event Name & Location */}
                   <div>
-                    <h3 className="text-xs sm:text-sm md:text-base font-bold text-[#1D1D1F] leading-snug line-clamp-2" title={evt.name}>
+                    <h3 className="text-xs sm:text-sm font-bold text-[#1D1D1F] leading-snug line-clamp-2" title={evt.name}>
                       {evt.name}
                     </h3>
-                    <div className="flex items-center gap-1 text-[10px] sm:text-xs text-slate-500 mt-1 truncate">
+                    <div className="flex items-center gap-1 text-[10px] sm:text-[11px] text-slate-500 mt-1 truncate">
                       <MapPin className="w-3 h-3 text-slate-400 shrink-0" />
                       <span className="truncate">{evt.location}</span>
                     </div>
-                    {hasMiniCalendar ? (
-                      <>
-                        {/* En móvil el calendario no cabe: se muestra solo el rango. */}
-                        <div className="text-[10px] sm:text-xs font-semibold text-accent mt-1 truncate sm:hidden">
-                          {evt.dateRange}
-                        </div>
-                        <EventMiniCalendar dateRange={evt.dateRange} />
-                      </>
-                    ) : (
-                      <div className="text-[10px] sm:text-xs font-semibold text-accent mt-1 truncate">
-                        {evt.dateRange}
-                      </div>
-                    )}
                   </div>
 
-                  {/* Compact Mini Metrics Grid */}
-                  <div className="grid grid-cols-2 gap-1.5 pt-1.5 sm:pt-2 border-t border-black/[0.04]">
-                    <div className="bg-[#FAFBFD] p-1.5 sm:p-2 rounded-xl border border-black/[0.03]">
-                      <div className="text-[8px] sm:text-[9px] font-bold text-slate-400 uppercase tracking-tight">Leads</div>
-                      <div className="text-xs sm:text-base font-bold text-[#1D1D1F] mt-0.5">{totalLeads}</div>
+                  {/* Date Range Badge */}
+                  {dateText && (
+                    <div className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-accent-light text-accent max-w-full">
+                      <Calendar className="w-3 h-3 shrink-0" />
+                      <span className="text-[10px] font-semibold truncate">{dateText}</span>
                     </div>
-                    <div className="bg-[#FAFBFD] p-1.5 sm:p-2 rounded-xl border border-black/[0.03]">
-                      <div className="text-[8px] sm:text-[9px] font-bold text-slate-400 uppercase tracking-tight">VIP</div>
-                      <div className="text-xs sm:text-base font-bold text-amber-600 mt-0.5">{priorityLeads}</div>
-                    </div>
+                  )}
+
+                  {/* Mini Calendar Compacto con duración */}
+                  <EventMiniCalendar dateRange={evt.dateRange} />
+
+                  {/* Compact Mini Metrics */}
+                  <div className="flex items-center gap-2.5 text-[10px] font-semibold text-slate-500 pt-0.5">
+                    <span className="flex items-center gap-1">
+                      <Users className="w-3 h-3 text-slate-400 shrink-0" />
+                      {totalLeads} Leads
+                    </span>
+                    <span className="flex items-center gap-1 text-amber-600">
+                      <Star className="w-3 h-3 fill-amber-500 text-amber-500 shrink-0" />
+                      {priorityLeads} VIP
+                    </span>
                   </div>
                 </div>
 
                 {/* Action Button: View Leads */}
-                <div className="pt-2 sm:pt-3 mt-2 border-t border-black/[0.04]">
+                <div className="pt-1.5 sm:pt-2 mt-1.5 sm:mt-2 border-t border-black/[0.04]">
                   <button
                     type="button"
                     onClick={() => onViewLeadsOfEvent(evt)}
-                    className="w-full py-1.5 sm:py-2 px-2 bg-[#F5F5F7] hover:bg-[#EBEBEF] text-[#1D1D1F] rounded-xl text-[10px] sm:text-xs font-bold flex items-center justify-center gap-1 transition-colors cursor-pointer"
+                    className="w-full py-1.5 px-2 bg-[#F5F5F7] hover:bg-[#EBEBEF] text-[#1D1D1F] rounded-xl text-[10px] sm:text-xs font-bold flex items-center justify-center gap-1 transition-colors cursor-pointer"
                   >
                     <Users className="w-3 h-3 text-slate-500 shrink-0" />
                     <span className="truncate">Ver Leads ({totalLeads})</span>

@@ -27,6 +27,8 @@ interface DatePickerProps {
    * columnas): si no, el calendario se sale del campo y descuadra la fila.
    */
   center?: boolean;
+  /** Radio de las esquinas del botón (ver PickerTrigger). */
+  roundedClassName?: string;
 }
 
 /** Ancho del popup: 7 columnas de celdas redondas más el padding. */
@@ -49,7 +51,8 @@ export const DatePicker: React.FC<DatePickerProps> = ({
   max,
   placeholder = 'Selecciona una fecha',
   ariaLabel,
-  center = false
+  center = false,
+  roundedClassName
 }) => {
   const [open, setOpen] = useState(false);
   const today = todayISODate();
@@ -166,6 +169,7 @@ export const DatePicker: React.FC<DatePickerProps> = ({
           open={open}
           onToggle={() => setOpen((prev) => !prev)}
           ariaLabel={ariaLabel}
+          roundedClassName={roundedClassName}
         />
       </div>
 
@@ -246,8 +250,8 @@ export const DatePicker: React.FC<DatePickerProps> = ({
                             : disabled
                               ? 'text-slate-300 cursor-not-allowed'
                               : 'text-[#1D1D1F] hover:bg-[#F5F5F7]'
-                        } ${isToday && !isSelected && !isFocused ? 'ring-1 ring-inset ring-[#0071E3] text-[#0071E3] font-bold' : ''} ${
-                          isFocused ? 'outline-none ring-2 ring-[#0071E3]' : ''
+                        } ${isToday && !isSelected && !isFocused ? 'ring-1 ring-inset ring-primary text-primary font-bold' : ''} ${
+                          isFocused ? 'outline-none ring-2 ring-primary' : ''
                         }`}
                       >
                         {Number(isoDate.slice(8, 10))}

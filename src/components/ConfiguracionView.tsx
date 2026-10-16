@@ -160,13 +160,13 @@ export const ConfiguracionView: React.FC<ConfiguracionViewProps> = ({
       <div className="bg-white rounded-2xl p-4 border border-slate-100 shadow-2xs space-y-3">
         <div className="flex items-start justify-between gap-2">
           <div className="flex items-start gap-2.5">
-            <div className="w-7 h-7 rounded-full bg-purple-50 text-purple-600 flex items-center justify-center shrink-0 mt-0.5">
+            <div className="w-7 h-7 rounded-full bg-primary/10 text-primary flex items-center justify-center shrink-0 mt-0.5">
               <Palette className="w-3.5 h-3.5" />
             </div>
             <div>
               <div className="flex items-center gap-1">
                 <h3 className="text-sm font-bold text-slate-900">Color de Acento y Tema</h3>
-                <Sparkles className="w-3.5 h-3.5 text-purple-500" />
+                <Sparkles className="w-3.5 h-3.5 text-primary" />
               </div>
               <p className="text-[11px] text-slate-400 leading-tight mt-0.5">
                 Personaliza los colores de botones, resaltados y métricas
@@ -174,7 +174,7 @@ export const ConfiguracionView: React.FC<ConfiguracionViewProps> = ({
             </div>
           </div>
 
-          <span className="bg-[#F3E8FF] text-[#7E22CE] text-[9px] font-bold px-2.5 py-1 rounded-full uppercase tracking-wider shrink-0">
+          <span className="bg-primary/10 text-primary text-[9px] font-bold px-2.5 py-1 rounded-full uppercase tracking-wider shrink-0">
             {selectedThemeConfig.badgeText}
           </span>
         </div>
@@ -190,7 +190,7 @@ export const ConfiguracionView: React.FC<ConfiguracionViewProps> = ({
                 onClick={() => handleThemeSelect(theme.id)}
                 className={`p-3 rounded-2xl border text-left transition-all cursor-pointer flex items-start justify-between min-h-[64px] ${
                   isSelected
-                    ? 'border-[#8B5CF6] bg-[#F3E8FF]/30 ring-1 ring-[#8B5CF6]/40'
+                    ? 'border-primary bg-primary/10 ring-1 ring-primary/40'
                     : 'border-slate-100 bg-white hover:bg-slate-50'
                 }`}
               >
@@ -208,7 +208,7 @@ export const ConfiguracionView: React.FC<ConfiguracionViewProps> = ({
                 </div>
 
                 {isSelected && (
-                  <span className="text-[8px] font-black text-[#7E22CE] uppercase tracking-wider shrink-0 ml-1 mt-0.5">
+                  <span className="text-[8px] font-black text-primary uppercase tracking-wider shrink-0 ml-1 mt-0.5">
                     ACTIVO
                   </span>
                 )}
@@ -257,7 +257,7 @@ export const ConfiguracionView: React.FC<ConfiguracionViewProps> = ({
           className="w-full p-3.5 flex items-center justify-between text-left hover:bg-slate-50/80 transition-colors group cursor-pointer"
         >
           <div className="flex items-center gap-3 min-w-0">
-            <div className="w-8 h-8 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center shrink-0">
+            <div className="w-8 h-8 rounded-xl bg-primary/10 text-primary flex items-center justify-center shrink-0">
               <ShieldCheck className="w-4 h-4" />
             </div>
             <div className="min-w-0">

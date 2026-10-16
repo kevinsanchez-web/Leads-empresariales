@@ -141,7 +141,7 @@ export const HeaderNotificationsPopover: React.FC<HeaderNotificationsPopoverProp
       {/* Header Superior con Ajuste Anti-Desbordamiento */}
       <header className="px-4 py-3 bg-white border-b border-slate-100 flex items-center justify-between shrink-0 min-w-0">
         <div className="flex items-center gap-2 min-w-0">
-          <div className="w-7 h-7 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center shrink-0">
+          <div className="w-7 h-7 rounded-lg bg-primary/10 text-primary flex items-center justify-center shrink-0">
             <Bell className="w-4 h-4" />
           </div>
           <div className="min-w-0">
@@ -197,14 +197,14 @@ export const HeaderNotificationsPopover: React.FC<HeaderNotificationsPopoverProp
           {pushStatus === 'granted' ? (
             <button
               onClick={handleTestPush}
-              className="px-2 py-1 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-[11px] font-bold transition-all shadow-xs cursor-pointer"
+              className="px-2 py-1 bg-primary hover:bg-primary-hover text-white rounded-lg text-[11px] font-bold transition-all shadow-xs cursor-pointer"
             >
               {pushTestSent ? '¡Enviada!' : 'Probar'}
             </button>
           ) : (
             <button
               onClick={handleEnablePush}
-              className="px-2.5 py-1 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-[11px] font-bold transition-all shadow-xs cursor-pointer"
+              className="px-2.5 py-1 bg-primary hover:bg-primary-hover text-white rounded-lg text-[11px] font-bold transition-all shadow-xs cursor-pointer"
             >
               Activar
             </button>
@@ -239,7 +239,7 @@ export const HeaderNotificationsPopover: React.FC<HeaderNotificationsPopoverProp
                       ? 'bg-rose-100 text-rose-700' 
                       : isToday 
                       ? 'bg-amber-100 text-amber-700' 
-                      : 'bg-blue-100 text-blue-700'
+                      : 'bg-primary/15 text-primary'
                   }`}>
                     {isOverdue ? <AlertTriangle className="w-3.5 h-3.5" /> : <Clock className="w-3.5 h-3.5" />}
                   </div>
@@ -247,7 +247,7 @@ export const HeaderNotificationsPopover: React.FC<HeaderNotificationsPopoverProp
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center justify-between gap-1">
                       <span className={`text-[9px] font-extrabold uppercase ${
-                        isOverdue ? 'text-rose-600' : isToday ? 'text-amber-600' : 'text-blue-600'
+                        isOverdue ? 'text-rose-600' : isToday ? 'text-amber-600' : 'text-primary'
                       }`}>
                         {isOverdue ? `Vencido (${alert.scheduledDate})` : isToday ? 'HOY' : alert.scheduledDate}
                       </span>
@@ -259,7 +259,7 @@ export const HeaderNotificationsPopover: React.FC<HeaderNotificationsPopoverProp
                       </button>
                     </div>
 
-                    <div className="font-bold text-xs text-slate-900 truncate mt-0.5 group-hover:text-blue-600 transition-colors">
+                    <div className="font-bold text-xs text-slate-900 truncate mt-0.5 group-hover:text-primary transition-colors">
                       {alert.title}
                     </div>
 
@@ -281,7 +281,7 @@ export const HeaderNotificationsPopover: React.FC<HeaderNotificationsPopoverProp
             onNavigateToNotifications();
             setIsOpen(false);
           }}
-          className="w-full py-2.5 px-3 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-bold flex items-center justify-center gap-2 transition-all cursor-pointer"
+          className="w-full py-2.5 px-3 bg-primary hover:bg-primary-hover text-white rounded-xl text-xs font-bold flex items-center justify-center gap-2 transition-all cursor-pointer"
         >
           <span>Ver todas las alertas e historial</span>
           <ChevronRight className="w-4 h-4" />
@@ -300,7 +300,7 @@ export const HeaderNotificationsPopover: React.FC<HeaderNotificationsPopoverProp
         title="Alertas de seguimiento de leads"
         className={`relative w-8 h-8 rounded-xl flex items-center justify-center transition-colors cursor-pointer ${
           isOpen 
-            ? 'bg-[#0071E3]/10 text-[#0071E3]' 
+            ? 'bg-primary/10 text-primary' 
             : 'text-slate-600 hover:bg-[#F5F5F7]'
         }`}
       >

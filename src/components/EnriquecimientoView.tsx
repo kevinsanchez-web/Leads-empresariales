@@ -1,4 +1,4 @@
-import React, { useMemo, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
   Building2,
   Search,
@@ -12,7 +12,8 @@ import {
   X,
   AlertTriangle,
   ExternalLink,
-  ChevronRight,
+  Users,
+  Zap,
 } from 'lucide-react';
 import { Lead, ContactEnrichment } from '../types';
 import { enrichLead, isAiFailure } from '../services/aiService';
@@ -26,6 +27,7 @@ import {
   ENRICHMENT_WORKER_FIELDS,
   EnrichmentField,
   LeadGaps,
+  CompanyGaps,
 } from '../utils/enrichmentSegments';
 import { cleanContact } from '../utils/contactInfo';
 
@@ -54,6 +56,23 @@ interface LeadRun {
 
 const DEFAULT_PRIORITY: EnrichmentField[] = ['linkedin', 'email', 'phone'];
 
+/** Porcentaje de datos de contacto presentes respecto al máximo (3 campos por lead). */
+function companyProgress(c: CompanyGaps): number {
+  const totalSlots = c.totalLeads * 3;
+  const missing = Object.values(c.byField).reduce((s, a) => s + a.length, 0);
+  const filled = Math.max(0, totalSlots - missing);
+  return totalSlots > 0 ? Math.round((filled / totalSlots) * 100) : 100;
+}
+
+/** Primer lead incompleto de una empresa siguiendo el orden de prioridad elegido. */
+function firstPendingLead(c: CompanyGaps, priority: EnrichmentField[]): Lead | undefined {
+  for (const field of priority) {
+    const lead = c.byField[field][0];
+    if (lead) return lead;
+  }
+  return undefined;
+}
+
 export const EnriquecimientoView: React.FC<EnriquecimientoViewProps> = ({
   leads,
   onSelectLead,
@@ -66,10 +85,12 @@ export const EnriquecimientoView: React.FC<EnriquecimientoViewProps> = ({
   const [results, setResults] = useState<Record<string, LeadRun>>({});
   const [summary, setSummary] = useState<string>('');
   const [failedCount, setFailedCount] = useState(0);
+  const [warningDismissed, setWarningDismissed] = useState(false);
 
   // El botón Parar tiene que cortar el ciclo de tandas aunque la vista se desmonte o el
   // componente se recicle, así que la señal vive fuera del estado de React.
   const stopRef = useRef(false);
+  const didInitSelection = useRef(false);
 
   const companies = useMemo(() => segmentByCompany(leads), [leads]);
 
@@ -101,6 +122,38 @@ export const EnriquecimientoView: React.FC<EnriquecimientoViewProps> = ({
     [company, priority]
   );
 
+  const globalMetrics = useMemo(() => {
+    const totalContacts = incompleteCompanies.reduce((s, c) => s + c.totalIncomplete, 0);
+    const totalSlots = incompleteCompanies.reduce((s, c) => s + c.totalLeads * 3, 0);
+    const missing = incompleteCompanies.reduce(
+      (s, c) => s + Object.values(c.byField).reduce((x, a) => x + a.length, 0),
+      0
+    );
+    const filled = Math.max(0, totalSlots - missing);
+    return {
+      contacts: totalContacts,
+      pct: totalSlots > 0 ? Math.round((filled / totalSlots) * 100) : 100,
+      companies: incompleteCompanies.length,
+    };
+  }, [incompleteCompanies]);
+
+  // Al cargar se selecciona automáticamente la primera empresa con pendientes, para que el
+  // panel derecho nunca arranque vacío. Solo ocurre una vez: si el usuario deselecciona
+  // después, la elección se respeta.
+  useEffect(() => {
+    if (!didInitSelection.current && visibleCompanies.length > 0) {
+      didInitSelection.current = true;
+      setSelectedCompany(visibleCompanies[0].key);
+    }
+  }, [visibleCompanies]);
+
+  const selectCompany = (key: string) => {
+    setSelectedCompany(key);
+    setResults({});
+    setSummary('');
+    setRunState('idle');
+  };
+
   const moveField = (field: EnrichmentField, delta: number) => {
     setPriority(prev => {
       const index = prev.indexOf(field);
@@ -119,14 +172,11 @@ export const EnriquecimientoView: React.FC<EnriquecimientoViewProps> = ({
     lead: Lead,
     enrichment: ContactEnrichment
   ): Promise<{ written: EnrichmentField[]; message: string }> => {
-    // Solo cuenta lo que de verdad se va a escribir: si el lead ya tenía el dato, la guarda no
-    // destructiva de App lo descarta y no debe aparecer como "Completado".
     const written: EnrichmentField[] = [];
     if (enrichment.linkedinUrl && !cleanContact(lead.linkedinUrl)) written.push('linkedin');
     if (enrichment.email && !cleanContact(lead.email)) written.push('email');
     if (enrichment.companyPhone && !cleanContact(lead.phone)) written.push('phone');
 
-    // Sin ningún campo para escribir no se llama al merge: el lead queda exactamente como está.
     if (written.length === 0) return { written, message: '' };
 
     await onApplyEnrichment(lead.id, {
@@ -169,7 +219,6 @@ export const EnriquecimientoView: React.FC<EnriquecimientoViewProps> = ({
       companyName: lead.company,
       role: lead.role,
       city: lead.city,
-      // Solo los campos que le faltan a este lead: el Worker arma el prompt con ellos.
       fields: item.missing.map(field => ENRICHMENT_WORKER_FIELDS[field]),
     });
 
@@ -208,8 +257,6 @@ export const EnriquecimientoView: React.FC<EnriquecimientoViewProps> = ({
     let skipped = 0;
     let failed = 0;
 
-    // De a 2 en vuelo: cada tanda espera a que terminen sus dos leads antes de pedir la
-    // siguiente, así nunca hay más de dos búsquedas simultáneas contra la cuota de Gemini.
     for (let i = 0; i < pending.length; i += 2) {
       if (stopRef.current) break;
       const batch = pending.slice(i, i + 2);
@@ -262,98 +309,243 @@ export const EnriquecimientoView: React.FC<EnriquecimientoViewProps> = ({
   const isRunning = runState === 'running';
 
   return (
-    <div className="space-y-4 animate-fade-in">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-white p-4 rounded-2xl border border-slate-200/60 shadow-xs">
-        <div className="flex items-center gap-2">
-          <div className="w-9 h-9 rounded-xl bg-violet-50 text-violet-600 flex items-center justify-center font-bold shrink-0">
+    <div className="flex flex-col w-full min-w-0 gap-3 animate-fade-in lg:flex-1 lg:min-h-0">
+
+      <div className="shrink-0 bg-white p-4 rounded-2xl border border-slate-200/60 shadow-xs flex items-center justify-between gap-3">
+        <div className="flex items-center gap-2 min-w-0">
+          <div className="w-9 h-9 rounded-xl bg-accent-light text-accent flex items-center justify-center font-bold shrink-0">
             <Sparkles className="w-5 h-5" />
           </div>
-          <div>
-            <h2 className="text-lg font-bold text-slate-900 leading-tight">Enriquecimiento de Leads</h2>
-            <p className="text-xs text-slate-500">
+          <div className="min-w-0">
+            <h2 className="text-lg font-bold text-slate-900 leading-tight truncate">Enriquecimiento de Leads</h2>
+            <p className="text-xs text-slate-500 truncate">
               Completa datos de contacto con fuentes públicas citadas por la IA
             </p>
           </div>
         </div>
 
-        <div className="relative w-full sm:w-60">
-          <Search className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
-          <input
-            type="text"
-            placeholder="Buscar empresa o persona..."
-            value={searchTerm}
-            onChange={e => setSearchTerm(e.target.value)}
-            className="w-full pl-8 pr-3 py-1.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium focus:outline-none focus:ring-2 focus:ring-blue-500"
-          />
-        </div>
+        {incompleteCompanies.length > 0 && (
+          <span className="text-[10px] font-bold text-accent bg-accent-light border border-accent-light px-2.5 py-1 rounded-full shrink-0">
+            {incompleteCompanies.length} empresas por completar
+          </span>
+        )}
       </div>
 
-      <div className="flex items-start gap-2 rounded-2xl border border-amber-200 bg-amber-50 px-3 py-2 text-[11px] text-amber-800 font-medium leading-snug">
-        <AlertTriangle className="w-3.5 h-3.5 shrink-0 mt-px text-amber-600" />
-        <span>
-          Los datos provienen de búsqueda web y son indicativos: verificá la identidad y el medio
-          de contacto antes de escribir o llamar. Los marcados como «aparente» solo coinciden por
-          dominio.
-        </span>
-      </div>
+      {!warningDismissed && (
+        <div className="shrink-0 flex items-start gap-2 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-[11px] text-amber-800 font-medium leading-snug">
+          <AlertTriangle className="w-3.5 h-3.5 shrink-0 mt-px text-amber-600" />
+          <span className="flex-1">
+            Los datos provienen de búsqueda web y son indicativos: verificá la identidad y el medio
+            de contacto antes de escribir o llamar. Los marcados como «aparente» solo coinciden por
+            dominio.
+          </span>
+          <button
+            type="button"
+            onClick={() => setWarningDismissed(true)}
+            className="p-0.5 rounded hover:bg-amber-100 text-amber-500 hover:text-amber-700 transition-colors cursor-pointer shrink-0"
+            aria-label="Ocultar aviso"
+          >
+            <X className="w-3.5 h-3.5" />
+          </button>
+        </div>
+      )}
 
       {incompleteCompanies.length === 0 ? (
-        <div className="bg-white rounded-2xl p-8 text-center border border-slate-200/60 text-slate-400 font-medium text-xs">
+        <div className="shrink-0 bg-white rounded-2xl p-8 text-center border border-slate-200/60 text-slate-400 font-medium text-xs">
           Todos los leads ya tienen LinkedIn, correo y teléfono. No hay nada que enriquecer.
         </div>
       ) : (
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-3 sm:gap-4">
-          {/* Empresas con leads incompletos */}
-          <div className="bg-white p-4 rounded-2xl border border-slate-200/70 shadow-xs">
-            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-2">
-              Empresas por completar
-            </span>
-            <div className="space-y-1 max-h-[420px] overflow-y-auto">
-              {visibleCompanies.map(comp => {
-                const active = comp.key === selectedCompany;
-                return (
-                  <button
-                    key={comp.key}
-                    type="button"
-                    onClick={() => {
-                      setSelectedCompany(active ? '' : comp.key);
-                      setResults({});
-                      setSummary('');
-                      setRunState('idle');
-                    }}
-                    className={`w-full text-left px-2.5 py-2 rounded-xl transition-colors flex items-center justify-between gap-2 border ${
-                      active
-                        ? 'bg-violet-50 border-violet-200'
-                        : 'bg-slate-50 border-slate-100 hover:bg-slate-100'
-                    }`}
-                  >
-                    <div className="min-w-0">
-                      <div className="font-bold text-slate-900 text-xs truncate">{comp.name}</div>
-                      <div className="text-[10px] text-slate-500">
-                        {comp.totalIncomplete} de {comp.totalLeads} por completar
-                      </div>
-                    </div>
-                    <ChevronRight
-                      className={`w-3.5 h-3.5 shrink-0 ${active ? 'text-violet-500' : 'text-slate-400'}`}
-                    />
-                  </button>
-                );
-              })}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-3 lg:flex-1 lg:min-h-0">
+          {/* Panel izquierdo: lista de empresas con su filtro */}
+          <div className="bg-white p-3.5 rounded-2xl border border-slate-200/70 shadow-xs flex flex-col min-h-0">
+            <div className="flex items-center justify-between mb-2 shrink-0">
+              <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
+                Empresas por completar
+              </span>
+              {visibleCompanies.length > 0 && (
+                <span className="text-[10px] font-bold text-slate-500 bg-slate-100 px-2 py-0.5 rounded-full">
+                  {visibleCompanies.length}
+                </span>
+              )}
             </div>
-          </div>
 
-          {/* Segmentación por campo */}
-          <div className="lg:col-span-2 space-y-3 sm:space-y-4">
-            {!company ? (
-              <div className="bg-white rounded-2xl p-8 text-center border border-slate-200/60 text-slate-400 font-medium text-xs">
-                Elige una empresa para ver qué campos le faltan a sus contactos.
+            <div className="relative mb-2 shrink-0">
+              <Search className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+              <input
+                type="text"
+                placeholder="Buscar empresa o persona..."
+                value={searchTerm}
+                onChange={e => setSearchTerm(e.target.value)}
+                className="w-full pl-8 pr-8 py-1.5 bg-slate-50 border border-slate-200 rounded-xl text-base sm:text-xs font-medium focus:outline-none focus:ring-2 focus:ring-primary placeholder:text-slate-400"
+              />
+              {searchTerm && (
+                <button
+                  type="button"
+                  onClick={() => setSearchTerm('')}
+                  className="absolute right-1.5 top-1/2 -translate-y-1/2 p-1 rounded-md text-slate-400 hover:text-slate-600 cursor-pointer"
+                  aria-label="Limpiar búsqueda"
+                >
+                  <X className="w-3 h-3" />
+                </button>
+              )}
+            </div>
+
+            {visibleCompanies.length === 0 ? (
+              <div className="text-center text-[11px] text-slate-400 py-8 px-2">
+                Sin resultados para «{searchTerm}». Probá con otro término.
               </div>
             ) : (
-              <>
+              <div className="space-y-1 max-h-[420px] overflow-y-auto lg:max-h-none lg:flex-1 lg:min-h-0">
+                {visibleCompanies.map(comp => {
+                  const active = comp.key === selectedCompany;
+                  const pct = companyProgress(comp);
+                  const status = pct === 0 ? 'Pendiente' : 'En proceso';
+                  const initials = comp.name
+                    .split(' ')
+                    .filter(Boolean)
+                    .map(w => w[0])
+                    .slice(0, 2)
+                    .join('')
+                    .toUpperCase() || '?';
+
+                  return (
+                    <button
+                      key={comp.key}
+                      type="button"
+                      onClick={() => selectCompany(active ? '' : comp.key)}
+                      aria-pressed={active}
+                      className={`w-full text-left p-2.5 rounded-xl transition-colors flex items-start gap-2.5 border ${
+                        active
+                          ? 'bg-accent-light border-accent'
+                          : 'bg-slate-50 border-slate-100 hover:bg-slate-100 hover:border-slate-200'
+                      }`}
+                    >
+                      <div
+                        className={`w-8 h-8 rounded-lg flex items-center justify-center text-[10px] font-black shrink-0 ${
+                          active ? 'bg-accent text-white' : 'bg-white text-accent border border-slate-200'
+                        }`}
+                      >
+                        {initials}
+                      </div>
+
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-center justify-between gap-2">
+                          <span className="font-bold text-slate-900 text-xs truncate">{comp.name}</span>
+                          <span
+                            className={`text-[9px] font-bold px-1.5 py-0.5 rounded-full shrink-0 border ${
+                              status === 'Pendiente'
+                                ? 'bg-amber-50 text-amber-700 border-amber-200/60'
+                                : 'bg-accent-light text-accent border-accent-light'
+                            }`}
+                          >
+                            {status}
+                          </span>
+                        </div>
+                        <div className="text-[10px] text-slate-500 mt-0.5">
+                          {comp.totalIncomplete} de {comp.totalLeads} por completar · {pct}%
+                        </div>
+                        <div className="mt-1.5 h-1 rounded-full bg-slate-200/70 overflow-hidden">
+                          <div
+                            className="h-full rounded-full bg-accent transition-all duration-300"
+                            style={{ width: `${pct}%` }}
+                          />
+                        </div>
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+
+          {/* Panel derecho: segmentación o resumen global */}
+          <div className="lg:col-span-2 min-w-0 flex flex-col lg:min-h-0">
+            {!company ? (
+              <div className="bg-white rounded-2xl p-4 border border-slate-200/70 shadow-xs flex flex-col gap-3 lg:flex-1 lg:min-h-0 lg:overflow-y-auto">
+                <div className="flex items-center gap-2">
+                  <div className="w-9 h-9 rounded-xl bg-accent-light text-accent flex items-center justify-center font-bold shrink-0">
+                    <Sparkles className="w-4 h-4" />
+                  </div>
+                  <div>
+                    <h3 className="text-sm font-extrabold text-slate-900 leading-tight">Resumen de enriquecimiento</h3>
+                    <p className="text-[11px] text-slate-500">
+                      Elegí una empresa de la lista para trabajar sus contactos.
+                    </p>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                  <div className="p-3 rounded-xl bg-slate-50 border border-slate-200/70">
+                    <div className="flex items-center gap-1.5 text-[10px] font-bold text-slate-400 uppercase tracking-wider">
+                      <Users className="w-3.5 h-3.5" />
+                      Contactos a enriquecer
+                    </div>
+                    <div className="text-2xl font-black text-slate-900 mt-1">{globalMetrics.contacts}</div>
+                    <div className="text-[10px] text-slate-500">
+                      en {globalMetrics.companies} {globalMetrics.companies === 1 ? 'empresa' : 'empresas'}
+                    </div>
+                  </div>
+
+                  <div className="p-3 rounded-xl bg-slate-50 border border-slate-200/70">
+                    <div className="flex items-center gap-1.5 text-[10px] font-bold text-slate-400 uppercase tracking-wider">
+                      <Sparkles className="w-3.5 h-3.5 text-accent" />
+                      Datos completados por la IA
+                    </div>
+                    <div className="text-2xl font-black text-accent mt-1">{globalMetrics.pct}%</div>
+                    <div className="mt-1.5 h-1 rounded-full bg-slate-200/70 overflow-hidden">
+                      <div
+                        className="h-full rounded-full bg-accent transition-all duration-300"
+                        style={{ width: `${globalMetrics.pct}%` }}
+                      />
+                    </div>
+                  </div>
+
+                  <div className="p-3 rounded-xl bg-slate-50 border border-slate-200/70">
+                    <div className="flex items-center gap-1.5 text-[10px] font-bold text-slate-400 uppercase tracking-wider">
+                      <Building2 className="w-3.5 h-3.5" />
+                      Empresas pendientes
+                    </div>
+                    <div className="text-2xl font-black text-slate-900 mt-1">{globalMetrics.companies}</div>
+                    <div className="text-[10px] text-slate-500">con leads incompletos</div>
+                  </div>
+                </div>
+
+                <div className="pt-1">
+                  <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-1.5">
+                    Accesos rápidos
+                  </span>
+                  <div className="flex flex-wrap gap-1.5">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const top = incompleteCompanies[0];
+                        if (top) selectCompany(top.key);
+                      }}
+                      className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-accent-light text-accent border border-accent-light hover:opacity-90 text-xs font-bold transition-opacity cursor-pointer"
+                    >
+                      <Zap className="w-3.5 h-3.5" />
+                      Empresa con más pendientes
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const lead = firstPendingLead(incompleteCompanies[0], priority);
+                        if (lead) onSelectLead(lead);
+                      }}
+                      className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-50 hover:bg-slate-100 text-slate-700 border border-slate-200 text-xs font-bold transition-colors cursor-pointer"
+                    >
+                      <Users className="w-3.5 h-3.5" />
+                      Primer lead por completar
+                    </button>
+                  </div>
+                </div>
+              </div>
+            ) : (
+              <div className="space-y-3 sm:space-y-4 lg:flex-1 lg:min-h-0 lg:overflow-y-auto">
                 <div className="bg-white p-4 rounded-2xl border border-slate-200/70 shadow-xs space-y-3">
                   <div className="flex items-center justify-between gap-2">
                     <div className="flex items-center gap-2 min-w-0">
-                      <Building2 className="w-4 h-4 text-violet-600 shrink-0" />
+                      <Building2 className="w-4 h-4 text-accent shrink-0" />
                       <h3 className="font-extrabold text-sm text-slate-900 truncate">{company.name}</h3>
                     </div>
                     <span className="text-[10px] font-bold text-slate-500 bg-slate-100 px-2 py-0.5 rounded-full shrink-0">
@@ -437,7 +629,7 @@ export const EnriquecimientoView: React.FC<EnriquecimientoViewProps> = ({
                       type="button"
                       onClick={handleRun}
                       disabled={isRunning || queue.length === 0}
-                      className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-violet-600 hover:bg-violet-700 text-white text-xs font-bold transition-colors disabled:opacity-50 cursor-pointer disabled:cursor-not-allowed"
+                      className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-accent hover:bg-accent-hover text-white text-xs font-bold transition-colors disabled:opacity-50 cursor-pointer disabled:cursor-not-allowed"
                     >
                       {isRunning ? (
                         <>
@@ -521,7 +713,7 @@ export const EnriquecimientoView: React.FC<EnriquecimientoViewProps> = ({
                     );
                   })}
                 </div>
-              </>
+              </div>
             )}
           </div>
         </div>
@@ -551,7 +743,7 @@ const LeadRow: React.FC<{
           href={lead.linkedinUrl}
           target="_blank"
           rel="noreferrer"
-          className="text-[9px] text-blue-700 bg-white px-1.5 py-0.5 rounded border border-blue-200 inline-flex items-center gap-0.5 shrink-0"
+          className="text-[9px] text-primary bg-white px-1.5 py-0.5 rounded border border-primary/20 inline-flex items-center gap-0.5 shrink-0"
         >
           <ExternalLink className="w-2.5 h-2.5" />
           <span>Perfil</span>
@@ -560,7 +752,7 @@ const LeadRow: React.FC<{
 
       <div className="shrink-0 w-5 flex justify-center">
         {!run && <span className="w-1.5 h-1.5 rounded-full bg-slate-300" />}
-        {run?.state === 'running' && <Loader2 className="w-3.5 h-3.5 animate-spin text-violet-500" />}
+        {run?.state === 'running' && <Loader2 className="w-3.5 h-3.5 animate-spin text-accent" />}
         {run?.state === 'written' && (
           <span title={run.fromCache ? `${run.message} (caché)` : run.message}>
             <Check className="w-3.5 h-3.5 text-emerald-500" />

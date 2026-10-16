@@ -86,7 +86,7 @@ export const CreateEventModal: React.FC<CreateEventModalProps> = ({
               placeholder="Ej: Andicom 2026, Smart City Expo"
               value={name}
               onChange={(e) => setName(e.target.value)}
-              className="w-full px-3.5 py-2 bg-[#F5F5F7] border border-black/[0.05] rounded-xl text-xs font-medium focus:bg-white focus:outline-none focus:ring-2 focus:ring-accent transition-all placeholder:text-slate-400 text-[#1D1D1F]"
+              className="w-full px-3.5 py-2 bg-[#F5F5F7] border border-black/[0.05] rounded-xl text-xs font-medium focus:bg-white focus:outline-none focus:ring-2 focus:ring-primary transition-all placeholder:text-slate-400 text-[#1D1D1F]"
             />
           </div>
 
@@ -102,7 +102,7 @@ export const CreateEventModal: React.FC<CreateEventModalProps> = ({
                 placeholder="Ej: Cartagena de Indias, Corferias Bogotá"
                 value={location}
                 onChange={(e) => setLocation(e.target.value)}
-                className="w-full pl-9 pr-3.5 py-2 bg-[#F5F5F7] border border-black/[0.05] rounded-xl text-xs font-medium focus:bg-white focus:outline-none focus:ring-2 focus:ring-accent transition-all placeholder:text-slate-400 text-[#1D1D1F]"
+                className="w-full pl-9 pr-3.5 py-2 bg-[#F5F5F7] border border-black/[0.05] rounded-xl text-xs font-medium focus:bg-white focus:outline-none focus:ring-2 focus:ring-primary transition-all placeholder:text-slate-400 text-[#1D1D1F]"
               />
             </div>
           </div>

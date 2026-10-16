@@ -2,6 +2,7 @@ import React from 'react';
 import { X, RotateCcw, Filter } from 'lucide-react';
 import { LeadStatus, UserRep } from '../types';
 import { INTEREST_OPTIONS, SOURCE_OPTIONS } from '../data/mockData';
+import { RoundedSelect } from './RoundedSelect';
 
 interface FiltersModalProps {
   isOpen: boolean;
@@ -45,7 +46,7 @@ export const FiltersModal: React.FC<FiltersModalProps> = ({
         {/* Header */}
         <div className="flex items-center justify-between pb-3 border-b border-slate-100 shrink-0">
           <div className="flex items-center gap-2">
-            <div className="w-8 h-8 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center">
+            <div className="w-8 h-8 rounded-lg bg-primary/10 text-primary flex items-center justify-center">
               <Filter className="w-4 h-4" />
             </div>
             <h3 className="text-sm sm:text-base font-bold text-slate-900">Filtros Avanzados</h3>
@@ -68,71 +69,79 @@ export const FiltersModal: React.FC<FiltersModalProps> = ({
               type="checkbox"
               checked={priorityOnly}
               onChange={(e) => setPriorityOnly(e.target.checked)}
-              className="w-4 h-4 text-blue-600 rounded cursor-pointer accent-blue-600"
+              className="w-4 h-4 text-primary rounded cursor-pointer accent-primary"
             />
           </div>
 
           {/* Status Filter */}
           <div>
             <label className="block text-[11px] font-bold text-slate-700 mb-1">Estado del Lead</label>
-            <select
+            <RoundedSelect
               value={statusFilter}
-              onChange={(e) => setStatusFilter(e.target.value)}
-              className="w-full px-3 py-1.5 sm:py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium focus:outline-none focus:ring-2 focus:ring-blue-500"
-            >
-              <option value="all">Todos los Estados</option>
-              <option value="Nuevo">Nuevo</option>
-              <option value="Contactado">Contactado</option>
-              <option value="Calificado">Calificado</option>
-              <option value="Reunión Agendada">Reunión Agendada</option>
-              <option value="Ganado">Ganado</option>
-              <option value="Descartado">Descartado</option>
-            </select>
+              onChange={setStatusFilter}
+              ariaLabel="Estado del Lead"
+              className="w-full"
+              buttonClassName="py-1.5 sm:py-2 text-xs"
+              options={[
+                { value: 'all', label: 'Todos los Estados' },
+                { value: 'Nuevo', label: 'Nuevo' },
+                { value: 'Contactado', label: 'Contactado' },
+                { value: 'Calificado', label: 'Calificado' },
+                { value: 'Reunión Agendada', label: 'Reunión Agendada' },
+                { value: 'Ganado', label: 'Ganado' },
+                { value: 'Descartado', label: 'Descartado' }
+              ]}
+            />
           </div>
 
           {/* Representative Filter */}
           <div>
             <label className="block text-[11px] font-bold text-slate-700 mb-1">Reportado Por (Representante)</label>
-            <select
+            <RoundedSelect
               value={repFilter}
-              onChange={(e) => setRepFilter(e.target.value)}
-              className="w-full px-3 py-1.5 sm:py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium focus:outline-none focus:ring-2 focus:ring-blue-500"
-            >
-              <option value="all">Todos los Representantes</option>
-              {users.map(u => (
-                <option key={u.id} value={u.name}>{u.name}</option>
-              ))}
-            </select>
+              onChange={setRepFilter}
+              ariaLabel="Reportado por (representante)"
+              className="w-full"
+              buttonClassName="py-1.5 sm:py-2 text-xs"
+              options={[
+                { value: 'all', label: 'Todos los Representantes' },
+                ...users.map(u => ({ value: u.name, label: u.name }))
+              ]}
+            />
           </div>
 
           {/* Interest Filter */}
           <div>
             <label className="block text-[11px] font-bold text-slate-700 mb-1">Interés Principal</label>
-            <select
+            <RoundedSelect
               value={interestFilter}
-              onChange={(e) => setInterestFilter(e.target.value)}
-              className="w-full px-3 py-1.5 sm:py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium focus:outline-none focus:ring-2 focus:ring-blue-500"
-            >
-              <option value="all">Todos los Intereses</option>
-              {INTEREST_OPTIONS.map(i => (
-                <option key={i} value={i}>{i}</option>
-              ))}
-            </select>
+              onChange={setInterestFilter}
+              ariaLabel="Interés principal"
+              className="w-full"
+              buttonClassName="py-1.5 sm:py-2 text-xs"
+              searchable
+              options={[
+                { value: 'all', label: 'Todos los Intereses' },
+                ...INTEREST_OPTIONS.map(i => ({ value: i, label: i }))
+              ]}
+            />
           </div>
 
           {/* Source Filter */}
           <div>
             <label className="block text-[11px] font-bold text-slate-700 mb-1">Fuente / Touchpoint de Captura</label>
-            <select
+            <RoundedSelect
               value={sourceFilter}
-              onChange={(e) => setSourceFilter(e.target.value)}
-              className="w-full px-3 py-1.5 sm:py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium focus:outline-none focus:ring-2 focus:ring-blue-500"
-            >
-              <option value="all">Todas las Fuentes</option>
-              {SOURCE_OPTIONS.map(s => (
-                <option key={s} value={s}>{s}</option>
-              ))}
-            </select>
+              onChange={setSourceFilter}
+              ariaLabel="Fuente / touchpoint de captura"
+              className="w-full"
+              buttonClassName="py-1.5 sm:py-2 text-xs"
+              searchable
+              options={[
+                { value: 'all', label: 'Todas las Fuentes' },
+                ...SOURCE_OPTIONS.map(s => ({ value: s, label: s }))
+              ]}
+            />
           </div>
 
         </div>
@@ -149,7 +158,7 @@ export const FiltersModal: React.FC<FiltersModalProps> = ({
 
           <button
             onClick={onClose}
-            className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-bold shadow-2xs cursor-pointer"
+            className="px-4 py-2 bg-primary hover:bg-primary-hover text-white rounded-xl text-xs font-bold shadow-2xs cursor-pointer"
           >
             Aplicar Filtros
           </button>

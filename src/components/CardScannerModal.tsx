@@ -160,7 +160,7 @@ export const CardScannerModal: React.FC<CardScannerModalProps> = ({
         {/* Header */}
         <div className="flex items-center justify-between gap-3 px-5 pt-5 pb-3 sm:px-6 sm:pt-6">
           <div className="flex min-w-0 items-center gap-3">
-            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-blue-50 text-blue-600">
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-primary/10 text-primary">
               <QrCode className="h-5 w-5" />
             </div>
             <div className="min-w-0">
@@ -178,7 +178,7 @@ export const CardScannerModal: React.FC<CardScannerModalProps> = ({
           <button
             type="button"
             onClick={() => { stopCamera(); onClose(); }}
-            className="flex h-8 w-8 shrink-0 cursor-pointer items-center justify-center rounded-full bg-slate-100 text-slate-500 transition-colors hover:bg-slate-200 hover:text-slate-800 focus-visible:outline-2 focus-visible:outline-blue-500"
+            className="flex h-8 w-8 shrink-0 cursor-pointer items-center justify-center rounded-full bg-slate-100 text-slate-500 transition-colors hover:bg-slate-200 hover:text-slate-800 focus-visible:outline-2 focus-visible:outline-primary"
             title="Cerrar modal"
             aria-label="Cerrar modal"
           >
@@ -268,7 +268,7 @@ export const CardScannerModal: React.FC<CardScannerModalProps> = ({
           {/* Loading overlay */}
           {isScanning && (
             <div className="absolute inset-0 z-20 flex flex-col items-center justify-center bg-white/90 p-6 text-center backdrop-blur-xl animate-fade-in">
-              <div className="mb-4 flex h-16 w-16 animate-pulse items-center justify-center rounded-3xl bg-blue-50 text-blue-600">
+              <div className="mb-4 flex h-16 w-16 animate-pulse items-center justify-center rounded-3xl bg-primary/10 text-primary">
                 <Sparkles className="h-8 w-8" />
               </div>
               <h4 className="text-lg font-semibold tracking-tight text-slate-900">
@@ -278,7 +278,7 @@ export const CardScannerModal: React.FC<CardScannerModalProps> = ({
                 Analizando nombre, empresa, cargo, correo y número telefónico de la tarjeta.
               </p>
               <div className="mt-4 flex items-center gap-2 rounded-full bg-slate-100 px-3.5 py-1.5 text-xs font-semibold text-slate-600">
-                <Loader2 className="h-4 w-4 animate-spin text-blue-600" />
+                <Loader2 className="h-4 w-4 animate-spin text-primary" />
                 <span>Procesando imagen</span>
               </div>
             </div>
@@ -317,7 +317,7 @@ export const CardScannerModal: React.FC<CardScannerModalProps> = ({
                 type="button"
                 onClick={handleCapturePhoto}
                 disabled={isScanning || !isCameraActive}
-                className="flex w-full cursor-pointer items-center justify-center gap-2 rounded-full bg-blue-600 py-3.5 text-sm font-semibold text-white shadow-[0_10px_24px_-10px_rgba(37,99,235,0.7)] transition-all hover:bg-blue-700 active:scale-[0.98] disabled:bg-slate-200 disabled:text-slate-400 disabled:shadow-none"
+                className="flex w-full cursor-pointer items-center justify-center gap-2 rounded-full bg-primary py-3.5 text-sm font-semibold text-white shadow-lg shadow-primary/40 transition-all hover:bg-primary-hover active:scale-[0.98] disabled:bg-slate-200 disabled:text-slate-400 disabled:shadow-none"
               >
                 <Camera className="h-5 w-5" />
                 <span>Tomar Foto y Escanear</span>
@@ -327,9 +327,9 @@ export const CardScannerModal: React.FC<CardScannerModalProps> = ({
             <div className="space-y-4">
               <div
                 onClick={() => fileInputRef.current?.click()}
-                className="flex aspect-4/3 cursor-pointer flex-col items-center justify-center rounded-3xl border-2 border-dashed border-slate-200 bg-slate-50 p-6 text-center transition-all hover:border-blue-400 hover:bg-blue-50/50"
+                className="flex aspect-4/3 cursor-pointer flex-col items-center justify-center rounded-3xl border-2 border-dashed border-slate-200 bg-slate-50 p-6 text-center transition-all hover:border-primary/50 hover:bg-primary/5"
               >
-                <div className="mb-3 flex h-12 w-12 items-center justify-center rounded-2xl bg-white text-blue-600 shadow-sm">
+                <div className="mb-3 flex h-12 w-12 items-center justify-center rounded-2xl bg-white text-primary shadow-sm">
                   <Upload className="h-6 w-6" />
                 </div>
                 <p className="text-sm font-semibold text-slate-800">Haz clic para seleccionar o arrastra una foto</p>

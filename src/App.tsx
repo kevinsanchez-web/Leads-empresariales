@@ -4,6 +4,7 @@ import { Header } from './components/Header';
 import { MetricsHeader } from './components/MetricsHeader';
 import { LeadsTable } from './components/LeadsTable';
 import { LeadDrawerHost } from './components/LeadDrawerHost';
+import { DrawerModal } from './components/useLeadDrawer';
 import { ReportsDashboard } from './components/ReportsDashboard';
 import { NewLeadModal } from './components/NewLeadModal';
 import { MobileQuickCapture } from './components/MobileQuickCapture';
@@ -36,15 +37,8 @@ import {
   createOrUpdateEvent,
   createOrUpdateUser,
   deleteUser as deleteUserFromFirestore,
+  importLeads,
 } from './services/firestoreService';
-
-// Mapeo de valores hexadecimales para variables CSS dinámicas del tema
-const THEME_COLORS: Record<AccentTheme, { primary: string; hover: string; light: string }> = {
-  azul: { primary: '#0071E3', hover: '#0077ED', light: '#0071E310' },
-  verde: { primary: '#10B981', hover: '#059669', light: '#10B98110' },
-  naranja: { primary: '#F97316', hover: '#EA580C', light: '#F9731610' },
-  purpura: { primary: '#8B5CF6', hover: '#7C3AED', light: '#8B5CF610' },
-};
 
 export default function App() {
   const [activeView, setActiveView] = useState<ActiveView>('captura_movil');
@@ -60,15 +54,11 @@ export default function App() {
     return 'azul';
   });
 
-  // Aplicar atributos y variables CSS al HTML Root
+  // Aplicar atributo data-theme al HTML Root. Los colores viven en index.css
+  // (bloques [data-theme=...] + tokens @theme), así que la fuente de verdad es única.
   useEffect(() => {
     try {
-      const selected = THEME_COLORS[accentTheme] || THEME_COLORS.azul;
       document.documentElement.setAttribute('data-theme', accentTheme);
-      document.documentElement.style.setProperty('--color-primary', selected.primary);
-      document.documentElement.style.setProperty('--color-primary-hover', selected.hover);
-      document.documentElement.style.setProperty('--color-primary-light', selected.light);
-
       localStorage.setItem('app_accent_theme_v1', accentTheme);
     } catch (e) {
       console.error("Error guardando accentTheme:", e);
@@ -132,6 +122,8 @@ export default function App() {
 
   // Lead seleccionado (el drawer flotante se abre solo por acción del usuario)
   const [selectedLeadId, setSelectedLeadId] = useState<string | null>(null);
+  // Modal a abrir cuando se monta la ficha del lead (acción rápida "Agendar" del kanban)
+  const [leadInitialModal, setLeadInitialModal] = useState<DrawerModal | null>(null);
 
   // Estado de Red y Sincronización Offline
   const [isDeviceOffline, setIsDeviceOffline] = useState<boolean>(() => !isOnline());
@@ -266,7 +258,8 @@ export default function App() {
       const matchCompany = lead.company.toLowerCase().includes(q);
       const matchRole = lead.role.toLowerCase().includes(q);
       const matchInterests = lead.interests.some(i => i.toLowerCase().includes(q));
-      return matchName || matchCompany || matchRole || matchInterests;
+      const matchIndustry = (lead.companyInfo?.industry || '').toLowerCase().includes(q);
+      return matchName || matchCompany || matchRole || matchInterests || matchIndustry;
     }
 
     return true;
@@ -274,11 +267,13 @@ export default function App() {
 
   const selectedLead = leads.find(l => l.id === selectedLeadId) || null;
 
-  const openLead = useCallback((lead: Lead) => {
+  const openLead = useCallback((lead: Lead, initialModal: DrawerModal | null = null) => {
+    setLeadInitialModal(initialModal);
     setSelectedLeadId(lead.id);
   }, []);
 
   const closeLead = useCallback(() => {
+    setLeadInitialModal(null);
     setSelectedLeadId(null);
   }, []);
 
@@ -288,6 +283,13 @@ export default function App() {
     } catch (err) {
       console.error('Error actualizando lead en Firestore:', err);
     }
+  };
+
+  // Importación masiva desde CSV/Excel: los nuevos en un batch atómico y los
+  // actualizados uno a uno (ya existen en Firestore con su historial).
+  const handleImportLeads = async (newLeads: Lead[], updatedLeads: Lead[]) => {
+    if (newLeads.length > 0) await importLeads(newLeads);
+    await Promise.all(updatedLeads.map(lead => createOrUpdateLead(lead)));
   };
 
   const handleApplyEnrichment = async (
@@ -310,6 +312,7 @@ export default function App() {
   };
 
   const handleSaveNewLead = async (newLead: Lead) => {
+    setLeadInitialModal(null);
     setSelectedLeadId(newLead.id);
     setLeadSaveError(null);
     try {
@@ -368,7 +371,7 @@ export default function App() {
   const pendingAlertsCount = pendingAlerts.filter(a => a.category === 'overdue' || a.category === 'today' || a.category === 'priority').length;
 
   return (
-    <div className="min-h-screen bg-[#F8FAFC] text-slate-800 font-sans flex flex-col antialiased selection:bg-blue-500 selection:text-white">
+    <div className="min-h-screen bg-[#F8FAFC] text-slate-800 font-sans flex flex-col antialiased selection:bg-primary selection:text-white">
       
       {/* Drawer Navegación Lateral */}
       <Sidebar
@@ -428,7 +431,7 @@ export default function App() {
         />
 
         {/* Contenido Dinámico según la Vista Activa */}
-        <main className="flex-1 min-w-0 flex flex-col p-3 sm:p-4 md:p-6 pb-[calc(var(--bottom-nav-reserve)+1.5rem)] max-w-[1600px] w-full mx-auto space-y-3">
+        <main className="flex-1 min-w-0 flex flex-col p-3 sm:p-4 md:p-6 pb-[calc(var(--bottom-nav-reserve)+2.75rem)] max-w-[1600px] w-full mx-auto space-y-3">
 
           {/* Banner Modo Offline */}
           {isDeviceOffline && (
@@ -481,14 +484,14 @@ export default function App() {
 
           {/* Barra para Forzar Sincronización de Leads Pendientes */}
           {!isDeviceOffline && offlineQueueCount > 0 && (
-            <div className="bg-indigo-600 text-white px-4 py-2 rounded-2xl shadow-md flex items-center justify-between gap-3 text-xs font-bold animate-fade-in">
+            <div className="bg-primary text-white px-4 py-2 rounded-2xl shadow-md flex items-center justify-between gap-3 text-xs font-bold animate-fade-in">
               <div className="flex items-center gap-2">
-                <RefreshCw className="w-4 h-4 animate-spin text-indigo-200" />
+                <RefreshCw className="w-4 h-4 animate-spin text-primary-light" />
                 <span>Tienes {offlineQueueCount} leads capturados sin conexión listos para sincronizar.</span>
               </div>
               <button
                 onClick={handleFlushOfflineQueue}
-                className="px-3 py-1 bg-white text-indigo-700 hover:bg-indigo-50 rounded-xl font-extrabold text-[11px] shadow-2xs transition-all cursor-pointer shrink-0 active:scale-95"
+                className="px-3 py-1 bg-white text-primary hover:bg-primary/10 rounded-xl font-extrabold text-[11px] shadow-2xs transition-all cursor-pointer shrink-0 active:scale-95"
               >
                 Sincronizar Ahora ⚡
               </button>
@@ -513,6 +516,9 @@ export default function App() {
                     onSelectLead={openLead}
                     currentPage={currentPage}
                     setCurrentPage={setCurrentPage}
+                    currentUser={currentUser}
+                    currentEvent={currentEvent}
+                    onImportLeads={handleImportLeads}
                   />
                 </div>
               </div>
@@ -554,6 +560,7 @@ export default function App() {
               leads={leads.filter(l => l.event === currentEvent.name)}
               onSelectLead={openLead}
               onUpdateLead={handleUpdateLead}
+              searchQuery={searchQuery}
             />
           )}
 
@@ -578,7 +585,10 @@ export default function App() {
           {activeView === 'seguimientos' && (
             <SeguimientosView
               leads={leads.filter(l => l.event === currentEvent.name)}
+              searchQuery={searchQuery}
               onSelectLead={openLead}
+              onUpdateLead={handleUpdateLead}
+              onScheduleLead={(lead) => openLead(lead, 'schedule')}
             />
           )}
 
@@ -696,6 +706,7 @@ export default function App() {
         onDeleteLead={handleDeleteLead}
         currentUser={currentUser.name}
         onGoToLeadsView={() => setActiveView('personas')}
+        initialModal={leadInitialModal}
       />
 
     </div>

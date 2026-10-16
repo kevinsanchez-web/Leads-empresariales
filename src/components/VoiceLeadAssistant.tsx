@@ -135,6 +135,11 @@ interface VoiceLeadAssistantProps {
   onApplyVoiceData: (data: ParsedVoiceLead) => void;
   onExecuteCommand?: (command: 'save' | 'clear' | 'priority' | 'scan') => void;
   onActiveFieldChange?: (fieldKey: string) => void;
+  /**
+   * Permite al padre renderizar el botón de standby (p. ej. dentro de la barra
+   * segmentada de captura) en vez del botón azul por defecto de este componente.
+   */
+  renderStandby?: (start: () => void) => React.ReactNode;
 }
 
 // Global retainers to prevent V8 Garbage Collection of SpeechSynthesisUtterance
@@ -148,7 +153,8 @@ declare global {
 export const VoiceLeadAssistant: React.FC<VoiceLeadAssistantProps> = ({
   onApplyVoiceData,
   onExecuteCommand,
-  onActiveFieldChange
+  onActiveFieldChange,
+  renderStandby
 }) => {
   const [isGuidedModeActive, setIsGuidedModeActive] = useState(false);
   const [isPaused, setIsPaused] = useState(false);
@@ -791,19 +797,22 @@ export const VoiceLeadAssistant: React.FC<VoiceLeadAssistantProps> = ({
 
   return (
     <>
-      {/* 1. Standby: boton de arranque (azul primario de la app) */}
-      {!isGuidedModeActive && (
-        <button
-          type="button"
-          id="start-guided-voice-btn"
-          onClick={startGuidedFlow}
-          className="px-2.5 py-1.5 rounded-xl bg-[#0071E3] hover:bg-[#0077ED] text-white text-xs font-semibold flex items-center justify-center gap-1.5 shadow-xs transition-colors cursor-pointer whitespace-nowrap shrink-0"
-          title="Iniciar Asistente de Voz para dictar datos"
-        >
-          <Mic className="w-3.5 h-3.5 text-white" />
-          <span>Asistente Voz</span>
-        </button>
-      )}
+      {/* 1. Standby: boton de arranque (azul primario de la app, o el que provea el padre) */}
+      {!isGuidedModeActive &&
+        (renderStandby ? (
+          renderStandby(startGuidedFlow)
+        ) : (
+          <button
+            type="button"
+            id="start-guided-voice-btn"
+            onClick={startGuidedFlow}
+            className="px-2.5 py-1.5 rounded-xl bg-primary hover:bg-primary-hover text-white text-xs font-semibold flex items-center justify-center gap-1.5 shadow-xs transition-colors cursor-pointer whitespace-nowrap shrink-0"
+            title="Iniciar Asistente de Voz para dictar datos"
+          >
+            <Mic className="w-3.5 h-3.5 text-white" />
+            <span>Asistente Voz</span>
+          </button>
+        ))}
 
       {/* 2. Sleek Floating Voice Control Bar (Active across forms).
             Se ancla encima de la barra de navegación: con bottom-5 quedaba oculto detrás de ella. */}
@@ -814,7 +823,7 @@ export const VoiceLeadAssistant: React.FC<VoiceLeadAssistantProps> = ({
             {/* Top Bar: Active Step Indicator + Live Animated Equalizer */}
             <div className="flex items-center justify-between gap-2.5 px-1 mb-2">
               <div className="flex items-center gap-2.5 min-w-0">
-                <div className="w-8 h-8 rounded-xl bg-[#0071E3]/10 border border-[#0071E3]/20 flex items-center justify-center text-[#0071E3] shrink-0">
+                <div className="w-8 h-8 rounded-xl bg-primary/10 border border-primary/20 flex items-center justify-center text-primary shrink-0">
                   <StepIcon className="w-4 h-4" />
                 </div>
                 <div className="min-w-0">
@@ -822,7 +831,7 @@ export const VoiceLeadAssistant: React.FC<VoiceLeadAssistantProps> = ({
                     <p className="text-xs font-bold text-[#1D1D1F] truncate">
                       {currentStep.title}
                     </p>
-                    <span className="text-[10px] font-bold text-[#0071E3] bg-[#0071E3]/10 px-1.5 py-0.2 rounded border border-[#0071E3]/20">
+                    <span className="text-[10px] font-bold text-primary bg-primary/10 px-1.5 py-0.2 rounded border border-primary/20">
                       {currentStepIndex + 1}/{GUIDED_VOICE_STEPS.length}
                     </span>
                   </div>
@@ -831,7 +840,7 @@ export const VoiceLeadAssistant: React.FC<VoiceLeadAssistantProps> = ({
                   <div className="flex items-center gap-1.5 text-[11px] text-slate-500 truncate">
                     {isSpeakingPrompt ? (
                       <span className="text-slate-600 font-semibold flex items-center gap-1">
-                        <Volume2 className="w-3.5 h-3.5 text-[#0071E3]" />
+                        <Volume2 className="w-3.5 h-3.5 text-primary" />
                         Hablando en voz alta...
                       </span>
                     ) : isPaused ? (
@@ -863,7 +872,7 @@ export const VoiceLeadAssistant: React.FC<VoiceLeadAssistantProps> = ({
                         key={i}
                         className={`w-1 rounded-full transition-all duration-100 ${
                           isSpeakingPrompt 
-                            ? 'bg-[#0071E3]' 
+                            ? 'bg-primary' 
                             : isListening 
                             ? 'bg-emerald-500' 
                             : 'bg-slate-300'
@@ -902,7 +911,7 @@ export const VoiceLeadAssistant: React.FC<VoiceLeadAssistantProps> = ({
                   onClick={() => setShowDetails(!showDetails)}
                   className={`p-1.5 rounded-xl text-xs transition-colors cursor-pointer border ${
                     showDetails
-                      ? 'bg-[#0071E3]/10 text-[#0071E3] border-[#0071E3]/20'
+                      ? 'bg-primary/10 text-primary border-primary/20'
                       : 'bg-[#F5F5F7] hover:bg-[#EBEBEF] text-slate-600 border-black/[0.05]'
                   }`}
                   title="Configuración de voz y respuestas rápidas"
@@ -921,7 +930,7 @@ export const VoiceLeadAssistant: React.FC<VoiceLeadAssistantProps> = ({
                 <button
                   type="button"
                   onClick={() => speakPrompt(currentStep.speechPrompt)}
-                  className="shrink-0 text-[10px] text-[#0071E3] hover:opacity-70 font-semibold cursor-pointer"
+                  className="shrink-0 text-[10px] text-primary hover:opacity-70 font-semibold cursor-pointer"
                 >
                   Repetir audio
                 </button>
@@ -952,7 +961,7 @@ export const VoiceLeadAssistant: React.FC<VoiceLeadAssistantProps> = ({
                     }
                   }}
                   placeholder={`Escribir o corregir (${currentStep.title})...`}
-                  className="flex-1 bg-[#F5F5F7] border border-black/[0.05] focus:bg-white focus:border-[#0071E3] focus:ring-2 focus:ring-[#0071E3]/20 text-xs text-[#1D1D1F] placeholder-slate-400 rounded-lg px-2.5 py-1 outline-none transition-colors"
+                  className="flex-1 bg-[#F5F5F7] border border-black/[0.05] focus:bg-white focus:border-primary focus:ring-2 focus:ring-primary/20 text-xs text-[#1D1D1F] placeholder-slate-400 rounded-lg px-2.5 py-1 outline-none transition-colors"
                 />
                 <button
                   type="button"
@@ -962,7 +971,7 @@ export const VoiceLeadAssistant: React.FC<VoiceLeadAssistantProps> = ({
                     setManualInputText('');
                   }}
                   disabled={!manualInputText.trim()}
-                  className="px-2.5 py-1 rounded-lg bg-[#0071E3] hover:bg-[#0077ED] disabled:opacity-40 text-white text-[11px] font-semibold shrink-0 transition-colors cursor-pointer"
+                  className="px-2.5 py-1 rounded-lg bg-primary hover:bg-primary-hover disabled:opacity-40 text-white text-[11px] font-semibold shrink-0 transition-colors cursor-pointer"
                 >
                   Aplicar
                 </button>
@@ -1055,7 +1064,7 @@ export const VoiceLeadAssistant: React.FC<VoiceLeadAssistantProps> = ({
                   onClick={togglePause}
                   className={`p-2 rounded-xl transition-colors cursor-pointer border ${
                     isPaused 
-                      ? 'bg-[#0071E3] text-white border-[#0071E3]' 
+                      ? 'bg-primary text-white border-primary' 
                       : 'bg-[#F5F5F7] hover:bg-[#EBEBEF] text-slate-600 border-black/[0.05]'
                   }`}
                   title={isPaused ? 'Reanudar Asistente' : 'Pausar Asistente'}
@@ -1079,7 +1088,7 @@ export const VoiceLeadAssistant: React.FC<VoiceLeadAssistantProps> = ({
                 <button
                   type="button"
                   onClick={() => goToStep(currentStepIndex + 1)}
-                  className="px-3 py-2 rounded-xl bg-[#0071E3] hover:bg-[#0077ED] text-white text-xs font-semibold flex items-center gap-1 transition-colors cursor-pointer"
+                  className="px-3 py-2 rounded-xl bg-primary hover:bg-primary-hover text-white text-xs font-semibold flex items-center gap-1 transition-colors cursor-pointer"
                   title="Pasar al siguiente campo"
                 >
                   <span>Pasar</span>

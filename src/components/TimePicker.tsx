@@ -377,7 +377,7 @@ export const TimePicker: React.FC<TimePickerProps> = ({
                 onPointerUp={handlePointerUp}
                 onPointerCancel={handlePointerUp}
                 onKeyDown={handleDialKeyDown}
-                className="select-none outline-none focus-visible:ring-2 focus-visible:ring-[#0071E3] rounded-full"
+                className="select-none outline-none focus-visible:ring-2 focus-visible:ring-primary rounded-full"
                 style={{ touchAction: 'none', cursor: 'grab' }}
               >
                 {/* Fondo de la esfera y aro del color del tema */}

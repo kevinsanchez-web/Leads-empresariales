@@ -2,14 +2,17 @@ import React, { useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { Lead } from '../types';
 import { LeadDetailDrawerContent } from './LeadDetailDrawer';
+import { DrawerModal } from './useLeadDrawer';
 
 interface LeadDrawerHostProps {
   lead: Lead | null;
   onClose: () => void;
-  onUpdateLead: (updated: Lead) => void;
+  onUpdateLead: (updatedLead: Lead) => void;
   onDeleteLead?: (leadId: string) => void;
   currentUser: string;
   onGoToLeadsView?: () => void;
+  /** Modal a abrir al montar la ficha (accion rápida "Agendar" del kanban). */
+  initialModal?: DrawerModal | null;
 }
 
 export const LeadDrawerHost: React.FC<LeadDrawerHostProps> = ({
@@ -18,7 +21,8 @@ export const LeadDrawerHost: React.FC<LeadDrawerHostProps> = ({
   onUpdateLead,
   onDeleteLead,
   currentUser,
-  onGoToLeadsView
+  onGoToLeadsView,
+  initialModal
 }) => {
   // La barra baja queda visible y usable con el sheet abierto, así que el sheet se ancla
   // justo encima de ella. Se mide en runtime porque su alto depende del safe area del
@@ -93,6 +97,7 @@ export const LeadDrawerHost: React.FC<LeadDrawerHostProps> = ({
             onDeleteLead={onDeleteLead}
             currentUser={currentUser}
             onGoToLeadsView={onGoToLeadsView}
+            initialModal={initialModal}
           />
         </div>
       </aside>

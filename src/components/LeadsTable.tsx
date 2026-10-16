@@ -17,10 +17,16 @@ import {
   Clock,
   SlidersHorizontal,
   Columns,
-  CheckCircle2
+  CheckCircle2,
+  ChevronDown,
+  FileText,
+  Upload
 } from 'lucide-react';
-import { Lead, LeadStatus } from '../types';
+import { Lead, LeadStatus, UserRep, EventOption } from '../types';
 import { compareLeadTimestamps, formatLeadTimestamp } from '../utils/date';
+import { exportLeadsToCsv, exportLeadsToXlsx } from '../utils/spreadsheet';
+import { DEFAULT_ESTIMATED_VALUE } from '../utils/format';
+import { ImportLeadsModal } from './ImportLeadsModal';
 
 interface LeadsTableProps {
   leads: Lead[];
@@ -30,6 +36,9 @@ interface LeadsTableProps {
   setCurrentPage: (page: number) => void;
   itemsPerPage?: number;
   onUpdateLead?: (lead: Lead) => void;
+  currentUser?: UserRep;
+  currentEvent?: EventOption;
+  onImportLeads?: (newLeads: Lead[], updatedLeads: Lead[]) => Promise<void>;
 }
 
 type SortField = 'name' | 'company' | 'status' | 'lastContact' | 'estimatedValue' | 'priority';
@@ -41,11 +50,18 @@ export const LeadsTable: React.FC<LeadsTableProps> = ({
   currentPage,
   setCurrentPage,
   itemsPerPage = 8,
-  onUpdateLead
+  onUpdateLead,
+  currentUser,
+  currentEvent,
+  onImportLeads
 }) => {
   const [viewMode, setViewMode] = useState<'table' | 'cards'>('table');
   const [sortField, setSortField] = useState<SortField>('lastContact');
   const [sortAsc, setSortAsc] = useState(false);
+  const [exportMenuOpen, setExportMenuOpen] = useState(false);
+  const [isImportModalOpen, setIsImportModalOpen] = useState(false);
+
+  const canImport = Boolean(currentUser && currentEvent && onImportLeads);
 
   // Sort Leads
   const sortedLeads = useMemo(() => {
@@ -54,8 +70,8 @@ export const LeadsTable: React.FC<LeadsTableProps> = ({
       let valB: any = b[sortField];
 
       if (sortField === 'estimatedValue') {
-        valA = a.estimatedValue || 0;
-        valB = b.estimatedValue || 0;
+        valA = a.estimatedValue ?? DEFAULT_ESTIMATED_VALUE;
+        valB = b.estimatedValue ?? DEFAULT_ESTIMATED_VALUE;
       } else if (sortField === 'priority') {
         valA = a.priority ? 1 : 0;
         valB = b.priority ? 1 : 0;
@@ -80,7 +96,7 @@ export const LeadsTable: React.FC<LeadsTableProps> = ({
   const paginatedLeads = sortedLeads.slice(startIndex, startIndex + itemsPerPage);
 
   const totalPipelineValue = useMemo(() => {
-    return leads.reduce((acc, curr) => acc + (curr.estimatedValue || 0), 0);
+    return leads.reduce((acc, curr) => acc + (curr.estimatedValue ?? DEFAULT_ESTIMATED_VALUE), 0);
   }, [leads]);
 
   const handleSort = (field: SortField) => {
@@ -92,38 +108,16 @@ export const LeadsTable: React.FC<LeadsTableProps> = ({
     }
   };
 
-  const handleExportCSV = () => {
-    const headers = [
-      "ID", "Nombre", "Empresa", "Cargo", "Email", "Telefono", "Ciudad", 
-      "Evento", "Intereses", "Estado", "Prioridad", "ValorEstimadoUSD", 
-      "CapturadoPor", "FechaCaptura", "UltimoContacto", "Notas"
-    ];
-    const rows = leads.map(l => [
-      l.id,
-      `"${(l.name || '').replace(/"/g, '""')}"`,
-      `"${(l.company || '').replace(/"/g, '""')}"`,
-      `"${(l.role || '').replace(/"/g, '""')}"`,
-      `"${(l.email || '').replace(/"/g, '""')}"`,
-      `"${(l.phone || '').replace(/"/g, '""')}"`,
-      `"${(l.city || '').replace(/"/g, '""')}"`,
-      `"${(l.event || '').replace(/"/g, '""')}"`,
-      `"${(l.interests || []).join(', ')}"`,
-      `"${l.status}"`,
-      l.priority ? "SI" : "NO",
-      l.estimatedValue || 0,
-      `"${(l.capturedBy || '').replace(/"/g, '""')}"`,
-      `"${l.capturedAt || ''}"`,
-      `"${l.lastContact || ''}"`,
-      `"${(l.notes || '').replace(/"/g, '""')}"`
-    ]);
-    const csvContent = "data:text/csv;charset=utf-8,\uFEFF" + [headers.join(','), ...rows.map(e => e.join(','))].join('\n');
-    const encodedUri = encodeURI(csvContent);
-    const link = document.createElement("a");
-    link.setAttribute("href", encodedUri);
-    link.setAttribute("download", `Leads_Export_${new Date().toISOString().slice(0, 10)}.csv`);
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+  // Exporta en el mismo orden que muestra la tabla (`sortedLeads`) y con fecha
+  // local (no UTC, para no caer en el día anterior en zonas nocturnas de GMT-5).
+  const handleExportCsv = () => {
+    setExportMenuOpen(false);
+    exportLeadsToCsv(sortedLeads, `Leads_Export_${new Date().toLocaleDateString('en-CA')}.csv`);
+  };
+
+  const handleExportXlsx = () => {
+    setExportMenuOpen(false);
+    exportLeadsToXlsx(sortedLeads, `Leads_Export_${new Date().toLocaleDateString('en-CA')}.xlsx`);
   };
 
   const handleQuickPriority = (e: React.MouseEvent, lead: Lead) => {
@@ -144,11 +138,11 @@ export const LeadsTable: React.FC<LeadsTableProps> = ({
   // Apple-style soft avatar colors based on name hash
   const getAvatarGradient = (name: string) => {
     const colors = [
-      'bg-gradient-to-br from-blue-500 to-indigo-600 text-white',
-      'bg-gradient-to-br from-purple-500 to-violet-600 text-white',
-      'bg-gradient-to-br from-teal-500 to-emerald-600 text-white',
-      'bg-gradient-to-br from-rose-500 to-pink-600 text-white',
-      'bg-gradient-to-br from-amber-500 to-orange-600 text-white'
+    'bg-linear-to-br from-blue-500 to-indigo-600 text-white',
+    'bg-linear-to-br from-purple-500 to-violet-600 text-white',
+    'bg-linear-to-br from-teal-500 to-emerald-600 text-white',
+    'bg-linear-to-br from-rose-500 to-pink-600 text-white',
+    'bg-linear-to-br from-amber-500 to-orange-600 text-white'
     ];
     let hash = 0;
     for (let i = 0; i < name.length; i++) hash = name.charCodeAt(i) + ((hash << 5) - hash);
@@ -164,8 +158,8 @@ export const LeadsTable: React.FC<LeadsTableProps> = ({
         };
       case 'Calificado':
         return {
-          pill: 'bg-[#0071E3]/10 text-[#0071E3]',
-          dot: 'bg-[#0071E3]'
+          pill: 'bg-primary/10 text-primary',
+          dot: 'bg-primary'
         };
       case 'Reunión Agendada':
         return {
@@ -247,15 +241,55 @@ export const LeadsTable: React.FC<LeadsTableProps> = ({
             </button>
           </div>
 
-          {/* Export CSV CTA */}
-          <button
-            onClick={handleExportCSV}
-            className="px-2.5 sm:px-3 py-1 sm:py-1.5 bg-[#F5F5F7] hover:bg-[#EBEBEF] text-[#1D1D1F] rounded-xl text-[11px] sm:text-xs font-semibold flex items-center gap-1 sm:gap-1.5 transition-colors cursor-pointer border border-black/[0.04]"
-            title="Exportar listado a Excel / CSV"
-          >
-            <FileSpreadsheet className="w-3.5 h-3.5 text-emerald-600 stroke-[2.2]" />
-            <span className="text-[11px]">Exportar</span>
-          </button>
+          {/* Import CTA */}
+          {canImport && (
+            <button
+              onClick={() => setIsImportModalOpen(true)}
+              className="px-2.5 sm:px-3 py-1 sm:py-1.5 bg-[#F5F5F7] hover:bg-[#EBEBEF] text-[#1D1D1F] rounded-xl text-[11px] sm:text-xs font-semibold flex items-center gap-1 sm:gap-1.5 transition-colors cursor-pointer border border-black/[0.04]"
+              title="Importar leads desde un archivo CSV o Excel"
+            >
+              <Upload className="w-3.5 h-3.5 text-sky-600 stroke-[2.2]" />
+              <span className="text-[11px]">Importar</span>
+            </button>
+          )}
+
+          {/* Export CTA: menú para elegir CSV o Excel */}
+          <div className="relative">
+            <button
+              onClick={() => setExportMenuOpen(v => !v)}
+              className="px-2.5 sm:px-3 py-1 sm:py-1.5 bg-[#F5F5F7] hover:bg-[#EBEBEF] text-[#1D1D1F] rounded-xl text-[11px] sm:text-xs font-semibold flex items-center gap-1 sm:gap-1.5 transition-colors cursor-pointer border border-black/[0.04]"
+              title="Exportar listado a Excel / CSV"
+            >
+              <FileSpreadsheet className="w-3.5 h-3.5 text-emerald-600 stroke-[2.2]" />
+              <span className="text-[11px]">Exportar</span>
+              <ChevronDown className={`w-3 h-3 text-slate-400 transition-transform ${exportMenuOpen ? 'rotate-180' : ''}`} />
+            </button>
+
+            {exportMenuOpen && (
+              <>
+                <div className="fixed inset-0 z-30" onClick={() => setExportMenuOpen(false)} />
+                <div className="absolute right-0 top-full mt-1 z-40 w-48 bg-white border border-slate-200 rounded-xl shadow-xl p-1 animate-fade-in">
+                  <div className="px-2.5 py-1.5 text-[9px] font-black text-slate-400 uppercase tracking-wider">
+                    Exportar listado
+                  </div>
+                  <button
+                    onClick={handleExportCsv}
+                    className="w-full text-left px-2.5 py-1.5 rounded-lg text-[11px] font-semibold text-slate-700 hover:bg-slate-50 flex items-center gap-2 transition-colors cursor-pointer"
+                  >
+                    <FileText className="w-3.5 h-3.5 text-sm text-slate-400 shrink-0" />
+                    Descargar CSV
+                  </button>
+                  <button
+                    onClick={handleExportXlsx}
+                    className="w-full text-left px-2.5 py-1.5 rounded-lg text-[11px] font-semibold text-slate-700 hover:bg-slate-50 flex items-center gap-2 transition-colors cursor-pointer"
+                  >
+                    <FileSpreadsheet className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+                    Descargar Excel (.xlsx)
+                  </button>
+                </div>
+              </>
+            )}
+          </div>
 
         </div>
 
@@ -278,7 +312,7 @@ export const LeadsTable: React.FC<LeadsTableProps> = ({
                 key={lead.id}
                 onClick={() => onSelectLead(lead)}
                 className={`p-3 flex items-center justify-between gap-2.5 transition-colors active:bg-black/[0.04] cursor-pointer ${
-                  isSelected ? 'bg-[#0071E3]/[0.06]' : 'bg-white'
+                  isSelected ? 'bg-primary/[0.06]' : 'bg-white'
                 }`}
               >
                 <div className="flex items-center gap-2.5 min-w-0 flex-1">
@@ -291,7 +325,7 @@ export const LeadsTable: React.FC<LeadsTableProps> = ({
                   </button>
 
                   <div className={`w-8 h-8 rounded-xl font-bold text-[11px] flex items-center justify-center shrink-0 shadow-2xs ${
-                    isSelected ? 'bg-[#0071E3] text-white' : getAvatarGradient(lead.name)
+                    isSelected ? 'bg-primary text-white' : getAvatarGradient(lead.name)
                   }`}>
                     {initials}
                   </div>
@@ -301,7 +335,7 @@ export const LeadsTable: React.FC<LeadsTableProps> = ({
                       {lead.name}
                     </div>
                     <div className="text-[11px] text-slate-500 truncate flex items-center gap-1 mt-0.5">
-                      <span className="font-semibold text-[#0071E3] truncate">{lead.company}</span>
+                      <span className="font-semibold text-primary truncate">{lead.company}</span>
                       <span className="text-slate-300">•</span>
                       <span className="truncate">{lead.role}</span>
                     </div>
@@ -313,7 +347,7 @@ export const LeadsTable: React.FC<LeadsTableProps> = ({
                     <span className={`w-1.5 h-1.5 rounded-full ${statusStyle.dot}`}></span>
                     <span className="whitespace-nowrap max-w-[85px] truncate">{lead.status}</span>
                   </div>
-                  <ChevronRight className={`w-3.5 h-3.5 ${isSelected ? 'text-[#0071E3]' : 'text-slate-300'}`} />
+                  <ChevronRight className={`w-3.5 h-3.5 ${isSelected ? 'text-primary' : 'text-slate-300'}`} />
                 </div>
               </div>
             );
@@ -332,12 +366,12 @@ export const LeadsTable: React.FC<LeadsTableProps> = ({
                   {/* Persona & Empresa Header */}
                   <th 
                     onClick={() => handleSort('name')}
-                    className="py-3 px-3 sm:px-4 cursor-pointer hover:text-[#0071E3] transition-colors"
+                    className="py-3 px-3 sm:px-4 cursor-pointer hover:text-primary transition-colors"
                   >
                     <div className="flex items-center gap-1.5">
                       <span>Contacto / Empresa</span>
                       {sortField === 'name' ? (
-                        sortAsc ? <ArrowUp className="w-3 h-3 text-[#0071E3]" /> : <ArrowDown className="w-3 h-3 text-[#0071E3]" />
+                        sortAsc ? <ArrowUp className="w-3 h-3 text-primary" /> : <ArrowDown className="w-3 h-3 text-primary" />
                       ) : (
                         <ArrowUpDown className="w-3 h-3 text-slate-300" />
                       )}
@@ -350,12 +384,12 @@ export const LeadsTable: React.FC<LeadsTableProps> = ({
                   {/* Estado Header */}
                   <th 
                     onClick={() => handleSort('status')}
-                    className="py-3 px-3 cursor-pointer hover:text-[#0071E3] transition-colors"
+                    className="py-3 px-3 cursor-pointer hover:text-primary transition-colors"
                   >
                     <div className="flex items-center gap-1.5">
                       <span>Estado</span>
                       {sortField === 'status' ? (
-                        sortAsc ? <ArrowUp className="w-3 h-3 text-[#0071E3]" /> : <ArrowDown className="w-3 h-3 text-[#0071E3]" />
+                        sortAsc ? <ArrowUp className="w-3 h-3 text-primary" /> : <ArrowDown className="w-3 h-3 text-primary" />
                       ) : (
                         <ArrowUpDown className="w-3 h-3 text-slate-300" />
                       )}
@@ -365,12 +399,12 @@ export const LeadsTable: React.FC<LeadsTableProps> = ({
                   {/* Valor Estimado Header */}
                   <th 
                     onClick={() => handleSort('estimatedValue')}
-                    className="hidden xl:table-cell py-3 px-3 cursor-pointer hover:text-[#0071E3] transition-colors"
+                    className="hidden xl:table-cell py-3 px-3 cursor-pointer hover:text-primary transition-colors"
                   >
                     <div className="flex items-center gap-1.5">
                       <span>Pipeline USD</span>
                       {sortField === 'estimatedValue' ? (
-                        sortAsc ? <ArrowUp className="w-3 h-3 text-[#0071E3]" /> : <ArrowDown className="w-3 h-3 text-[#0071E3]" />
+                        sortAsc ? <ArrowUp className="w-3 h-3 text-primary" /> : <ArrowDown className="w-3 h-3 text-primary" />
                       ) : (
                         <ArrowUpDown className="w-3 h-3 text-slate-300" />
                       )}
@@ -380,12 +414,12 @@ export const LeadsTable: React.FC<LeadsTableProps> = ({
                   {/* Último Contacto Header */}
                   <th 
                     onClick={() => handleSort('lastContact')}
-                    className="hidden 2xl:table-cell py-3 px-3 text-right cursor-pointer hover:text-[#0071E3] transition-colors"
+                    className="hidden 2xl:table-cell py-3 px-3 text-right cursor-pointer hover:text-primary transition-colors"
                   >
                     <div className="flex items-center justify-end gap-1.5">
                       <span>Actividad</span>
                       {sortField === 'lastContact' ? (
-                        sortAsc ? <ArrowUp className="w-3 h-3 text-[#0071E3]" /> : <ArrowDown className="w-3 h-3 text-[#0071E3]" />
+                        sortAsc ? <ArrowUp className="w-3 h-3 text-primary" /> : <ArrowDown className="w-3 h-3 text-primary" />
                       ) : (
                         <ArrowUpDown className="w-3 h-3 text-slate-300" />
                       )}
@@ -415,7 +449,7 @@ export const LeadsTable: React.FC<LeadsTableProps> = ({
                         className={`
                           group cursor-pointer transition-colors duration-150
                           ${isSelected 
-                            ? 'bg-[#0071E3]/[0.06] hover:bg-[#0071E3]/[0.08]' 
+                            ? 'bg-primary/[0.06] hover:bg-primary/[0.08]' 
                             : 'hover:bg-black/[0.02]'
                           }
                         `}
@@ -434,7 +468,7 @@ export const LeadsTable: React.FC<LeadsTableProps> = ({
                             <div className={`
                               w-8 h-8 rounded-xl font-bold text-[11px] flex items-center justify-center shrink-0 shadow-2xs transition-transform group-hover:scale-105
                               ${isSelected 
-                                ? 'bg-[#0071E3] text-white' 
+                                ? 'bg-primary text-white' 
                                 : getAvatarGradient(lead.name)
                               }
                             `}>
@@ -493,7 +527,7 @@ export const LeadsTable: React.FC<LeadsTableProps> = ({
 
                         {/* Chevron Arrow */}
                         <td className="py-3 pr-4 text-right">
-                          <ChevronRight className={`w-3.5 h-3.5 transition-all duration-150 ${isSelected ? 'text-[#0071E3] translate-x-0.5' : 'text-slate-300 group-hover:text-slate-500'}`} />
+                          <ChevronRight className={`w-3.5 h-3.5 transition-all duration-150 ${isSelected ? 'text-primary translate-x-0.5' : 'text-slate-300 group-hover:text-slate-500'}`} />
                         </td>
                       </tr>
                     );
@@ -516,7 +550,7 @@ export const LeadsTable: React.FC<LeadsTableProps> = ({
                   onClick={() => onSelectLead(lead)}
                   className={`p-4 rounded-2xl border transition-all duration-150 cursor-pointer flex flex-col justify-between ${
                     isSelected
-                      ? 'border-[#0071E3] bg-[#0071E3]/[0.03] shadow-[0_2px_8px_rgba(0,113,227,0.12)] ring-1 ring-[#0071E3]'
+                      ? 'border-primary bg-primary/[0.03] shadow-[0_2px_8px_rgba(0,113,227,0.12)] ring-1 ring-primary'
                       : 'border-black/[0.06] bg-white hover:border-slate-300 hover:shadow-xs'
                   }`}
                 >
@@ -558,7 +592,7 @@ export const LeadsTable: React.FC<LeadsTableProps> = ({
 
                   <div className="mt-4 pt-3 border-t border-black/[0.04] flex items-center justify-between text-xs text-slate-500">
                     <span>{formatLeadTimestamp(lead.lastContact)}</span>
-                    <span className="text-[#0071E3] font-semibold flex items-center gap-0.5">
+                    <span className="text-primary font-semibold flex items-center gap-0.5">
                       Ver Detalles
                       <ChevronRight className="w-3 h-3" />
                     </span>
@@ -603,7 +637,7 @@ className="w-7 h-7 sm:w-8 sm:h-8 shrink-0 rounded-xl border border-black/10 flex
                       onClick={() => setCurrentPage(page)}
                       className={`w-8 h-8 rounded-xl text-xs font-bold transition-all cursor-pointer ${
                         currentPage === page 
-                          ? 'bg-[#0071E3] text-white shadow-2xs' 
+                          ? 'bg-primary text-white shadow-2xs' 
                           : 'border border-black/[0.08] hover:bg-black/[0.04] text-slate-700'
                       }`}
                     >
@@ -624,6 +658,17 @@ className="w-7 h-7 sm:w-8 sm:h-8 shrink-0 rounded-xl border border-black/10 flex
           </button>
         </div>
       </div>
+
+      {isImportModalOpen && currentUser && currentEvent && onImportLeads && (
+        <ImportLeadsModal
+          isOpen={isImportModalOpen}
+          onClose={() => setIsImportModalOpen(false)}
+          leads={leads}
+          currentUser={currentUser}
+          currentEvent={currentEvent}
+          onImportLeads={onImportLeads}
+        />
+      )}
 
     </div>
   );

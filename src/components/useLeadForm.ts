@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { CompanyResearchInfo, EventOption, Lead, UserRep } from '../types';
 import { cleanCompanyName } from '../utils/company';
-import { cleanContact } from '../utils/contactInfo';
+import { cleanContact, isValidEmail, isValidPhone, normalizeEmail, normalizePhone } from '../utils/contactInfo';
 import { isOnline, saveLeadOffline } from '../utils/offlineStore';
 import {
   isCaptureTimestampInFuture,
@@ -78,6 +78,7 @@ export interface UseLeadFormResult {
   isScannerOpen: boolean;
   activeVoiceField: string | null;
   validationError: string | null;
+  contactWarning: string | null;
   canSubmit: boolean;
   setName: (v: string) => void;
   setCompany: (v: string) => void;
@@ -167,6 +168,9 @@ export function useLeadForm({
   const [isScannerOpen, setIsScannerOpen] = useState(false);
   const [activeVoiceField, setActiveVoiceField] = useState<string | null>(null);
   const [validationError, setValidationError] = useState<string | null>(null);
+  // Advertencia no bloqueante de contacto: no impide guardar, solo avisa de que
+  // el email o teléfono escritos no parecen válidos (para captura ágil).
+  const [contactWarning, setContactWarning] = useState<string | null>(null);
   // Contador de peticiones de investigación: una respuesta tardía de una empresa anterior
   // debe descartarse en vez de pintar información de otra compañía en el formulario.
   const researchRequestId = useRef(0);
@@ -385,13 +389,25 @@ export function useLeadForm({
       return false;
     }
     const interestSummary = selectedInterests.length > 0 ? selectedInterests.join(', ') : 'IA';
+
+    // Normaliza los datos de contacto y avisa (sin bloquear) si no parecen válidos.
+    const normalizedEmail = normalizeEmail(email);
+    const normalizedPhone = normalizePhone(phone);
+    let warning: string | null = null;
+    if (normalizedEmail && !isValidEmail(normalizedEmail)) {
+      warning = `El correo «${normalizedEmail}» no parece válido. Revísalo antes de contactar.`;
+    } else if (normalizedPhone && !isValidPhone(normalizedPhone)) {
+      warning = 'El teléfono no parece un número colombiano de 10 dígitos.';
+    }
+    setContactWarning(warning);
+
     const newLead: Lead = {
       id: `${defaults.idPrefix}${Date.now()}`,
       name: name.trim(),
       role: role.trim() || defaults.roleFallback,
       company: cleanCompanyName(company),
-      email: cleanContact(email),
-      phone: cleanContact(phone),
+      email: normalizedEmail,
+      phone: normalizedPhone,
       ...(linkedinValue ? { linkedinUrl: linkedinValue } : {}),
       event: selectedEvent,
       interests: selectedInterests.length > 0 ? selectedInterests : ['IA'],
@@ -464,7 +480,7 @@ export function useLeadForm({
     selectedEvent, followUpDate, captureDate, captureTime,
     selectedInterests, selectedSources, selectedExperiences,
     companyInfo, isResearchingCompany, researchError, researchSimulated,
-    isScannerOpen, activeVoiceField, validationError,
+    isScannerOpen, activeVoiceField, validationError, contactWarning,
     canSubmit: Boolean(name.trim() && company.trim()),
     setName, setCompany, setRole, setPhone, setEmail, setLinkedin, setNotes, setPriority,
     setFollowUpDate, setCaptureDate, setCaptureTime, setSelectedEvent,

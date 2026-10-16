@@ -103,7 +103,7 @@ export const DivergencyLogo: React.FC<DivergencyLogoProps> = ({
           <span className={`font-extrabold tracking-tight ${invert ? 'text-white' : 'text-slate-900'} ${currentSize.text}`}>
             divergency
           </span>
-          <span className={`font-black ml-1.5 px-1 py-0.2 rounded-md text-[10px] sm:text-xs tracking-wider uppercase bg-gradient-to-r from-[var(--primary-accent,#0071E3)] to-[var(--primary-gradient-to,#5856D6)] text-white shadow-2xs`}>
+          <span className={`font-black ml-1.5 px-1 py-0.2 rounded-md text-[10px] sm:text-xs tracking-wider uppercase bg-linear-to-r from-(--primary-accent,#0071E3) to-(--primary-gradient-to,#5856D6) text-white shadow-2xs`}>
             AI
           </span>
         </div>

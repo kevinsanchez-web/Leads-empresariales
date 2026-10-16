@@ -9,6 +9,12 @@ interface PickerTriggerProps {
   open: boolean;
   onToggle: () => void;
   ariaLabel: string;
+  /**
+   * Radio de las esquinas del botón. Se parametriza para que vistas como
+   * Reportes puedan unificar el border-radius de todos sus controles sin
+   * arrastrar el redondeado por defecto al resto de la app.
+   */
+  roundedClassName?: string;
 }
 
 /**
@@ -26,7 +32,8 @@ export const PickerTrigger: React.FC<PickerTriggerProps> = ({
   placeholder,
   open,
   onToggle,
-  ariaLabel
+  ariaLabel,
+  roundedClassName = 'rounded-xl'
 }) => (
   <button
     type="button"
@@ -35,7 +42,7 @@ export const PickerTrigger: React.FC<PickerTriggerProps> = ({
     aria-label={ariaLabel}
     aria-haspopup="dialog"
     aria-expanded={open}
-    className="relative w-full pl-9 pr-9 py-2 bg-[#F5F5F7] border border-black/[0.05] rounded-xl text-xs font-medium text-left text-[#1D1D1F] hover:bg-white focus:outline-none focus:ring-2 focus:ring-[#0071E3] transition-all cursor-pointer"
+    className={`relative w-full pl-9 pr-9 py-2 bg-white border border-slate-200 ${roundedClassName} text-xs font-medium text-left text-[#1D1D1F] hover:border-slate-300 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/25 transition-all cursor-pointer`}
   >
     <Icon className="w-3.5 h-3.5 absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
     <span className={text ? '' : 'text-slate-400'}>{text || placeholder}</span>

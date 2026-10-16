@@ -327,6 +327,36 @@ export function formatEventDateRange(startISO: string, endISO?: string): string 
   return `${startDay} - ${endDay} ${monthName} ${year}`;
 }
 
+/**
+ * Versión legible del `dateRange` de un evento para la UI, p. ej.
+ * `"06 - 08 Septiembre 2026"` → `"6 al 8 de Septiembre, 2026"`.
+ *
+ * Si el rango es de un solo día sale `"6 de Septiembre, 2026"`. Los rangos que
+ * `eventDateRangeForDisplay` no puede interpretar (p. ej. `"Julio - Septiembre
+ * 2026"`, `"Fecha por definir"`, `"2026"`) se devuelven tal cual como texto, y el
+ * valor vacío produce `''` para que la UI omita el distintivo.
+ */
+export function formatEventDateRangeText(value?: string): string {
+  const cleaned = (value ?? '').trim();
+  if (!cleaned) return '';
+
+  const range = eventDateRangeForDisplay(cleaned);
+  if (!range) return cleaned;
+
+  const start = new Date(isoDateToLocalMs(range.start));
+  const end = new Date(isoDateToLocalMs(range.end));
+  if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime())) return cleaned;
+
+  const monthName = monthNameEs(end.getMonth());
+  if (!monthName) return cleaned;
+
+  if (end.getTime() === start.getTime()) {
+    return `${start.getDate()} de ${monthName}, ${end.getFullYear()}`;
+  }
+
+  return `${start.getDate()} al ${end.getDate()} de ${monthName}, ${end.getFullYear()}`;
+}
+
 /** Lista de días `YYYY-MM-DD` entre dos fechas inclusives, en orden ascendente. */
 export function enumerateDays(startISO: string, endISO: string, maxDays = 400): string[] {
   const start = new Date(isoDateToLocalMs(startISO));

@@ -1,8 +1,8 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { Camera, CheckCircle2, Clock, Flame, UserPlus, Wand2, Zap } from 'lucide-react';
+import { CheckCircle2, Clock, Flame, UserPlus, Zap } from 'lucide-react';
 import { Lead, UserRep, EventOption } from '../types';
 import { CardScannerModal } from './CardScannerModal';
-import { VoiceLeadAssistant } from './VoiceLeadAssistant';
+import { CaptureToolsBar } from './CaptureToolsBar';
 import { LeadFormFields } from './LeadFormFields';
 import { useLeadForm, PAGE_DEFAULTS } from './useLeadForm';
 
@@ -71,9 +71,9 @@ export const MobileQuickCapture: React.FC<MobileQuickCaptureProps> = ({
         <div className="lg:col-span-8 space-y-3">
           <div className="bg-white rounded-2xl border border-slate-200/80 shadow-xs overflow-hidden">
             {/* Header del Formulario */}
-            <div className="bg-[#F5F5F7] px-4 sm:px-6 py-3 flex items-center justify-between gap-3 border-b border-black/[0.05]">
+            <div className="bg-white px-4 sm:px-6 py-3 flex items-center justify-between gap-3 border-b border-black/[0.05]">
               <div className="flex items-center gap-2.5 min-w-0">
-                <div className="w-7 h-7 rounded-lg bg-[#0071E3] text-white flex items-center justify-center shrink-0">
+                <div className="w-7 h-7 rounded-lg bg-primary text-white flex items-center justify-center shrink-0">
                   <Zap className="w-4 h-4" />
                 </div>
                 <div className="min-w-0">
@@ -87,28 +87,7 @@ export const MobileQuickCapture: React.FC<MobileQuickCaptureProps> = ({
                 </div>
               </div>
 
-              <div className="flex items-center gap-1.5 shrink-0">
-                <button
-                  type="button"
-                  onClick={form.openScanner}
-                  className="px-2 py-1 bg-[#0071E3] hover:bg-[#0077ED] text-white border border-transparent rounded-lg text-xs font-semibold flex items-center gap-1 transition-all cursor-pointer whitespace-nowrap"
-                  title="Escanear tarjeta de presentación"
-                >
-                  <Camera className="w-3.5 h-3.5" />
-                  <span className="hidden sm:inline">Escanear Tarjeta</span>
-                  <span className="sm:hidden">Escanear</span>
-                </button>
-
-                <button
-                  type="button"
-                  onClick={form.handleSimulateScan}
-                  className="px-2 py-1 bg-white hover:bg-slate-100 text-slate-700 border border-black/[0.05] rounded-lg text-xs font-semibold flex items-center gap-1 transition-all cursor-pointer whitespace-nowrap"
-                  title="Llenar con datos de prueba"
-                >
-                  <Wand2 className="w-3.5 h-3.5 text-[#5856D6]" />
-                  <span>Demo</span>
-                </button>
-              </div>
+              <CaptureToolsBar form={form} />
             </div>
 
             {/* Estado de Éxito o Formulario */}
@@ -125,12 +104,6 @@ export const MobileQuickCapture: React.FC<MobileQuickCaptureProps> = ({
               </div>
             ) : (
               <form onSubmit={handleSubmit} className="p-4 sm:p-6 space-y-3">
-                <VoiceLeadAssistant
-                  onApplyVoiceData={form.handleApplyVoiceData}
-                  onExecuteCommand={form.handleExecuteVoiceCommand}
-                  onActiveFieldChange={form.setActiveVoiceField}
-                />
-
                 <LeadFormFields
                   form={form}
                   events={events}
@@ -139,7 +112,7 @@ export const MobileQuickCapture: React.FC<MobileQuickCaptureProps> = ({
 
                 <button
                   type="submit"
-                  className="w-full py-2.5 bg-[#0071E3] hover:bg-[#0077ED] text-white rounded-xl text-xs font-bold flex items-center justify-center gap-2 shadow-sm transition-all cursor-pointer active:scale-98"
+                  className="w-full py-2.5 bg-primary hover:bg-primary-hover text-white rounded-xl text-xs font-bold flex items-center justify-center gap-2 shadow-sm transition-all cursor-pointer active:scale-98"
                 >
                   <UserPlus className="w-3.5 h-3.5" />
                   <span>Guardar Prospecto</span>
@@ -186,7 +159,7 @@ export const MobileQuickCapture: React.FC<MobileQuickCaptureProps> = ({
               <button
                 type="button"
                 onClick={onDone}
-                className="text-xs font-semibold text-[#0071E3] hover:text-[#0077ED] cursor-pointer"
+                className="text-xs font-semibold text-primary hover:text-primary-hover cursor-pointer"
               >
                 Ver todos
               </button>
