@@ -68,7 +68,7 @@ export const LeadFormFields: React.FC<LeadFormFieldsProps> = ({
   return (
     <div className="space-y-4 pb-2">
       {/* Navegación entre bloques */}
-      <div className="flex items-center gap-1 bg-[#F5F5F7] p-1 rounded-xl border border-black/[0.04]">
+      <div className="flex items-center gap-1 bg-[#F5F5F7] p-1 rounded-xl border border-black/4">
         {STEPS.map((tab, idx) => {
           const isActive = step === idx;
           return (
@@ -263,7 +263,7 @@ export const LeadFormFields: React.FC<LeadFormFieldsProps> = ({
                               className="inline-flex items-center gap-1 text-[10px] text-primary hover:underline bg-white/80 px-2 py-0.5 rounded-md border border-slate-200"
                             >
                               <Globe className="w-2.5 h-2.5 text-primary" />
-                              <span className="truncate max-w-[140px]">{src.title}</span>
+                              <span className="truncate max-w-35">{src.title}</span>
                               <ExternalLink className="w-2.5 h-2.5 text-slate-400" />
                             </a>
                           ))}
@@ -351,7 +351,7 @@ export const LeadFormFields: React.FC<LeadFormFieldsProps> = ({
             />
 
             {/* Seguimiento prioritario */}
-            <div className="flex items-center justify-between gap-3 p-2.5 rounded-xl bg-[#FAFBFD] border border-black/[0.04]">
+            <div className="flex items-center justify-between gap-3 p-2.5 rounded-xl bg-[#FAFBFD] border border-black/4">
               <div className="flex items-center gap-2 min-w-0">
                 <div
                   className={`w-7 h-7 rounded-lg flex items-center justify-center shrink-0 ${

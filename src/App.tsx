@@ -23,11 +23,26 @@ import { BottomNavBar } from './components/BottomNavBar';
 import { ConfiguracionView } from './components/ConfiguracionView';
 import { getNotificationAlerts } from './utils/notifications';
 import { cleanContact } from './utils/contactInfo';
+import { useAccess, canOpenView } from './controllers/accessController';
+import { useSession } from './controllers/sessionController';
+import { NoAccessScreen } from './components/NoAccessScreen';
+import { logout } from './controllers/authController';
 import { isOnline, getOfflineLeads, syncOfflineLeads } from './utils/offlineStore';
 import { WifiOff, RefreshCw, CheckCircle2, X, AlertTriangle } from 'lucide-react';
 
 import { ActiveView, Lead, UserRep, EventOption, UserRoleType, AccentTheme } from './types';
-import { MOCK_USERS, MOCK_EVENTS, INITIAL_LEADS } from './data/mockData';
+import { MOCK_EVENTS, INITIAL_LEADS } from './data/mockData';
+
+// Marcador que ocupa el lugar del usuario mientras la sesión carga. Nunca se muestra ni se guarda.
+const PENDING_USER: UserRep = {
+  id: '',
+  name: '',
+  email: '',
+  role: '',
+  team: '',
+  avatar: '',
+  accountType: 'ventas',
+};
 import {
   subscribeToLeads,
   subscribeToUsers,
@@ -86,32 +101,24 @@ export default function App() {
     }
   }, [currentEvent]);
 
-  const [users, setUsers] = useState<UserRep[]>(MOCK_USERS);
+  const [users, setUsers] = useState<UserRep[]>([]);
+  const [usersLoaded, setUsersLoaded] = useState(false);
 
-  const [currentUser, setCurrentUser] = useState<UserRep>(() => {
-    try {
-      const saved = localStorage.getItem('centralized_current_user_v1');
-      if (saved) return JSON.parse(saved);
-    } catch (e) {
-      console.error("Error cargando currentUser:", e);
-    }
-    return MOCK_USERS[0];
-  });
-
-  useEffect(() => {
-    try {
-      localStorage.setItem('centralized_current_user_v1', JSON.stringify(currentUser));
-    } catch (e) {
-      console.error("Error guardando currentUser:", e);
-    }
-  }, [currentUser]);
+  // Quién opera la app sale de la sesión de Firebase (ver sessionController), no de una elección
+  // en el navegador. El marcador solo existe para que los hooks de abajo tengan un valor mientras
+  // la sesión carga o la cuenta no tiene acceso; en ambos casos más abajo no se pinta la app.
+  const session = useSession(users, usersLoaded);
+  const currentUser: UserRep = session.user ?? PENDING_USER;
 
   const [leads, setLeads] = useState<Lead[]>(INITIAL_LEADS);
 
   // Sincronización en tiempo real con Firestore
   useEffect(() => {
     const unsubLeads = subscribeToLeads(setLeads);
-    const unsubUsers = subscribeToUsers(setUsers);
+    const unsubUsers = subscribeToUsers((list) => {
+      setUsers(list);
+      setUsersLoaded(true);
+    });
     const unsubEvents = subscribeToEvents(setEvents);
     return () => {
       unsubLeads();
@@ -119,6 +126,12 @@ export default function App() {
       unsubEvents();
     };
   }, []);
+
+  // Si el rol actual no puede abrir la vista activa, vuelve a la captura.
+  const access = useAccess(currentUser);
+  useEffect(() => {
+    if (!canOpenView(access, activeView)) setActiveView('captura_movil');
+  }, [access, activeView]);
 
   // Lead seleccionado (el drawer flotante se abre solo por acción del usuario)
   const [selectedLeadId, setSelectedLeadId] = useState<string | null>(null);
@@ -218,7 +231,7 @@ export default function App() {
   const [isFiltersModalOpen, setIsFiltersModalOpen] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isUserAccountsModalOpen, setIsUserAccountsModalOpen] = useState(false);
-  const [userModalInitialRole, setUserModalInitialRole] = useState<UserRoleType>('executive');
+  const [userModalInitialRole, setUserModalInitialRole] = useState<UserRoleType>('ventas');
 
   // Paginación
   const [currentPage, setCurrentPage] = useState(1);
@@ -238,8 +251,9 @@ export default function App() {
     setSearchQuery('');
   };
 
+  // Cierra la sesión de Firebase; AuthGate detecta el cambio y vuelve a mostrar el acceso.
   const handleLogout = () => {
-    console.log('Sesión cerrada correctamente');
+    logout().catch((err) => console.error('Error cerrando sesión:', err));
   };
 
   // Filtrado de Leads
@@ -362,13 +376,24 @@ export default function App() {
     }
   };
 
-  const handleOpenAddUserModal = (roleType: UserRoleType = 'executive') => {
+  const handleOpenAddUserModal = (roleType: UserRoleType = 'ventas') => {
     setUserModalInitialRole(roleType);
     setIsUserAccountsModalOpen(true);
   };
 
   const pendingAlerts = getNotificationAlerts(leads);
   const pendingAlertsCount = pendingAlerts.filter(a => a.category === 'overdue' || a.category === 'today' || a.category === 'priority').length;
+
+  if (session.status === 'loading') {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-[#F8FAFC]">
+        <div className="animate-pulse text-slate-400 text-sm font-semibold">Cargando...</div>
+      </div>
+    );
+  }
+  if (session.status === 'unauthorized') {
+    return <NoAccessScreen email={session.email} />;
+  }
 
   return (
     <div className="min-h-screen bg-[#F8FAFC] text-slate-800 font-sans flex flex-col antialiased selection:bg-primary selection:text-white">
@@ -407,8 +432,7 @@ export default function App() {
             onOpenCreateEventModal: () => setIsCreateEventModalOpen(true),
             currentUser,
             users,
-            onSelectUser: setCurrentUser,
-            onOpenUserAccountsModal: () => handleOpenAddUserModal('executive'),
+            onOpenUserAccountsModal: () => handleOpenAddUserModal('ventas'),
             activeView,
             searchQuery,
             setSearchQuery,
@@ -585,7 +609,6 @@ export default function App() {
           {activeView === 'seguimientos' && (
             <SeguimientosView
               leads={leads.filter(l => l.event === currentEvent.name)}
-              searchQuery={searchQuery}
               onSelectLead={openLead}
               onUpdateLead={handleUpdateLead}
               onScheduleLead={(lead) => openLead(lead, 'schedule')}
@@ -620,7 +643,6 @@ export default function App() {
             <UsuariosView
               users={users}
               currentUser={currentUser}
-              onSelectUser={setCurrentUser}
               onAddUser={handleAddUser}
               onDeleteUser={handleDeleteUser}
               leads={leads}
@@ -675,7 +697,6 @@ export default function App() {
         onClose={() => setIsUserAccountsModalOpen(false)}
         users={users}
         currentUser={currentUser}
-        onSelectUser={setCurrentUser}
         onAddUser={handleAddUser}
         onDeleteUser={handleDeleteUser}
         leads={leads}

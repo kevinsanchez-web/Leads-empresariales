@@ -7,21 +7,21 @@ import {
   Phone, 
   Clock, 
   Search, 
-  ArrowRight, 
   Check,
   ChevronDown,
   Trash2,
   UserCheck,
-  Briefcase,
   X
 } from 'lucide-react';
 import { UserRep, Lead, UserRoleType } from '../types';
 import { RoundedSelect } from './RoundedSelect';
+import { RoleBadge } from './RoleBadge';
+import { useAccess, resolveRole } from '../controllers/accessController';
+import { ROLES, ROLE_LABELS, ROLE_DESCRIPTIONS, Role } from '../models/roles';
 
 interface UsuariosViewProps {
   users: UserRep[];
   currentUser: UserRep;
-  onSelectUser: (user: UserRep) => void;
   onAddUser: (newUser: UserRep) => void;
   onDeleteUser?: (userId: string) => void;
   leads: Lead[];
@@ -31,14 +31,14 @@ interface UsuariosViewProps {
 export const UsuariosView: React.FC<UsuariosViewProps> = ({
   users,
   currentUser,
-  onSelectUser,
-  onAddUser,
   onDeleteUser,
   leads,
   onOpenAddUserModal
 }) => {
   const [search, setSearch] = useState('');
-  const [roleFilter, setRoleFilter] = useState<'all' | 'executive' | 'admin'>('all');
+  const access = useAccess(currentUser);
+  const canCreate = access.can('users.manage') && access.assignableRoles.length > 0;
+  const [roleFilter, setRoleFilter] = useState<'all' | Role>('all');
   const [teamFilter, setTeamFilter] = useState('all');
   const [showCreateMenu, setShowCreateMenu] = useState(false);
   const createMenuRef = useRef<HTMLDivElement>(null);
@@ -55,9 +55,7 @@ export const UsuariosView: React.FC<UsuariosViewProps> = ({
   }, []);
 
   const filteredUsers = users.filter((u) => {
-    const isAdmin = u.accountType === 'admin' || u.role.toLowerCase().includes('admin');
-    if (roleFilter === 'executive' && isAdmin) return false;
-    if (roleFilter === 'admin' && !isAdmin) return false;
+    if (roleFilter !== 'all' && resolveRole(u) !== roleFilter) return false;
     if (teamFilter !== 'all' && u.team !== teamFilter) return false;
 
     if (search.trim()) {
@@ -73,8 +71,7 @@ export const UsuariosView: React.FC<UsuariosViewProps> = ({
   });
 
   const teams = Array.from(new Set(users.map(u => u.team)));
-  const executiveCount = users.filter(u => u.accountType !== 'admin' && !u.role.toLowerCase().includes('admin')).length;
-  const adminCount = users.filter(u => u.accountType === 'admin' || u.role.toLowerCase().includes('admin')).length;
+  const roleCounts = ROLES.reduce((acc, r) => ({ ...acc, [r]: users.filter(u => resolveRole(u) === r).length }), {} as Record<Role, number>);
 
   const getUserMetrics = (userName: string) => {
     const userLeads = leads.filter(l => l.capturedBy === userName);
@@ -99,6 +96,7 @@ export const UsuariosView: React.FC<UsuariosViewProps> = ({
             <p className="text-xs text-slate-500 font-medium mt-0.5">Accesos y roles del equipo.</p>
           </div>
 
+          {canCreate && (
           <div className="relative shrink-0 self-start sm:self-auto" ref={createMenuRef}>
             <button
               type="button"
@@ -111,83 +109,46 @@ export const UsuariosView: React.FC<UsuariosViewProps> = ({
             </button>
 
             {showCreateMenu && (
-              <div className="absolute right-0 mt-2 min-w-[210px] bg-white rounded-xl border border-slate-200 shadow-xl p-1 z-20">
-                <button
-                  type="button"
-                  onClick={() => { setShowCreateMenu(false); onOpenAddUserModal('executive'); }}
-                  className="w-full flex items-center gap-2 px-2.5 py-2 rounded-lg text-xs font-semibold text-slate-700 hover:bg-slate-50 hover:text-slate-900 transition-colors cursor-pointer text-left"
-                >
-                  <Briefcase className="w-3.5 h-3.5 text-primary shrink-0" />
-                  <span>Ejecutivo de Cuentas</span>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => { setShowCreateMenu(false); onOpenAddUserModal('admin'); }}
-                  className="w-full flex items-center gap-2 px-2.5 py-2 rounded-lg text-xs font-semibold text-slate-700 hover:bg-slate-50 hover:text-slate-900 transition-colors cursor-pointer text-left"
-                >
-                  <Shield className="w-3.5 h-3.5 text-amber-600 shrink-0" />
-                  <span>Administrador</span>
-                </button>
+              <div className="absolute right-0 mt-2 min-w-52.5 bg-white rounded-xl border border-slate-200 shadow-xl p-1 z-20">
+                {access.assignableRoles.map(r => (
+                  <button
+                    key={r}
+                    type="button"
+                    onClick={() => { setShowCreateMenu(false); onOpenAddUserModal(r); }}
+                    className="w-full flex items-center gap-2 px-2.5 py-2 rounded-lg text-xs font-semibold text-slate-700 hover:bg-slate-50 hover:text-slate-900 transition-colors cursor-pointer text-left"
+                  >
+                    <span>{ROLE_LABELS[r]}</span>
+                  </button>
+                ))}
               </div>
             )}
           </div>
+          )}
         </div>
 
         {/* 2. Tarjetas de Rol: funcionan como filtro interactivo */}
-        <div className="p-3.5 sm:p-4 bg-slate-50/50 border-b border-slate-100 grid grid-cols-1 sm:grid-cols-2 gap-3 shrink-0">
-          <button
-            type="button"
-            onClick={() => setRoleFilter(prev => prev === 'executive' ? 'all' : 'executive')}
-            aria-pressed={roleFilter === 'executive'}
-            className={`text-left w-full bg-white rounded-xl p-3 border flex items-start gap-3 shadow-2xs cursor-pointer transition-all ${
-              roleFilter === 'executive'
-                ? 'border-primary ring-2 ring-primary/20'
-                : 'border-slate-200/70 hover:border-slate-300'
-            }`}
-          >
-            <div className="w-8 h-8 rounded-lg bg-primary/10 text-primary flex items-center justify-center font-bold shrink-0">
-              <Briefcase className="w-4 h-4" />
-            </div>
-            <div className="min-w-0 flex-1">
-              <div className="flex items-center gap-2 mb-0.5 flex-wrap">
-                <span className="font-bold text-xs text-slate-900">Ejecutivos de Cuentas</span>
-                <span className="text-[10px] font-bold px-2 py-0.2 rounded-md bg-primary/10 text-primary border border-primary/15">
-                  {executiveCount} Activos
-                </span>
-                {roleFilter === 'executive' && <Check className="w-3.5 h-3.5 text-primary shrink-0" />}
+        <div className="p-3.5 sm:p-4 bg-slate-50/50 border-b border-slate-100 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3 shrink-0">
+          {ROLES.filter(r => roleCounts[r] > 0 || r !== 'super_admin').map(r => (
+            <button
+              key={r}
+              type="button"
+              onClick={() => setRoleFilter(prev => prev === r ? 'all' : r)}
+              aria-pressed={roleFilter === r}
+              className={`text-left w-full bg-white rounded-xl p-3 border flex flex-col gap-1.5 shadow-2xs cursor-pointer transition-all ${
+                roleFilter === r
+                  ? 'border-primary ring-2 ring-primary/20'
+                  : 'border-slate-200/70 hover:border-slate-300'
+              }`}
+            >
+              <div className="flex items-center justify-between gap-2">
+                <RoleBadge role={r} />
+                <span className="text-sm font-bold text-slate-900">{roleCounts[r]}</span>
               </div>
-              <p className="text-[11px] text-slate-500 leading-relaxed font-normal">
-                Captura ágil de leads.
+              <p className="text-[11px] text-slate-500 leading-relaxed font-normal line-clamp-2">
+                {ROLE_DESCRIPTIONS[r]}
               </p>
-            </div>
-          </button>
-
-          <button
-            type="button"
-            onClick={() => setRoleFilter(prev => prev === 'admin' ? 'all' : 'admin')}
-            aria-pressed={roleFilter === 'admin'}
-            className={`text-left w-full bg-white rounded-xl p-3 border flex items-start gap-3 shadow-2xs cursor-pointer transition-all ${
-              roleFilter === 'admin'
-                ? 'border-primary ring-2 ring-primary/20'
-                : 'border-slate-200/70 hover:border-slate-300'
-            }`}
-          >
-            <div className="w-8 h-8 rounded-lg bg-amber-50 text-amber-600 flex items-center justify-center font-bold shrink-0">
-              <Shield className="w-4 h-4" />
-            </div>
-            <div className="min-w-0 flex-1">
-              <div className="flex items-center gap-2 mb-0.5 flex-wrap">
-                <span className="font-bold text-xs text-slate-900">Administradores</span>
-                <span className="text-[10px] font-bold px-2 py-0.2 rounded-md bg-amber-50 text-amber-700 border border-amber-200/50">
-                  {adminCount} Activos
-                </span>
-                {roleFilter === 'admin' && <Check className="w-3.5 h-3.5 text-primary shrink-0" />}
-              </div>
-              <p className="text-[11px] text-slate-500 leading-relaxed font-normal">
-                Acceso total al panel.
-              </p>
-            </div>
-          </button>
+            </button>
+          ))}
         </div>
 
         {/* 3. Barra de Búsqueda y Filtros */}
@@ -239,20 +200,21 @@ export const UsuariosView: React.FC<UsuariosViewProps> = ({
               </div>
               <h3 className="text-xs font-bold text-slate-800">No se encontraron usuarios</h3>
               <p className="text-[11px] text-slate-400 mt-0.5">Intenta cambiar los filtros o el término de búsqueda.</p>
-              <button
+              {canCreate && <button
                 type="button"
-                onClick={() => onOpenAddUserModal('executive')}
+                onClick={() => onOpenAddUserModal(access.assignableRoles[access.assignableRoles.length - 1])}
                 className="mt-4 px-4 py-2 bg-primary hover:bg-primary-hover text-white rounded-xl text-xs font-semibold flex items-center justify-center gap-1.5 shadow-2xs cursor-pointer transition-all active:scale-98"
               >
                 <UserPlus className="w-3.5 h-3.5" />
                 <span>{users.length === 0 ? 'Crear primer usuario' : 'Crear usuario'}</span>
-              </button>
+              </button>}
             </div>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3.5">
               {filteredUsers.map((user) => {
                 const isCurrent = user.id === currentUser.id;
-                const isAdmin = user.accountType === 'admin' || user.role.toLowerCase().includes('admin');
+                const userRole = resolveRole(user);
+                const canManage = access.canManageUser(user);
                 const stats = getUserMetrics(user.name);
 
                 return (
@@ -274,19 +236,12 @@ export const UsuariosView: React.FC<UsuariosViewProps> = ({
                     <div>
                       {/* Encabezado Tarjeta */}
                       <div className="flex items-start gap-3 mb-3">
-                        <div className={`w-10 h-10 rounded-xl ${user.color || (isAdmin ? 'bg-amber-600' : 'bg-primary')} text-white font-bold text-sm flex items-center justify-center shrink-0 shadow-2xs`}>
+                        <div className={`w-10 h-10 rounded-xl ${user.color || (userRole === 'super_admin' ? 'bg-slate-900' : 'bg-primary')} text-white font-bold text-sm flex items-center justify-center shrink-0 shadow-2xs`}>
                           {user.avatar}
                         </div>
                         <div className="min-w-0 pr-10">
                           <div className="flex items-center gap-1 mb-0.5">
-                            <span className={`text-[9px] font-bold px-1.5 py-0.2 rounded-md flex items-center gap-1 ${
-                              isAdmin 
-                                ? 'bg-amber-50 text-amber-700 border border-amber-200/60' 
-                                : 'bg-primary/10 text-primary border border-primary/20'
-                            }`}>
-                              {isAdmin ? <Shield className="w-2.5 h-2.5 text-amber-600" /> : <Briefcase className="w-2.5 h-2.5 text-primary" />}
-                              <span>{isAdmin ? 'ADMINISTRADOR' : 'EJECUTIVO'}</span>
-                            </span>
+                            <RoleBadge role={userRole} />
                           </div>
                           <h3 className="font-bold text-sm text-slate-900 truncate leading-tight">
                             {user.name}
@@ -338,21 +293,11 @@ export const UsuariosView: React.FC<UsuariosViewProps> = ({
                       {isCurrent ? (
                         <div className="w-full py-1.5 bg-primary/10 text-primary font-bold text-[11px] rounded-xl text-center border border-primary/20 flex items-center justify-center gap-1">
                           <UserCheck className="w-3 h-3" />
-                          <span>Sesión Actual ({isAdmin ? 'Admin' : 'Ejecutivo'})</span>
+                          <span>Sesión Actual ({ROLE_LABELS[userRole]})</span>
                         </div>
-                      ) : (
-                        <button
-                          onClick={() => onSelectUser(user)}
-                          className={`flex-1 py-1.5 text-white rounded-xl text-[11px] font-semibold transition-colors flex items-center justify-center gap-1 shadow-2xs cursor-pointer ${
-                            isAdmin ? 'bg-slate-800 hover:bg-slate-900' : 'bg-primary hover:bg-primary-hover'
-                          }`}
-                        >
-                          <span>Iniciar Sesión como {isAdmin ? 'Admin' : 'Ejecutivo'}</span>
-                          <ArrowRight className="w-3 h-3" />
-                        </button>
-                      )}
+                      ) : <div className="flex-1" />}
 
-                      {onDeleteUser && users.length > 1 && !isCurrent && (
+                      {onDeleteUser && users.length > 1 && !isCurrent && canManage && (
                         <button
                           onClick={() => {
                             if (confirm(`¿Estás seguro de eliminar la cuenta de ${user.name}?`)) {

@@ -59,7 +59,7 @@ interface HeaderProps {
 }
 
 const LeadDrawerHeader: React.FC<HeaderProps> = ({ lead, onTogglePriority, onOpenQr, onRequestDelete, onClose, onGoToLeadsView }) => (
-  <div className="flex items-start justify-between pb-3 border-b border-black/[0.05] gap-2 shrink-0">
+  <div className="flex items-start justify-between pb-3 border-b border-black/5 gap-2 shrink-0">
     <div className="flex items-center gap-2.5 min-w-0 flex-1">
                   <div className="w-9 h-9 rounded-xl bg-linear-to-br from-primary to-[#5856D6] text-white font-bold text-xs flex items-center justify-center shrink-0 shadow-xs">
         {getInitials(lead.name)}
@@ -332,7 +332,7 @@ const ContactChannelsMenu: React.FC<{ lead: Lead }> = ({ lead }) => {
           <div
             ref={popupRef}
             style={popupStyle}
-            className="z-[70] overflow-hidden rounded-xl border border-black/[0.08] bg-white py-1 shadow-xl"
+            className="z-70 overflow-hidden rounded-xl border border-black/8 bg-white py-1 shadow-xl"
           >
             {channels.length === 0 ? (
               <p className="px-2.5 py-1.5 text-xs font-medium text-slate-400">Sin datos de contacto</p>
@@ -363,7 +363,7 @@ const ContactChannelsMenu: React.FC<{ lead: Lead }> = ({ lead }) => {
 };
 
 const LeadQuickActions: React.FC<QuickActionsProps> = ({ lead, onStatusChange, onSchedule }) => (
-  <div className="py-2.5 space-y-2 border-b border-black/[0.04] shrink-0 text-xs">
+  <div className="py-2.5 space-y-2 border-b border-black/4 shrink-0 text-xs">
     <div className="flex items-center justify-between gap-2 flex-wrap sm:flex-nowrap">
       <div className="flex items-center gap-1.5 min-w-0">
         <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider shrink-0">Estado:</span>
@@ -373,7 +373,7 @@ const LeadQuickActions: React.FC<QuickActionsProps> = ({ lead, onStatusChange, o
           onChange={(val) => onStatusChange(val as LeadStatus)}
           ariaLabel="Estado del lead"
           className="min-w-0"
-          buttonClassName="bg-[#F5F5F7] hover:bg-[#EBEBEF] border border-black/[0.06] rounded-xl pl-2.5 pr-7 py-1 font-bold text-[#1D1D1F] text-xs focus:outline-none focus:ring-2 focus:ring-primary transition-colors"
+          buttonClassName="bg-[#F5F5F7] hover:bg-[#EBEBEF] border border-black/6 rounded-xl pl-2.5 pr-7 py-1 font-bold text-[#1D1D1F] text-xs focus:outline-none focus:ring-2 focus:ring-primary transition-colors"
           options={LEAD_STATUSES.map((status) => ({ value: status, label: status }))}
         />
       </div>
@@ -426,7 +426,7 @@ const buildTabs = (historyCount: number): {
   iconColor: string;
 }[] => [
   { id: 'resumen', label: 'Datos', Icon: FileText, minWidth: 'min-w-[75px]', activeText: 'text-[#1D1D1F]', iconColor: '' },
-  { id: 'actividad', label: `Notas (${historyCount})`, Icon: Clock, minWidth: 'min-w-[90px]', activeText: 'text-[#1D1D1F]', iconColor: '' },
+  { id: 'actividad', label: `Notas (${historyCount})`, Icon: Clock, minWidth: 'min-w-22.5', activeText: 'text-[#1D1D1F]', iconColor: '' },
   { id: 'ia', label: 'IA Assistant', Icon: Sparkles, minWidth: 'min-w-[105px]', activeText: 'text-primary', iconColor: 'text-primary' }
 ];
 
@@ -435,7 +435,7 @@ const LeadDrawerTabs: React.FC<{ activeTab: DrawerTab; historyCount: number; onC
   historyCount,
   onChange
 }) => (
-                <div className="flex bg-[#F5F5F7] p-1 rounded-xl my-2 shrink-0 border border-black/[0.03] overflow-x-auto scrollbar-none">
+                <div className="flex bg-[#F5F5F7] p-1 rounded-xl my-2 shrink-0 border border-black/3 overflow-x-auto scrollbar-none">
     {buildTabs(historyCount).map(({ id, label, Icon, minWidth, activeText, iconColor }) => (
       <button
         key={id}
@@ -461,7 +461,7 @@ const ScheduleMeetingModal: React.FC<{
   const [meetingDate, setMeetingDate] = useState('');
   const [meetingNotes, setMeetingNotes] = useState('');
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = (e: React.SubmitEvent<HTMLFormElement>) => {
     e.preventDefault();
     onConfirm(meetingDate, meetingNotes);
   };
@@ -484,10 +484,10 @@ const ScheduleMeetingModal: React.FC<{
       <div
         role="dialog"
         aria-modal="true"
-        className="w-full max-w-md rounded-2xl border border-black/[0.08] bg-white p-5 shadow-2xl"
+        className="w-full max-w-md rounded-2xl border border-black/8 bg-white p-5 shadow-2xl"
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="flex items-center justify-between border-b border-black/[0.05] pb-2.5">
+        <div className="flex items-center justify-between border-b border-black/5 pb-2.5">
           <h3 className="text-sm font-bold text-[#1D1D1F]">Agendar Reunión</h3>
           <button onClick={onClose} className="text-slate-400 hover:text-slate-600">
             <X className="h-4 w-4" />
@@ -503,7 +503,7 @@ const ScheduleMeetingModal: React.FC<{
               min={localDateTimeInputNow()}
               value={meetingDate}
               onChange={(e) => setMeetingDate(e.target.value)}
-              className="w-full rounded-xl border border-black/[0.06] bg-[#F5F5F7] px-3 py-1.5 text-xs font-semibold focus:outline-none focus:ring-1 focus:ring-primary"
+              className="w-full rounded-xl border border-black/6 bg-[#F5F5F7] px-3 py-1.5 text-xs font-semibold focus:outline-none focus:ring-1 focus:ring-primary"
             />
           </div>
 
@@ -514,7 +514,7 @@ const ScheduleMeetingModal: React.FC<{
               placeholder={`Ej: Demo técnica para ${companyName}`}
               value={meetingNotes}
               onChange={(e) => setMeetingNotes(e.target.value)}
-              className="w-full rounded-xl border border-black/[0.06] bg-[#F5F5F7] px-3 py-1.5 text-xs focus:outline-none focus:ring-1 focus:ring-primary"
+              className="w-full rounded-xl border border-black/6 bg-[#F5F5F7] px-3 py-1.5 text-xs focus:outline-none focus:ring-1 focus:ring-primary"
             />
           </div>
 
@@ -560,10 +560,10 @@ const QrModal: React.FC<{ lead: Lead; onClose: () => void }> = ({ lead, onClose 
       <div
         role="dialog"
         aria-modal="true"
-        className="w-full max-w-xs space-y-3 rounded-2xl border border-black/[0.08] bg-white p-5 text-center shadow-2xl"
+        className="w-full max-w-xs space-y-3 rounded-2xl border border-black/8 bg-white p-5 text-center shadow-2xl"
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="flex items-center justify-between border-b border-black/[0.05] pb-2">
+        <div className="flex items-center justify-between border-b border-black/5 pb-2">
           <h3 className="text-xs font-bold text-[#1D1D1F]">vCard Contacto QR</h3>
           <button onClick={onClose} className="cursor-pointer text-slate-400 hover:text-slate-600">
             <X className="h-4 w-4" />
@@ -572,7 +572,7 @@ const QrModal: React.FC<{ lead: Lead; onClose: () => void }> = ({ lead, onClose 
 
         <p className="text-[11px] text-slate-500">Escanea para guardar el contacto en tu teléfono.</p>
 
-        <div className="mx-auto inline-block rounded-xl border border-black/[0.06] bg-white p-3 shadow-inner">
+        <div className="mx-auto inline-block rounded-xl border border-black/6 bg-white p-3 shadow-inner">
           <QRCodeCanvas value={buildVCard(lead)} size={160} level="M" includeMargin={true} />
         </div>
 
@@ -616,7 +616,7 @@ const DeleteLeadModal: React.FC<{
       <div
         role="dialog"
         aria-modal="true"
-        className="w-full max-w-sm space-y-3 rounded-2xl border border-black/[0.08] bg-white p-5 shadow-2xl"
+        className="w-full max-w-sm space-y-3 rounded-2xl border border-black/8 bg-white p-5 shadow-2xl"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-start gap-3">

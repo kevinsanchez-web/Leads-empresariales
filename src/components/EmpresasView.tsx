@@ -470,7 +470,7 @@ export const EmpresasView: React.FC<EmpresasViewProps> = ({ leads, onSelectLead,
                                 href={src.url}
                                 target="_blank"
                                 rel="noopener noreferrer"
-                                className="inline-flex items-center gap-0.5 text-[9px] text-primary bg-white px-1.5 py-0.5 rounded border border-slate-200 hover:underline max-w-[140px]"
+                                className="inline-flex items-center gap-0.5 text-[9px] text-primary bg-white px-1.5 py-0.5 rounded border border-slate-200 hover:underline max-w-35"
                               >
                                 <Globe className="w-2.5 h-2.5 text-primary shrink-0" />
                                 <span className="truncate" title={src.title}>{src.title}</span>
@@ -605,7 +605,7 @@ export const EmpresasView: React.FC<EmpresasViewProps> = ({ leads, onSelectLead,
             </div>
           ) : (
             <div className="overflow-x-auto">
-              <table className="w-full min-w-[880px] text-left text-xs">
+              <table className="w-full min-w-220 text-left text-xs">
                 <thead>
                   <tr className="bg-slate-50 border-b border-slate-200/70 text-[10px] uppercase tracking-wider text-slate-400">
                     <th className="px-4 py-3 font-bold">Cliente</th>
@@ -627,11 +627,11 @@ export const EmpresasView: React.FC<EmpresasViewProps> = ({ leads, onSelectLead,
                         key={`${comp.name}::${contact.key}`}
                         className="border-b border-slate-100 last:border-0 hover:bg-slate-50/70 transition-colors"
                       >
-                        <td className="px-4 py-2.5 max-w-[220px]">
+                        <td className="px-4 py-2.5 max-w-55">
                           <button
                             type="button"
                             onClick={e => handleContactClick(e, comp, contact)}
-                            className="font-bold text-slate-900 hover:text-primary hover:underline cursor-pointer flex items-center gap-1 max-w-[220px] text-left"
+                            className="font-bold text-slate-900 hover:text-primary hover:underline cursor-pointer flex items-center gap-1 max-w-55 text-left"
                             title={
                               contact.count > 1
                                 ? `Elegir registro de ${contact.name} (${contact.count})`
@@ -647,7 +647,7 @@ export const EmpresasView: React.FC<EmpresasViewProps> = ({ leads, onSelectLead,
                             </span>
                           )}
                         </td>
-                        <td className="px-4 py-2.5 max-w-[180px]">
+                        <td className="px-4 py-2.5 max-w-45">
                           <div className="min-w-0">
                             <span className="text-slate-700 truncate block" title={contact.roles.join(' • ')}>
                               {contact.mainRole || <span className="text-slate-300">—</span>}
@@ -662,12 +662,12 @@ export const EmpresasView: React.FC<EmpresasViewProps> = ({ leads, onSelectLead,
                             )}
                           </div>
                         </td>
-                        <td className="px-4 py-2.5 max-w-[180px] text-slate-600">
+                        <td className="px-4 py-2.5 max-w-45 text-slate-600">
                           <span className="truncate block" title={comp.name}>{comp.name}</span>
                         </td>
                         <td className="px-4 py-2.5 text-slate-600">
                           {comp.industry ? (
-                            <span className="inline-block px-1.5 py-0.5 rounded bg-slate-100 border border-slate-200 text-[10px] font-semibold truncate max-w-[150px]">
+                            <span className="inline-block px-1.5 py-0.5 rounded bg-slate-100 border border-slate-200 text-[10px] font-semibold truncate max-w-37.5">
                               {comp.industry}
                             </span>
                           ) : (

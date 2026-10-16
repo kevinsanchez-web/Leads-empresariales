@@ -12,7 +12,7 @@ interface MultiSelectComboboxProps {
 }
 
 const TRIGGER_BASE =
-  'w-full min-h-[34px] px-2.5 py-1.5 bg-white border border-slate-200 rounded-lg text-xs text-left hover:border-slate-300 focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/25 transition-all cursor-pointer flex items-center gap-1.5 flex-wrap';
+  'w-full min-h-8.5 px-2.5 py-1.5 bg-white border border-slate-200 rounded-lg text-xs text-left hover:border-slate-300 focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/25 transition-all cursor-pointer flex items-center gap-1.5 flex-wrap';
 
 /**
  * Selección múltiple desplegable con buscador. Reemplaza a los grupos de chips
@@ -84,7 +84,7 @@ export const MultiSelectCombobox: React.FC<MultiSelectComboboxProps> = ({
             {selected.slice(0, 3).map(value => (
               <span
                 key={value}
-                className="px-1.5 py-0.5 rounded-md bg-primary/10 text-primary text-[11px] font-semibold truncate max-w-[120px]"
+                className="px-1.5 py-0.5 rounded-md bg-primary/10 text-primary text-[11px] font-semibold truncate max-w-30"
               >
                 {value}
               </span>

@@ -17,7 +17,7 @@ const SEGMENT =
  * cuando el modo guiado está activo.
  */
 export const CaptureToolsBar: React.FC<CaptureToolsBarProps> = ({ form }) => (
-  <div className="flex items-center gap-0.5 bg-[#F5F5F7] p-1 rounded-xl border border-black/[0.04] shrink-0">
+  <div className="flex items-center gap-0.5 bg-[#F5F5F7] p-1 rounded-xl border border-black/4 shrink-0">
     <VoiceLeadAssistant
       onApplyVoiceData={form.handleApplyVoiceData}
       onExecuteCommand={form.handleExecuteVoiceCommand}

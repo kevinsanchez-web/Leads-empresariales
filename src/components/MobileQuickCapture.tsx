@@ -59,7 +59,7 @@ export const MobileQuickCapture: React.FC<MobileQuickCaptureProps> = ({
   const recentLeadsForEvent = eventLeads.slice(0, 5);
   const priorityCount = eventLeads.filter(l => l.priority).length;
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = (e: React.SubmitEvent<HTMLFormElement>) => {
     e.preventDefault();
     form.submit();
   };
@@ -71,7 +71,7 @@ export const MobileQuickCapture: React.FC<MobileQuickCaptureProps> = ({
         <div className="lg:col-span-8 space-y-3">
           <div className="bg-white rounded-2xl border border-slate-200/80 shadow-xs overflow-hidden">
             {/* Header del Formulario */}
-            <div className="bg-white px-4 sm:px-6 py-3 flex items-center justify-between gap-3 border-b border-black/[0.05]">
+            <div className="bg-white px-4 sm:px-6 py-3 flex items-center justify-between gap-3 border-b border-black/5">
               <div className="flex items-center gap-2.5 min-w-0">
                 <div className="w-7 h-7 rounded-lg bg-primary text-white flex items-center justify-center shrink-0">
                   <Zap className="w-4 h-4" />
@@ -133,7 +133,7 @@ export const MobileQuickCapture: React.FC<MobileQuickCaptureProps> = ({
             </div>
 
             <div className="grid grid-cols-2 gap-2 mb-3">
-              <div className="bg-[#F5F5F7] p-3 rounded-xl border border-black/[0.04]">
+              <div className="bg-[#F5F5F7] p-3 rounded-xl border border-black/4">
                 <span className="text-[10px] font-medium text-slate-500 block">Registrados</span>
                 <span className="text-xl font-black text-[#1D1D1F]">{eventLeads.length}</span>
               </div>
@@ -144,7 +144,7 @@ export const MobileQuickCapture: React.FC<MobileQuickCaptureProps> = ({
               </div>
             </div>
 
-            <div className="text-[11px] text-slate-500 bg-[#F5F5F7] p-2 rounded-lg border border-black/[0.04] flex items-center gap-2">
+            <div className="text-[11px] text-slate-500 bg-[#F5F5F7] p-2 rounded-lg border border-black/4 flex items-center gap-2">
               <Clock className="w-3.5 h-3.5 text-slate-400 shrink-0" />
               <span>Sincronizado automáticamente</span>
             </div>
@@ -174,7 +174,7 @@ export const MobileQuickCapture: React.FC<MobileQuickCaptureProps> = ({
                 {recentLeadsForEvent.map((lead) => (
                   <div
                     key={lead.id}
-                    className="p-2.5 rounded-xl bg-[#F5F5F7] border border-black/[0.04] text-xs hover:border-slate-200 transition-all"
+                    className="p-2.5 rounded-xl bg-[#F5F5F7] border border-black/4 text-xs hover:border-slate-200 transition-all"
                   >
                     <div className="flex items-start justify-between gap-1 mb-0.5">
                       <span className="font-bold text-slate-900 truncate">{lead.name}</span>

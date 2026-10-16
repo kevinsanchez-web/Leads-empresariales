@@ -395,7 +395,7 @@ export const EnriquecimientoView: React.FC<EnriquecimientoViewProps> = ({
                 Sin resultados para «{searchTerm}». Probá con otro término.
               </div>
             ) : (
-              <div className="space-y-1 max-h-[420px] overflow-y-auto lg:max-h-none lg:flex-1 lg:min-h-0">
+              <div className="space-y-1 max-h-105 overflow-y-auto lg:max-h-none lg:flex-1 lg:min-h-0">
                 {visibleCompanies.map(comp => {
                   const active = comp.key === selectedCompany;
                   const pct = companyProgress(comp);

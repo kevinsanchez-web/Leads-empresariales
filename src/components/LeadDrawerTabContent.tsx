@@ -102,7 +102,7 @@ const CompanyInfoDetails: React.FC<{ info: CompanyResearchInfo; companyName: str
               className="inline-flex items-center gap-1 text-[10px] text-primary hover:underline bg-white px-2 py-0.5 rounded-md border border-slate-200"
             >
               <Globe className="w-2.5 h-2.5 text-primary" />
-              <span className="truncate max-w-[130px]">{src.title}</span>
+              <span className="truncate max-w-32.5">{src.title}</span>
               <ExternalLink className="w-2.5 h-2.5 text-slate-400" />
             </a>
           ))}
@@ -211,7 +211,7 @@ const SummaryTab: React.FC<{ lead: Lead; research: LeadDrawerState['companyResea
   <div className="space-y-3 pt-1">
     <CompanyProfileCard lead={lead} research={research} />
 
-    <div className="divide-y divide-black/[0.04]">
+    <div className="divide-y divide-black/4">
       <DetailRow label="Teléfono" valueClassName={contactValueClass(lead.phone)}>
         {displayContact(lead.phone)}
       </DetailRow>
@@ -234,7 +234,7 @@ const SummaryTab: React.FC<{ lead: Lead; research: LeadDrawerState['companyResea
       )}
     </div>
 
-    <div className="pt-2 border-t border-black/[0.04]">
+    <div className="pt-2 border-t border-black/4">
       <span className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider block mb-1.5">
         Intereses Registrados
       </span>
@@ -248,7 +248,7 @@ const SummaryTab: React.FC<{ lead: Lead; research: LeadDrawerState['companyResea
     </div>
 
     {lead.notes && (
-      <div className="pt-2 border-t border-black/[0.04]">
+      <div className="pt-2 border-t border-black/4">
         <span className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider block mb-1">
           Nota Inicial
         </span>
@@ -275,7 +275,7 @@ const HISTORY_TYPE_META: Record<NonNullable<InteractionItem['type']>, { label: s
 const ActivityTab: React.FC<{ lead: Lead; onAddNote: (text: string) => void }> = ({ lead, onAddNote }) => {
   const [newNote, setNewNote] = useState('');
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = (e: React.SubmitEvent<HTMLFormElement>) => {
     e.preventDefault();
     if (!newNote.trim()) return;
     onAddNote(newNote.trim());
@@ -290,7 +290,7 @@ const ActivityTab: React.FC<{ lead: Lead; onAddNote: (text: string) => void }> =
           placeholder="Escribir nueva nota de seguimiento..."
           value={newNote}
           onChange={(e) => setNewNote(e.target.value)}
-          className="flex-1 px-2.5 py-1.5 bg-[#F5F5F7] border border-black/[0.05] rounded-xl text-xs focus:bg-white focus:outline-none focus:ring-1 focus:ring-primary text-[#1D1D1F]"
+          className="flex-1 px-2.5 py-1.5 bg-[#F5F5F7] border border-black/5 rounded-xl text-xs focus:bg-white focus:outline-none focus:ring-1 focus:ring-primary text-[#1D1D1F]"
         />
         <button
           type="submit"
@@ -305,7 +305,7 @@ const ActivityTab: React.FC<{ lead: Lead; onAddNote: (text: string) => void }> =
         {lead.history.map((item) => {
           const meta = HISTORY_TYPE_META[item.type ?? 'note'];
           return (
-            <div key={item.id} className="p-2 rounded-xl bg-[#F5F5F7]/80 text-xs border border-black/[0.02]">
+            <div key={item.id} className="p-2 rounded-xl bg-[#F5F5F7]/80 text-xs border border-black/2">
               <div className="flex items-center justify-between gap-2 text-[10px] text-slate-400 mb-0.5">
                 <div className="flex items-center gap-1.5 min-w-0">
                   <span className={`px-1.5 py-0.5 rounded-md font-bold uppercase tracking-wide shrink-0 ${meta.className}`}>
@@ -407,8 +407,8 @@ const AiAssistantTab: React.FC<{ analysis: LeadDrawerState['analysis']; emailDra
     )}
 
     {emailDraft.email && (
-      <div className="p-2.5 bg-slate-50 rounded-xl border border-black/[0.06] text-xs space-y-1.5 animate-fade-in">
-        <div className="flex items-center justify-between font-bold text-[#1D1D1F] border-b border-black/[0.04] pb-1">
+      <div className="p-2.5 bg-slate-50 rounded-xl border border-black/6 text-xs space-y-1.5 animate-fade-in">
+        <div className="flex items-center justify-between font-bold text-[#1D1D1F] border-b border-black/4 pb-1">
           <span className="truncate pr-2 text-[11px]">{emailDraft.email.asunto}</span>
           <button
             onClick={emailDraft.copy}

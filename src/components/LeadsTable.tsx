@@ -190,10 +190,10 @@ export const LeadsTable: React.FC<LeadsTableProps> = ({
   };
 
   return (
-    <div className="bg-white rounded-2xl sm:rounded-3xl border border-black/[0.06] shadow-[0_1px_3px_rgba(0,0,0,0.02)] overflow-hidden flex flex-col justify-between transition-all">
+    <div className="bg-white rounded-2xl sm:rounded-3xl border border-black/6 shadow-[0_1px_3px_rgba(0,0,0,0.02)] overflow-hidden flex flex-col justify-between transition-all">
       
       {/* Table Top Action Bar */}
-      <div className="px-3 sm:px-5 py-2 sm:py-3 border-b border-black/[0.05] bg-white flex items-center justify-between gap-2">
+      <div className="px-3 sm:px-5 py-2 sm:py-3 border-b border-black/5 bg-white flex items-center justify-between gap-2">
         
         {/* Title & Count Badge */}
         <div className="flex items-center gap-2">
@@ -214,7 +214,7 @@ export const LeadsTable: React.FC<LeadsTableProps> = ({
         <div className="flex items-center gap-1.5 sm:gap-2.5">
           
           {/* Apple Segmented View Toggle (List vs Grid) */}
-          <div className="hidden sm:flex items-center bg-[#F5F5F7] p-0.5 rounded-xl border border-black/[0.04]">
+          <div className="hidden sm:flex items-center bg-[#F5F5F7] p-0.5 rounded-xl border border-black/4">
             <button
               onClick={() => setViewMode('table')}
               className={`px-2.5 py-1.5 rounded-lg text-xs font-semibold transition-all duration-150 cursor-pointer flex items-center gap-1.5 ${
@@ -245,7 +245,7 @@ export const LeadsTable: React.FC<LeadsTableProps> = ({
           {canImport && (
             <button
               onClick={() => setIsImportModalOpen(true)}
-              className="px-2.5 sm:px-3 py-1 sm:py-1.5 bg-[#F5F5F7] hover:bg-[#EBEBEF] text-[#1D1D1F] rounded-xl text-[11px] sm:text-xs font-semibold flex items-center gap-1 sm:gap-1.5 transition-colors cursor-pointer border border-black/[0.04]"
+              className="px-2.5 sm:px-3 py-1 sm:py-1.5 bg-[#F5F5F7] hover:bg-[#EBEBEF] text-[#1D1D1F] rounded-xl text-[11px] sm:text-xs font-semibold flex items-center gap-1 sm:gap-1.5 transition-colors cursor-pointer border border-black/4"
               title="Importar leads desde un archivo CSV o Excel"
             >
               <Upload className="w-3.5 h-3.5 text-sky-600 stroke-[2.2]" />
@@ -257,7 +257,7 @@ export const LeadsTable: React.FC<LeadsTableProps> = ({
           <div className="relative">
             <button
               onClick={() => setExportMenuOpen(v => !v)}
-              className="px-2.5 sm:px-3 py-1 sm:py-1.5 bg-[#F5F5F7] hover:bg-[#EBEBEF] text-[#1D1D1F] rounded-xl text-[11px] sm:text-xs font-semibold flex items-center gap-1 sm:gap-1.5 transition-colors cursor-pointer border border-black/[0.04]"
+              className="px-2.5 sm:px-3 py-1 sm:py-1.5 bg-[#F5F5F7] hover:bg-[#EBEBEF] text-[#1D1D1F] rounded-xl text-[11px] sm:text-xs font-semibold flex items-center gap-1 sm:gap-1.5 transition-colors cursor-pointer border border-black/4"
               title="Exportar listado a Excel / CSV"
             >
               <FileSpreadsheet className="w-3.5 h-3.5 text-emerald-600 stroke-[2.2]" />
@@ -296,7 +296,7 @@ export const LeadsTable: React.FC<LeadsTableProps> = ({
       </div>
 
       {/* MOBILE OPTIMIZED NATIVE LIST (No horizontal scroll, 100% visible on phones) */}
-      <div className="block md:hidden divide-y divide-black/[0.04]">
+      <div className="block md:hidden divide-y divide-black/4">
         {paginatedLeads.length === 0 ? (
           <div className="text-center py-10 text-slate-400 font-medium text-xs">
             No se encontraron leads con los filtros actuales.
@@ -361,7 +361,7 @@ export const LeadsTable: React.FC<LeadsTableProps> = ({
           <div className="overflow-x-auto w-full relative">
             <table className="w-full text-left border-collapse">
               <thead>
-                <tr className="border-b border-black/[0.05] text-[11px] font-semibold text-slate-400 uppercase tracking-wider bg-[#FAFBFD] select-none">
+                <tr className="border-b border-black/5 text-[11px] font-semibold text-slate-400 uppercase tracking-wider bg-[#FAFBFD] select-none">
                   
                   {/* Persona & Empresa Header */}
                   <th 
@@ -429,7 +429,7 @@ export const LeadsTable: React.FC<LeadsTableProps> = ({
                   <th className="py-3 pr-4 w-6"></th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-black/[0.04] text-sm">
+              <tbody className="divide-y divide-black/4 text-sm">
                 {paginatedLeads.length === 0 ? (
                   <tr>
                     <td colSpan={6} className="text-center py-16 text-slate-400 font-medium text-xs">
@@ -490,7 +490,7 @@ export const LeadsTable: React.FC<LeadsTableProps> = ({
 
                         {/* Interests Pills */}
                         <td className="hidden sm:table-cell py-3 px-3">
-                          <div className="flex items-center gap-1 flex-wrap max-w-[160px]">
+                          <div className="flex items-center gap-1 flex-wrap max-w-40">
                             {lead.interests.slice(0, 2).map((interest, i) => (
                               <span
                                 key={i}
@@ -551,7 +551,7 @@ export const LeadsTable: React.FC<LeadsTableProps> = ({
                   className={`p-4 rounded-2xl border transition-all duration-150 cursor-pointer flex flex-col justify-between ${
                     isSelected
                       ? 'border-primary bg-primary/[0.03] shadow-[0_2px_8px_rgba(0,113,227,0.12)] ring-1 ring-primary'
-                      : 'border-black/[0.06] bg-white hover:border-slate-300 hover:shadow-xs'
+                      : 'border-black/6 bg-white hover:border-slate-300 hover:shadow-xs'
                   }`}
                 >
                   <div>
@@ -590,7 +590,7 @@ export const LeadsTable: React.FC<LeadsTableProps> = ({
                     </div>
                   </div>
 
-                  <div className="mt-4 pt-3 border-t border-black/[0.04] flex items-center justify-between text-xs text-slate-500">
+                  <div className="mt-4 pt-3 border-t border-black/4 flex items-center justify-between text-xs text-slate-500">
                     <span>{formatLeadTimestamp(lead.lastContact)}</span>
                     <span className="text-primary font-semibold flex items-center gap-0.5">
                       Ver Detalles
@@ -605,7 +605,7 @@ export const LeadsTable: React.FC<LeadsTableProps> = ({
       </div>
 
       {/* Pagination Footer */}
-      <div className="px-3 sm:px-4 py-2 sm:py-3 border-t border-black/[0.05] bg-white flex items-center justify-between gap-2 text-[11px] sm:text-xs text-slate-500 font-medium">
+      <div className="px-3 sm:px-4 py-2 sm:py-3 border-t border-black/5 bg-white flex items-center justify-between gap-2 text-[11px] sm:text-xs text-slate-500 font-medium">
         <div>
           <span className="hidden sm:inline">Mostrando </span>
           <span className="font-bold text-[#1D1D1F]">{totalItems === 0 ? 0 : startIndex + 1}</span>-
@@ -638,7 +638,7 @@ className="w-7 h-7 sm:w-8 sm:h-8 shrink-0 rounded-xl border border-black/10 flex
                       className={`w-8 h-8 rounded-xl text-xs font-bold transition-all cursor-pointer ${
                         currentPage === page 
                           ? 'bg-primary text-white shadow-2xs' 
-                          : 'border border-black/[0.08] hover:bg-black/[0.04] text-slate-700'
+                          : 'border border-black/8 hover:bg-black/[0.04] text-slate-700'
                       }`}
                     >
                       {page}
@@ -652,7 +652,7 @@ className="w-7 h-7 sm:w-8 sm:h-8 shrink-0 rounded-xl border border-black/10 flex
           <button
             onClick={() => setCurrentPage(Math.min(totalPages, currentPage + 1))}
             disabled={currentPage === totalPages || totalPages === 0}
-            className="w-7 h-7 sm:w-8 sm:h-8 rounded-xl border border-black/[0.08] flex items-center justify-center hover:bg-black/[0.04] disabled:opacity-30 disabled:cursor-not-allowed cursor-pointer transition-colors"
+            className="w-7 h-7 sm:w-8 sm:h-8 rounded-xl border border-black/8 flex items-center justify-center hover:bg-black/[0.04] disabled:opacity-30 disabled:cursor-not-allowed cursor-pointer transition-colors"
           >
             <ChevronRight className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-slate-700" />
           </button>

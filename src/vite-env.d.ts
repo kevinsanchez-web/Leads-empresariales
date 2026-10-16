@@ -2,6 +2,7 @@
 
 interface ImportMetaEnv {
   readonly VITE_AI_WORKER_URL?: string;
+  readonly VITE_USE_EMULATORS?: string;
 }
 
 interface ImportMeta {

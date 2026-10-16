@@ -35,7 +35,7 @@ export const NewLeadModal: React.FC<NewLeadModalProps> = ({
 
   if (!isOpen) return null;
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = (e: React.SubmitEvent<HTMLFormElement>) => {
     e.preventDefault();
     form.submit();
   };
@@ -43,7 +43,7 @@ export const NewLeadModal: React.FC<NewLeadModalProps> = ({
   return (
     <div className="fixed inset-0 bg-slate-900/65 backdrop-blur-xs flex items-center justify-center z-50 p-2 sm:p-4">
       <div className="bg-white rounded-2xl sm:rounded-3xl max-w-xl w-full max-h-[92vh] flex flex-col shadow-2xl border border-slate-200 overflow-hidden animate-fade-in">
-        <div className="px-5 sm:px-6 py-4 bg-white border-b border-black/[0.05] flex items-center justify-between shrink-0">
+        <div className="px-5 sm:px-6 py-4 bg-white border-b border-black/5 flex items-center justify-between shrink-0">
           <div className="flex items-center gap-3 min-w-0">
             <div className="w-9 h-9 rounded-2xl bg-primary text-white flex items-center justify-center font-bold shrink-0 shadow-[0_2px_8px_rgba(0,113,227,0.25)]">
               <UserPlus className="w-4 h-4" />
@@ -76,7 +76,7 @@ export const NewLeadModal: React.FC<NewLeadModalProps> = ({
             onOpenCreateEventModal={onOpenCreateEventModal}
           />
 
-          <div className="pt-3 pb-1 border-t border-black/[0.05] flex items-center justify-end gap-2 shrink-0">
+          <div className="pt-3 pb-1 border-t border-black/5 flex items-center justify-end gap-2 shrink-0">
             <button
               type="button"
               onClick={onClose}

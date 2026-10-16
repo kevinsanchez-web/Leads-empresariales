@@ -33,7 +33,7 @@ export const EventsView: React.FC<EventsViewProps> = ({
 
       {/* Encabezado: botón fuera del cuadro de título, alineado a la derecha */}
       <div className="flex items-center justify-between gap-2 sm:gap-3">
-        <div className="min-w-0 flex-1 bg-white rounded-2xl sm:rounded-3xl p-3 sm:p-4 border border-black/[0.06] shadow-xs">
+        <div className="min-w-0 flex-1 bg-white rounded-2xl sm:rounded-3xl p-3 sm:p-4 border border-black/6 shadow-xs">
           <div className="inline-flex items-center gap-1.5 px-2 py-0.5 bg-accent-light text-accent rounded-md text-[10px] sm:text-xs font-bold mb-1">
             <Calendar className="w-3 h-3 shrink-0" />
             <span>Eventos y Sedes</span>
@@ -59,7 +59,7 @@ export const EventsView: React.FC<EventsViewProps> = ({
       </div>
 
       {events.length === 0 ? (
-        <div className="bg-white rounded-2xl sm:rounded-3xl border border-black/[0.06] px-5 py-10 text-center">
+        <div className="bg-white rounded-2xl sm:rounded-3xl border border-black/6 px-5 py-10 text-center">
           <div className="w-10 h-10 rounded-2xl bg-accent-light text-accent flex items-center justify-center mx-auto">
             <Calendar className="w-5 h-5" />
           </div>
@@ -85,7 +85,7 @@ export const EventsView: React.FC<EventsViewProps> = ({
                   bg-white rounded-2xl p-2.5 sm:p-3.5 border transition-all duration-200 flex flex-col justify-between
                   ${isCurrent
                     ? 'border-accent ring-1 ring-accent shadow-xs'
-                    : 'border-black/[0.06] shadow-2xs hover:border-black/[0.12] hover:shadow-xs'
+                    : 'border-black/6 shadow-2xs hover:border-black/[0.12] hover:shadow-xs'
                   }
                 `}
               >
@@ -149,7 +149,7 @@ export const EventsView: React.FC<EventsViewProps> = ({
                 </div>
 
                 {/* Action Button: View Leads */}
-                <div className="pt-1.5 sm:pt-2 mt-1.5 sm:mt-2 border-t border-black/[0.04]">
+                <div className="pt-1.5 sm:pt-2 mt-1.5 sm:mt-2 border-t border-black/4">
                   <button
                     type="button"
                     onClick={() => onViewLeadsOfEvent(evt)}

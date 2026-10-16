@@ -23,7 +23,7 @@ export const CreateEventModal: React.FC<CreateEventModalProps> = ({
 
   if (!isOpen) return null;
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = (e: React.SubmitEvent<HTMLFormElement>) => {
     e.preventDefault();
     if (!name.trim()) return;
 
@@ -45,10 +45,10 @@ export const CreateEventModal: React.FC<CreateEventModalProps> = ({
 
   return (
     <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50 p-3 sm:p-4">
-      <div className="bg-white rounded-3xl max-w-md w-full p-5 sm:p-6 shadow-2xl border border-black/[0.08] animate-fade-in flex flex-col max-h-[92vh] overflow-hidden">
+      <div className="bg-white rounded-3xl max-w-md w-full p-5 sm:p-6 shadow-2xl border border-black/8 animate-fade-in flex flex-col max-h-[92vh] overflow-hidden">
         
         {/* Header */}
-        <div className="flex items-center justify-between pb-3.5 border-b border-black/[0.05] shrink-0">
+        <div className="flex items-center justify-between pb-3.5 border-b border-black/5 shrink-0">
           <div className="flex items-center gap-3">
             <div className="w-9 h-9 rounded-2xl bg-accent text-white flex items-center justify-center font-bold shadow-accent">
               <Calendar className="w-4 h-4" />
@@ -86,7 +86,7 @@ export const CreateEventModal: React.FC<CreateEventModalProps> = ({
               placeholder="Ej: Andicom 2026, Smart City Expo"
               value={name}
               onChange={(e) => setName(e.target.value)}
-              className="w-full px-3.5 py-2 bg-[#F5F5F7] border border-black/[0.05] rounded-xl text-xs font-medium focus:bg-white focus:outline-none focus:ring-2 focus:ring-primary transition-all placeholder:text-slate-400 text-[#1D1D1F]"
+              className="w-full px-3.5 py-2 bg-[#F5F5F7] border border-black/5 rounded-xl text-xs font-medium focus:bg-white focus:outline-none focus:ring-2 focus:ring-primary transition-all placeholder:text-slate-400 text-[#1D1D1F]"
             />
           </div>
 
@@ -102,7 +102,7 @@ export const CreateEventModal: React.FC<CreateEventModalProps> = ({
                 placeholder="Ej: Cartagena de Indias, Corferias Bogotá"
                 value={location}
                 onChange={(e) => setLocation(e.target.value)}
-                className="w-full pl-9 pr-3.5 py-2 bg-[#F5F5F7] border border-black/[0.05] rounded-xl text-xs font-medium focus:bg-white focus:outline-none focus:ring-2 focus:ring-primary transition-all placeholder:text-slate-400 text-[#1D1D1F]"
+                className="w-full pl-9 pr-3.5 py-2 bg-[#F5F5F7] border border-black/5 rounded-xl text-xs font-medium focus:bg-white focus:outline-none focus:ring-2 focus:ring-primary transition-all placeholder:text-slate-400 text-[#1D1D1F]"
               />
             </div>
           </div>
@@ -144,7 +144,7 @@ export const CreateEventModal: React.FC<CreateEventModalProps> = ({
           )}
 
           {/* Set as Active Event Switch */}
-          <div className="flex items-center justify-between p-3 rounded-2xl bg-[#FAFBFD] border border-black/[0.04]">
+          <div className="flex items-center justify-between p-3 rounded-2xl bg-[#FAFBFD] border border-black/4">
             <div className="flex items-center gap-2.5">
               <CheckCircle2 className={`w-4 h-4 ${setAsActive ? 'text-[#34C759]' : 'text-slate-400'}`} />
               <div>
@@ -170,7 +170,7 @@ export const CreateEventModal: React.FC<CreateEventModalProps> = ({
           </div>
 
           {/* Footer Actions */}
-          <div className="flex items-center justify-end gap-2 pt-3 border-t border-black/[0.05]">
+          <div className="flex items-center justify-end gap-2 pt-3 border-t border-black/5">
             <button
               type="button"
               onClick={onClose}

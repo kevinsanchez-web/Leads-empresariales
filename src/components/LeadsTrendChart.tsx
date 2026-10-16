@@ -202,7 +202,7 @@ export const LeadsTrendChart: React.FC<LeadsTrendChartProps> = ({
               <h3 className="font-bold text-xs sm:text-sm text-slate-900 truncate">
                 Tendencia de Captura
               </h3>
-              <span className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-primary/10 text-primary border border-primary/15 truncate max-w-[160px]">
+              <span className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-primary/10 text-primary border border-primary/15 truncate max-w-40">
                 {currentEvent.name || 'Todos los Eventos'}
               </span>
             </div>
@@ -283,13 +283,13 @@ export const LeadsTrendChart: React.FC<LeadsTrendChartProps> = ({
                 if (active && payload && payload.length) {
                   const data = payload[0].payload;
                   return (
-                    <div className="bg-slate-900/95 backdrop-blur-xs text-white p-2.5 rounded-xl shadow-xl text-xs space-y-1.5 border border-slate-800 min-w-[150px]">
+                    <div className="bg-slate-900/95 backdrop-blur-xs text-white p-2.5 rounded-xl shadow-xl text-xs space-y-1.5 border border-slate-800 min-w-37.5">
                       <div className="font-bold text-slate-300 border-b border-slate-800 pb-1 flex items-center justify-between text-[11px]">
                         <span>{data.displayDate} ({data.date})</span>
                       </div>
                       <div className="flex items-center justify-between gap-3 text-[11px]">
                         <span className="text-slate-400 flex items-center gap-1">
-                          <span className="w-2 h-2 rounded-full bg-primary/100 inline-block"></span>
+                          <span className="w-2 h-2 rounded-full bg-primary inline-block"></span>
                           Total Leads:
                         </span>
                         <span className="font-bold text-blue-400 text-xs">

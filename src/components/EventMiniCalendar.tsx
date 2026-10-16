@@ -101,7 +101,7 @@ export const EventMiniCalendar: React.FC<EventMiniCalendarProps> = ({ dateRange 
   const showGrid = model.weeks.length <= MAX_WEEKS;
 
   return (
-    <div className="w-full rounded-xl bg-[#FAFBFD] border border-black/[0.05] p-2 sm:p-2.5">
+    <div className="w-full rounded-xl bg-[#FAFBFD] border border-black/5 p-2 sm:p-2.5">
       {/* Cabecera: mes + duración */}
       <div className="flex items-center justify-between gap-2 mb-1.5">
         <span className="text-[11px] font-bold text-slate-600 truncate">{model.label}</span>

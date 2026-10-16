@@ -384,7 +384,7 @@ export const ReportsDashboard: React.FC<ReportsDashboardProps> = ({
       )}
 
       {/* Header Controls */}
-      <div className="bg-white p-2.5 sm:p-3 rounded-xl border border-black/[0.06] shadow-2xs flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+      <div className="bg-white p-2.5 sm:p-3 rounded-xl border border-black/6 shadow-2xs flex flex-col sm:flex-row sm:items-center justify-between gap-2">
         <div className="flex items-center gap-2">
           <div
             className="w-7 h-7 rounded-lg flex items-center justify-center font-bold"
@@ -404,7 +404,7 @@ export const ReportsDashboard: React.FC<ReportsDashboardProps> = ({
             value={selectedEventId}
             onChange={setSelectedEventId}
             ariaLabel="Filtrar por evento"
-            buttonClassName="px-2.5 py-1 bg-[#F5F5F7] border border-black/[0.05] rounded-lg text-[11px] font-semibold text-[#1D1D1F] focus:outline-none focus:ring-2 focus:ring-primary pr-7"
+            buttonClassName="px-2.5 py-1 bg-[#F5F5F7] border border-black/5 rounded-lg text-[11px] font-semibold text-[#1D1D1F] focus:outline-none focus:ring-2 focus:ring-primary pr-7"
             options={[
               { value: 'all', label: 'Todos los Eventos' },
               ...events.map(e => ({ value: e.id, label: e.name }))
@@ -416,7 +416,7 @@ export const ReportsDashboard: React.FC<ReportsDashboardProps> = ({
             value={selectedRepFilter}
             onChange={setSelectedRepFilter}
             ariaLabel="Filtrar por usuario"
-            buttonClassName="px-2.5 py-1 bg-[#F5F5F7] border border-black/[0.05] rounded-lg text-[11px] font-semibold text-[#1D1D1F] focus:outline-none focus:ring-2 focus:ring-primary pr-7"
+            buttonClassName="px-2.5 py-1 bg-[#F5F5F7] border border-black/5 rounded-lg text-[11px] font-semibold text-[#1D1D1F] focus:outline-none focus:ring-2 focus:ring-primary pr-7"
             options={[
               { value: 'all', label: 'Todos los Usuarios' },
               ...users.map(u => ({ value: u.name, label: u.name }))
@@ -424,7 +424,7 @@ export const ReportsDashboard: React.FC<ReportsDashboardProps> = ({
           />
 
           {/* Rango de fechas de captura */}
-          <div className="flex items-center gap-1 bg-[#F5F5F7] border border-black/[0.05] rounded-lg px-1.5 py-0.5">
+          <div className="flex items-center gap-1 bg-[#F5F5F7] border border-black/5 rounded-lg px-1.5 py-0.5">
             <DatePicker
               value={dateFrom}
               onChange={v => {
@@ -467,7 +467,7 @@ export const ReportsDashboard: React.FC<ReportsDashboardProps> = ({
             <button
               onClick={() => setExportMenuOpen(v => !v)}
               disabled={!hasRealData}
-              className="px-2.5 py-1 bg-[var(--color-primary)] hover:bg-[var(--color-primary-hover)] text-white rounded-lg text-[11px] font-semibold flex items-center gap-1 transition-colors cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
+              className="px-2.5 py-1 bg-primary hover:bg-primary-hover text-white rounded-lg text-[11px] font-semibold flex items-center gap-1 transition-colors cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
               title={hasRealData ? 'Exportar reporte a Excel / CSV' : 'No hay datos reales para exportar'}
             >
               <FileSpreadsheet className="w-3 h-3" />
@@ -536,8 +536,8 @@ export const ReportsDashboard: React.FC<ReportsDashboardProps> = ({
               title={isActive ? `Quitar filtro de ${KPI_LABELS[card.id]}` : `Filtrar gráficos por ${KPI_LABELS[card.id]}`}
               className={`bg-white p-2.5 rounded-xl border text-left transition-all cursor-pointer ${
                 isActive
-                  ? 'border-transparent ring-2 ring-[var(--color-primary)] shadow-sm'
-                  : 'border-black/[0.06] shadow-2xs hover:border-slate-300'
+                  ? 'border-transparent ring-2 ring-primary shadow-sm'
+                  : 'border-black/6 shadow-2xs hover:border-slate-300'
               }`}
             >
               <div className="flex items-center justify-between gap-2">
@@ -579,7 +579,7 @@ export const ReportsDashboard: React.FC<ReportsDashboardProps> = ({
         </div>
 
         {/* Intereses Principales con valores exactos al final de cada barra */}
-        <div className="bg-white p-3 rounded-xl border border-black/[0.06] shadow-2xs min-w-0 h-full flex flex-col">
+        <div className="bg-white p-3 rounded-xl border border-black/6 shadow-2xs min-w-0 h-full flex flex-col">
           <div className="flex items-center justify-between gap-2 mb-1">
             <h3 className="text-[11px] font-bold text-[#1D1D1F]">Intereses Principales</h3>
             <span className="text-[9px] text-slate-400 font-semibold">{chartLeads.length} leads</span>
@@ -630,7 +630,7 @@ export const ReportsDashboard: React.FC<ReportsDashboardProps> = ({
         </div>
 
         {/* Mapa de calor por bloques de tiempo (reemplaza el área horaria) */}
-        <div className="bg-white p-3 rounded-xl border border-black/[0.06] shadow-2xs lg:col-span-2 min-w-0">
+        <div className="bg-white p-3 rounded-xl border border-black/6 shadow-2xs lg:col-span-2 min-w-0">
           <div className="flex items-center justify-between gap-2 mb-2">
             <h3 className="text-[11px] font-bold text-[#1D1D1F]">Ritmo Horario de Capturas</h3>
             <span className="text-[9px] text-slate-400 font-semibold">
@@ -641,7 +641,7 @@ export const ReportsDashboard: React.FC<ReportsDashboardProps> = ({
           {heatmap.dated > 0 ? (
             <>
               <div className="overflow-x-auto pb-1">
-                <div className="min-w-[460px] overflow-hidden rounded-lg border border-slate-200 bg-slate-200 flex flex-col gap-px">
+                <div className="min-w-115 overflow-hidden rounded-lg border border-slate-200 bg-slate-200 flex flex-col gap-px">
                   <div
                     className="grid gap-px"
                     style={{ gridTemplateColumns: `84px repeat(${TIME_BLOCKS.length}, minmax(0, 1fr))` }}

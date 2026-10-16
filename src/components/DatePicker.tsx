@@ -180,7 +180,7 @@ export const DatePicker: React.FC<DatePickerProps> = ({
             role="dialog"
             aria-label={ariaLabel}
             style={popupStyle}
-            className="z-[70] rounded-2xl bg-white border border-black/[0.06] shadow-xl p-3 animate-fade-in"
+            className="z-70 rounded-2xl bg-white border border-black/6 shadow-xl p-3 animate-fade-in"
           >
             <div className="flex items-center justify-between mb-2">
               <button

@@ -97,19 +97,21 @@ export interface NotificationAlert {
   daysDiff: number;
 }
 
-export type UserRoleType = "admin" | "executive";
+import type { Role } from "./models/roles";
+
+// Alias de compatibilidad: el rol vive ahora en models/roles.ts.
+export type UserRoleType = Role;
 
 export interface UserRep {
   id: string;
   name: string;
   role: string;
-  accountType?: UserRoleType;
+  // Los usuarios guardados antes de los roles nuevos traen "executive"; resolveRole() lo traduce.
+  accountType?: Role | "executive";
   email: string;
   avatar: string;
   team: string;
   phone?: string;
-  password?: string;
-  pin?: string;
   color?: string;
   createdAt?: string;
   lastLogin?: string;

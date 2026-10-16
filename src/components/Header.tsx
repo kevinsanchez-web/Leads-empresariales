@@ -14,6 +14,7 @@ import { UserRep, EventOption, Lead, ActiveView, AccentTheme } from '../types';
 import { HeaderNotificationsPopover } from './HeaderNotificationsPopover';
 import { DivergencyLogo } from './DivergencyLogo';
 import { ConfiguracionView } from './ConfiguracionView';
+import { useAccess } from '../controllers/accessController';
 
 interface HeaderProps {
   currentEvent: EventOption;
@@ -22,7 +23,6 @@ interface HeaderProps {
   onOpenCreateEventModal?: () => void;
   currentUser: UserRep;
   users: UserRep[];
-  onSelectUser: (user: UserRep) => void;
   onOpenUserAccountsModal?: () => void;
   activeView?: ActiveView;
   searchQuery: string;
@@ -51,7 +51,6 @@ export const Header: React.FC<HeaderProps> = ({
   onOpenCreateEventModal,
   currentUser,
   users,
-  onSelectUser,
   onOpenUserAccountsModal,
   activeView = 'personas',
   searchQuery,
@@ -97,13 +96,13 @@ export const Header: React.FC<HeaderProps> = ({
     activeView === 'intereses' || 
     activeView === 'seguimientos';
 
-  const isAdmin = currentUser.accountType === 'admin' || (currentUser.role && currentUser.role.toLowerCase().includes('admin'));
+  const access = useAccess(currentUser);
 
   return (
     // Se elimina overflow-hidden para permitir que los menús flotantes sobresalgan del header
-    <header className="bg-white/95 backdrop-blur-md border-b border-black/[0.06] sticky top-0 z-30 shadow-xs w-full max-w-full">
+    <header className="bg-white/95 backdrop-blur-md border-b border-black/6 sticky top-0 z-30 shadow-xs w-full max-w-full">
       {/* Fila Principal del Navbar */}
-      <div className="px-2 sm:px-4 md:px-6 py-1.5 sm:py-2 flex items-center justify-between gap-1 sm:gap-2 max-w-[1600px] mx-auto w-full">
+      <div className="px-2 sm:px-4 md:px-6 py-1.5 sm:py-2 flex items-center justify-between gap-1 sm:gap-2 max-w-400 mx-auto w-full">
         
         {/* Bloque Izquierdo: Menú + Logo + Selector de Eventos */}
         <div className="flex items-center gap-1 sm:gap-2 min-w-0 flex-1">
@@ -146,7 +145,7 @@ export const Header: React.FC<HeaderProps> = ({
 
             {/* Desplegable de Eventos */}
             {showEventDropdown && (
-              <div className="absolute left-0 mt-2 w-72 max-w-[calc(100vw-1rem)] bg-white border border-black/[0.08] rounded-2xl shadow-xl z-50 p-2 animate-fade-in divide-y divide-black/[0.04]">
+              <div className="absolute left-0 mt-2 w-72 max-w-[calc(100vw-1rem)] bg-white border border-black/8 rounded-2xl shadow-xl z-50 p-2 animate-fade-in divide-y divide-black/4">
                 <div className="px-2 py-1 text-[11px] font-semibold text-slate-400 uppercase tracking-wider flex items-center justify-between">
                   <span>Seleccionar Evento</span>
                   <span className="text-[10px] text-slate-400 font-normal">{events.length} disponibles</span>
@@ -219,17 +218,17 @@ export const Header: React.FC<HeaderProps> = ({
               title={`Usuario activo: ${currentUser.name}`}
               aria-expanded={showUserDropdown}
             >
-              <div className={`w-7 h-7 sm:w-7 sm:h-7 rounded-full ${currentUser.avatar ? 'bg-primary' : (isAdmin ? 'bg-slate-900' : 'bg-primary')} text-white font-bold text-[11px] flex items-center justify-center shadow-2xs shrink-0 ring-2 ring-white`}>
+              <div className={`w-7 h-7 sm:w-7 sm:h-7 rounded-full ${currentUser.avatar ? 'bg-primary' : (access.role === 'super_admin' ? 'bg-slate-900' : 'bg-primary')} text-white font-bold text-[11px] flex items-center justify-center shadow-2xs shrink-0 ring-2 ring-white`}>
                 {currentUser.avatar || 'AD'}
               </div>
               <div className="hidden md:flex flex-col items-start leading-none text-left">
-                <span className="text-xs font-semibold text-[#1D1D1F] max-w-[90px] truncate">
+                <span className="text-xs font-semibold text-[#1D1D1F] max-w-22.5 truncate">
                   {currentUser.name.split(' ')[0]}
                 </span>
                 <span className={`text-[9px] font-black uppercase tracking-tight ${
-                  isAdmin ? 'text-amber-600' : 'text-primary'
+                  access.can('users.view') ? 'text-amber-600' : 'text-primary'
                 }`}>
-                  {isAdmin ? 'Admin' : 'Ejecutivo'}
+                  {access.roleLabel}
                 </span>
               </div>
               <ChevronDown className={`w-3 h-3 text-slate-400 hidden sm:inline transition-transform duration-200 ${showUserDropdown ? 'rotate-180 text-slate-700' : ''}`} />
@@ -237,7 +236,7 @@ export const Header: React.FC<HeaderProps> = ({
 
             {/* Contenedor del Desplegable ConfiguracionView con ancho explícito */}
             {showUserDropdown && (
-              <div className="absolute right-0 mt-2 z-50 animate-fade-in w-[calc(100vw-1.5rem)] sm:w-[380px] max-w-[420px]">
+              <div className="absolute right-0 mt-2 z-50 animate-fade-in w-[calc(100vw-1.5rem)] sm:w-95 max-w-105">
                 <ConfiguracionView
                   currentUser={currentUser}
                   users={users}
@@ -261,7 +260,7 @@ export const Header: React.FC<HeaderProps> = ({
 
       {/* Toolbar Inferior de Búsqueda y Filtros */}
       {showSearchAndFilters && (
-        <div className="px-2 sm:px-4 md:px-6 pb-2 pt-1 border-t border-black/[0.03] bg-[#FAFBFD]/80">
+        <div className="px-2 sm:px-4 md:px-6 pb-2 pt-1 border-t border-black/3 bg-[#FAFBFD]/80">
           <div className="flex items-center gap-1.5 sm:gap-2">
             <div className="relative flex-1 min-w-0">
               <Search className="w-3.5 h-3.5 absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
@@ -270,7 +269,7 @@ export const Header: React.FC<HeaderProps> = ({
                 placeholder="Buscar por empresa, contacto, sector o palabra clave..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full pl-8 pr-7 py-1.5 bg-white border border-black/[0.06] rounded-xl text-xs text-[#1D1D1F] focus:outline-none focus:ring-2 focus:ring-primary shadow-2xs placeholder:text-slate-400 transition-all truncate"
+                className="w-full pl-8 pr-7 py-1.5 bg-white border border-black/6 rounded-xl text-xs text-[#1D1D1F] focus:outline-none focus:ring-2 focus:ring-primary shadow-2xs placeholder:text-slate-400 transition-all truncate"
               />
               {searchQuery && (
                 <button
@@ -288,7 +287,7 @@ export const Header: React.FC<HeaderProps> = ({
               className={`h-8 px-2 sm:px-3 rounded-xl border text-xs font-semibold flex items-center justify-center gap-1 transition-all cursor-pointer shrink-0 active:scale-95 ${
                 activeFilterCount > 0 
                   ? 'bg-primary border-primary text-white shadow-xs' 
-                  : 'bg-white border-black/[0.06] text-slate-700 hover:bg-slate-50'
+                  : 'bg-white border-black/6 text-slate-700 hover:bg-slate-50'
               }`}
               title="Filtrar leads"
             >
@@ -306,7 +305,7 @@ export const Header: React.FC<HeaderProps> = ({
               className={`h-8 px-2 sm:px-3 rounded-xl text-xs font-semibold flex items-center justify-center gap-1 transition-all border cursor-pointer shrink-0 active:scale-95 ${
                 showOnlyMyLeads 
                   ? 'bg-primary/10 border-primary/30 text-primary' 
-                  : 'bg-white border-black/[0.06] text-slate-600 hover:bg-slate-50'
+                  : 'bg-white border-black/6 text-slate-600 hover:bg-slate-50'
               }`}
               title={`Filtrar por ${currentUser.name}`}
             >

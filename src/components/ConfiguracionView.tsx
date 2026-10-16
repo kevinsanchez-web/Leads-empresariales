@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { 
   Check, 
   Mail, 
@@ -12,6 +12,7 @@ import {
   Building2
 } from 'lucide-react';
 import { UserRep, EventOption, AccentTheme, ActiveView } from '../types';
+import { useAccess } from '../controllers/accessController';
 
 export interface ConfiguracionViewProps {
   currentUser?: UserRep;
@@ -99,6 +100,7 @@ export const ConfiguracionView: React.FC<ConfiguracionViewProps> = ({
   onClose,
   className = ''
 }) => {
+  const access = useAccess(currentUser);
   // Manejo autónomo de tema (Funciona con prop controlada o con estado local)
   const [internalTheme, setInternalTheme] = useState<AccentTheme>('purpura');
   
@@ -125,7 +127,7 @@ export const ConfiguracionView: React.FC<ConfiguracionViewProps> = ({
 
   return (
     <div 
-      className={`w-full max-w-[420px] bg-[#F8FAFC] border border-black/[0.08] rounded-[28px] shadow-xl p-3.5 space-y-3 text-slate-800 transition-all ${className}`}
+      className={`w-full max-w-105 bg-[#F8FAFC] border border-black/8 rounded-[28px] shadow-xl p-3.5 space-y-3 text-slate-800 transition-all ${className}`}
     >
       {/* 1. USUARIO PRINCIPAL */}
       <div className="bg-white rounded-2xl p-4 border border-slate-100 shadow-2xs flex items-center gap-3.5">
@@ -141,7 +143,7 @@ export const ConfiguracionView: React.FC<ConfiguracionViewProps> = ({
               {currentUser.name}
             </h2>
             <span className="bg-[#FEF3C7] text-[#92400E] text-[10px] font-black px-1.5 py-0.5 rounded uppercase tracking-wide shrink-0">
-              {currentUser.accountType === 'admin' || currentUser.role?.toLowerCase().includes('admin') ? 'ADMIN' : 'EJEC'}
+              {access.roleLabel}
             </span>
           </div>
           
@@ -188,7 +190,7 @@ export const ConfiguracionView: React.FC<ConfiguracionViewProps> = ({
                 key={theme.id}
                 type="button"
                 onClick={() => handleThemeSelect(theme.id)}
-                className={`p-3 rounded-2xl border text-left transition-all cursor-pointer flex items-start justify-between min-h-[64px] ${
+                className={`p-3 rounded-2xl border text-left transition-all cursor-pointer flex items-start justify-between min-h-16 ${
                   isSelected
                     ? 'border-primary bg-primary/10 ring-1 ring-primary/40'
                     : 'border-slate-100 bg-white hover:bg-slate-50'

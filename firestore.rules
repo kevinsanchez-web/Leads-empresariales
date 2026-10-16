@@ -1,18 +1,113 @@
 rules_version = '2';
 
-// Solo cuentas de Gmail o del dominio institucional de la CUN pueden leer o escribir (a pedido
-// explícito del cliente). Debe coincidir con ALLOWED_DOMAINS en src/allowedUsers.ts — esa copia
-// del lado del cliente solo controla la pantalla de login, la protección real es esta regla.
+// La protección real de los datos es ESTA regla, no la interfaz. El rol de cada persona sale de su
+// documento en `users`, cuyo id es su correo en minúsculas (ver sessionController.userIdFromEmail).
+// Los roles y sus permisos son los de src/models/roles.ts y src/models/permissions.ts: si cambian
+// allí, tienen que cambiar aquí.
 service cloud.firestore {
   match /databases/{database}/documents {
-    function isAllowed() {
-      return request.auth != null
-        && request.auth.token.email_verified == true
-        && request.auth.token.email.matches('.*@(gmail[.]com|cun[.]edu[.]co)$');
+
+    // Mismo listado que SUPER_ADMIN_EMAILS en src/models/superAdmin.ts: Super Administradores raíz
+    // del equipo de Divergency AI. No necesitan documento en `users` y nadie puede editarlos.
+    function rootSuperAdminEmails() {
+      return ['kevin_sanchez@cun.edu.co'];
     }
 
+    function isSignedIn() {
+      return request.auth != null && request.auth.token.email_verified == true;
+    }
+
+    function myEmail() {
+      return request.auth.token.email.lower();
+    }
+
+    function isRootSuperAdmin() {
+      return isSignedIn() && myEmail() in rootSuperAdminEmails();
+    }
+
+    function profilePath() {
+      return /databases/$(database)/documents/users/$(myEmail());
+    }
+
+    function hasProfile() {
+      return isSignedIn() && exists(profilePath());
+    }
+
+    // Super Administrador: uno raíz, o alguien a quien otro Super Administrador dio ese rol.
+    function isSuperAdmin() {
+      return isRootSuperAdmin()
+        || (hasProfile() && get(profilePath()).data.accountType == 'super_admin');
+    }
+
+    // "executive" es el valor antiguo de accountType y equivale a "ventas".
+    function normalizeRole(accountType) {
+      return accountType == 'executive' ? 'ventas' : accountType;
+    }
+
+    function role() {
+      return isRootSuperAdmin() ? 'super_admin' : normalizeRole(get(profilePath()).data.accountType);
+    }
+
+    function isAdminLike() {
+      return isSuperAdmin() || (hasProfile() && role() == 'admin');
+    }
+
+    // Un administrador solo gestiona perfiles operativos; un Super Administrador gestiona todos los
+    // roles, incluidos otros Super Administradores.
+    function manageableRoles() {
+      return isSuperAdmin()
+        ? ['super_admin', 'admin', 'marketing', 'capturador', 'ventas']
+        : ['marketing', 'capturador', 'ventas'];
+    }
+
+    function canManageRole(accountType) {
+      return normalizeRole(accountType) in manageableRoles();
+    }
+
+    // ---- Usuarios -------------------------------------------------------------------------
+    match /users/{userId} {
+      // Directorio del equipo: cualquier persona dada de alta lo ve (ya no contiene contraseñas).
+      allow read: if isSuperAdmin() || hasProfile();
+
+      allow create: if isAdminLike()
+        && !(userId in rootSuperAdminEmails())
+        && userId == request.resource.data.email.lower()
+        && canManageRole(request.resource.data.accountType);
+
+      allow update: if isAdminLike()
+        && !(userId in rootSuperAdminEmails())
+        && canManageRole(resource.data.accountType)
+        && canManageRole(request.resource.data.accountType)
+        && userId == request.resource.data.email.lower();
+
+      allow delete: if isAdminLike()
+        && !(userId in rootSuperAdminEmails())
+        && canManageRole(resource.data.accountType);
+    }
+
+    // ---- Configuración común ---------------------------------------------------------------
+    match /events/{eventId} {
+      allow read: if isSuperAdmin() || hasProfile();
+      allow write: if isAdminLike();
+    }
+
+    // ---- Leads -----------------------------------------------------------------------------
+    // Pendiente (plan, paso 1.5): al existir `assignedTo`, Ventas solo leerá y escribirá los suyos.
+    match /leads/{leadId} {
+      allow read: if isSuperAdmin() || hasProfile();
+      allow create, update: if isAdminLike()
+        || (hasProfile() && role() in ['capturador', 'ventas']);
+      allow delete: if isAdminLike();
+    }
+
+    // Caché de enriquecimiento de IA: la escribe el cliente tras consultar al Worker.
+    match /enrichmentCache/{key} {
+      allow read, write: if isSuperAdmin() || hasProfile();
+    }
+
+    // Todo lo demás está cerrado.
     match /{document=**} {
-      allow read, write: if isAllowed();
+      allow read, write: if false;
     }
   }
 }

@@ -6,12 +6,13 @@ import {
   Bell,
   ChevronUp,
   Shield,
-  Briefcase,
   UserPlus,
   X
 } from 'lucide-react';
 import { ActiveView, EventOption, UserRep } from '../types';
 import { DivergencyLogo } from './DivergencyLogo';
+import { RoleBadge } from './RoleBadge';
+import { useAccess, canOpenView } from '../controllers/accessController';
 
 interface SidebarProps {
   activeView: ActiveView;
@@ -44,27 +45,18 @@ export const Sidebar: React.FC<SidebarProps> = ({
 }) => {
   const [showEventDropdown, setShowEventDropdown] = React.useState(false);
 
-  const isAdmin = currentUser?.accountType === 'admin' || (currentUser?.role && currentUser.role.toLowerCase().includes('admin'));
+  const access = useAccess(currentUser);
 
-  const executiveMenuItems = [
-    { 
-      id: 'notificaciones' as ActiveView, 
-      label: 'Notificaciones', 
-      icon: Bell, 
-      badge: pendingAlertsCount ? `${pendingAlertsCount}` : undefined, 
-      alertBadge: pendingAlertsCount ? pendingAlertsCount > 0 : false 
-    }
+  // El permiso de cada vista vive en el controlador (VIEW_PERMISSIONS); sin permiso, no se muestra.
+  const menuItems: { id: ActiveView; label: string; icon: React.ElementType; badge?: string; alertBadge?: boolean }[] = [
+    { id: 'eventos', label: 'Eventos & Sedes', icon: Calendar, badge: `${events.length}` },
+    { id: 'intereses', label: 'Intereses & Tags', icon: Star },
+    { id: 'reportes', label: 'Reportes y Analítica', icon: BarChart3 },
+    { id: 'notificaciones', label: 'Notificaciones', icon: Bell, badge: pendingAlertsCount ? `${pendingAlertsCount}` : undefined, alertBadge: pendingAlertsCount ? pendingAlertsCount > 0 : false },
+    { id: 'usuarios', label: 'Cuentas & Equipo', icon: Shield, badge: `${users.length}` }
   ];
 
-  const adminMenuItems = [
-    { id: 'eventos' as ActiveView, label: 'Eventos & Sedes', icon: Calendar, badge: `${events.length}` },
-    { id: 'intereses' as ActiveView, label: 'Intereses & Tags', icon: Star },
-    { id: 'reportes' as ActiveView, label: 'Reportes y Analítica', icon: BarChart3 },
-    { id: 'notificaciones' as ActiveView, label: 'Notificaciones', icon: Bell, badge: pendingAlertsCount ? `${pendingAlertsCount}` : undefined, alertBadge: pendingAlertsCount ? pendingAlertsCount > 0 : false },
-    { id: 'usuarios' as ActiveView, label: 'Cuentas & Equipo', icon: Shield, badge: `${users.length}` }
-  ];
-
-  const currentMenuItems = isAdmin ? adminMenuItems : executiveMenuItems;
+  const currentMenuItems = menuItems.filter(item => canOpenView(access, item.id));
 
   const handleNavClick = (viewId: ActiveView) => {
     setActiveView(viewId);
@@ -98,20 +90,8 @@ export const Sidebar: React.FC<SidebarProps> = ({
             </div>
 
             {/* Role Badge Indicator */}
-            <div className={`mt-2 px-2.5 py-1 rounded-xl text-[11px] font-bold flex items-center justify-between ${
-              isAdmin 
-                ? 'bg-amber-50 border border-amber-200/80 text-amber-900' 
-                : 'bg-primary/10 border border-primary/20 text-primary'
-            }`}>
-              <div className="flex items-center gap-1.5 truncate">
-                {isAdmin ? <Shield className="w-3.5 h-3.5 text-amber-600 shrink-0" /> : <Briefcase className="w-3.5 h-3.5 text-primary shrink-0" />}
-                <span className="truncate">{isAdmin ? 'Modo Administrador' : 'Modo Ejecutivo (Captura)'}</span>
-              </div>
-              <span className={`text-[9px] uppercase px-1.5 py-0.2 rounded-md font-black shrink-0 ${
-                isAdmin ? 'bg-amber-200/60 text-amber-800' : 'bg-primary/15 text-primary'
-              }`}>
-                {isAdmin ? 'FULL' : 'ÁGIL'}
-              </span>
+            <div className="mt-2">
+              <RoleBadge role={access.role} />
             </div>
           </div>
 
@@ -224,7 +204,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                   </button>
                 ))}
 
-                {isAdmin && onOpenCreateEventModal && (
+                {access.can('events.manage') && onOpenCreateEventModal && (
                   <div className="pt-1.5 border-t border-slate-100 mt-1">
                     <button
                       onClick={() => {

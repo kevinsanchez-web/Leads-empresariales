@@ -360,7 +360,7 @@ export const TimePicker: React.FC<TimePickerProps> = ({
             role="dialog"
             aria-label={ariaLabel}
             style={popupStyle}
-            className="z-[70] rounded-2xl bg-white border border-black/[0.06] shadow-xl p-3 animate-fade-in"
+            className="z-70 rounded-2xl bg-white border border-black/6 shadow-xl p-3 animate-fade-in"
           >
             <div className="flex justify-center">
               <svg
@@ -532,7 +532,7 @@ export const TimePicker: React.FC<TimePickerProps> = ({
               Arrastra las agujas · teclado: H, M, A, P y flechas
             </p>
 
-            <div className="flex items-center gap-2 mt-2 pt-2 border-t border-black/[0.05]">
+            <div className="flex items-center gap-2 mt-2 pt-2 border-t border-black/5">
               {/* Muestra el valor guardado, no el paso resaltado: tras "Ahora"
                   pueden diferir si el paso no es de 1 minuto. */}
               <span

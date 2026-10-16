@@ -16,7 +16,7 @@ export const MetricsHeader: React.FC<MetricsHeaderProps> = ({ leads }) => {
 
   return (
     <div className="relative">
-    <div className="bg-white rounded-xl border border-black/[0.06] shadow-xs px-2.5 sm:px-4 py-1.5 sm:py-2 flex items-center justify-between gap-1 sm:gap-2 overflow-x-auto overscroll-x-contain scrollbar-none">
+    <div className="bg-white rounded-xl border border-black/6 shadow-xs px-2.5 sm:px-4 py-1.5 sm:py-2 flex items-center justify-between gap-1 sm:gap-2 overflow-x-auto overscroll-x-contain scrollbar-none">
       {/* Metric 1: Total Leads */}
       <div className="flex items-center gap-1.5 sm:gap-2.5 min-w-max pr-2 sm:pr-4">
         <div className="w-6 h-6 sm:w-7 sm:h-7 rounded-lg bg-primary/10 text-primary flex items-center justify-center shrink-0">

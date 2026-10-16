@@ -172,10 +172,10 @@ export const RoundedSelect: React.FC<RoundedSelectProps> = ({
               width: pos.width,
               minWidth: '13rem'
             }}
-            className="z-[70] bg-white border border-slate-200 rounded-2xl shadow-xl p-1.5 space-y-0.5 max-h-64 overflow-y-auto animate-fade-in"
+            className="z-70 bg-white border border-slate-200 rounded-2xl shadow-xl p-1.5 space-y-0.5 max-h-64 overflow-y-auto animate-fade-in"
           >
             {showSearch && (
-              <div className="relative sticky top-0 bg-white pb-1">
+              <div className="sticky top-0 bg-white pb-1">
                 <Search className="w-3 h-3 absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
                 <input
                   type="text"

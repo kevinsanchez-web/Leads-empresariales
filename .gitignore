@@ -6,6 +6,8 @@ coverage/
 *.log
 .env*
 !.env.example
+!.env.emulators
+.emulator-data/
 .firebase/
 .wrangler/
 

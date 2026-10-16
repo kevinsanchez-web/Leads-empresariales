@@ -2,9 +2,7 @@ import React, { useState, useRef } from 'react';
 import {
   CheckCircle2,
   Star,
-  ChevronRight,
   AlertCircle,
-  ArrowRight,
   GripVertical,
   CalendarClock,
   MoreHorizontal,
@@ -275,7 +273,7 @@ export const SeguimientosView: React.FC<SeguimientosViewProps> = ({
                 onDragOver={(e) => handleDragOver(e, stage.id)}
                 onDragLeave={(e) => handleDragLeave(e, stage.id)}
                 onDrop={() => handleDrop(stage.id)}
-                className={`p-3 rounded-2xl border transition-all flex flex-col min-w-[230px] ${
+                className={`p-3 rounded-2xl border transition-all flex flex-col min-w-57.5 ${
                   isTargetColumn
                     ? 'bg-primary/5 border-primary/50 ring-4 ring-primary/10 shadow-md'
                     : 'bg-slate-100/70 border-slate-200/70'
@@ -296,9 +294,9 @@ export const SeguimientosView: React.FC<SeguimientosViewProps> = ({
 
                 {/* Lista de Tarjetas. Es un flex vertical para que el estado vacío
                     pueda crecer con `flex-1` y quedar centrado en la columna. */}
-                <div className="flex flex-col space-y-2.5 flex-1 overflow-y-auto max-h-[600px] pr-0.5 min-h-[120px]">
+                <div className="flex flex-col space-y-2.5 flex-1 overflow-y-auto max-h-150 pr-0.5 min-h-30">
                   {stageLeads.length === 0 ? (
-                    <div className="flex-1 min-h-[170px] flex items-center justify-center rounded-xl bg-white/60 border border-slate-200/60">
+                    <div className="flex-1 min-h-42.5 flex items-center justify-center rounded-xl bg-white/60 border border-slate-200/60">
                       <div className="text-center px-4">
                         <Inbox className="w-5 h-5 text-slate-300 mx-auto mb-1.5" />
                         <p className="text-[11px] font-semibold text-slate-400">
@@ -354,7 +352,7 @@ export const SeguimientosView: React.FC<SeguimientosViewProps> = ({
                                   {lead.interests.slice(0, 2).map((interest, idx) => (
                                     <span
                                       key={`${interest}-${idx}`}
-                                      className="text-[9px] font-bold px-1.5 py-0.5 rounded-md bg-primary/10 text-primary border border-primary/15 truncate max-w-[86px]"
+                                      className="text-[9px] font-bold px-1.5 py-0.5 rounded-md bg-primary/10 text-primary border border-primary/15 truncate max-w-21.5"
                                     >
                                       {interest}
                                     </span>
